@@ -6,6 +6,8 @@ export interface SurnameLabelScreenRect {
   bottom: number;
   frontFacing: boolean;
   selected: boolean;
+  countryArea?: number;
+  centerDistance?: number;
 }
 
 export interface SurnameLabelObstacle {
@@ -13,6 +15,79 @@ export interface SurnameLabelObstacle {
   right: number;
   top: number;
   bottom: number;
+}
+
+export interface SurnameSurfaceProjectionPoint {
+  x: number;
+  y: number;
+  /** Positive values are on the camera-facing half of the globe. */
+  visibility: number;
+}
+
+export interface SurnameSurfaceTriangle {
+  a: number;
+  b: number;
+  c: number;
+}
+
+export interface SurnameSurfaceBounds {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  frontPointCount: number;
+}
+
+/**
+ * Projects only the camera-facing part of a curved wordmark. A triangle that
+ * crosses the horizon contributes its horizon intersections, so the screen
+ * envelope remains tight while the label is partly hidden by the globe.
+ */
+export function computeVisibleSurnameSurfaceBounds(
+  points: readonly SurnameSurfaceProjectionPoint[],
+  triangles: readonly SurnameSurfaceTriangle[],
+): SurnameSurfaceBounds | null {
+  const visible: Array<{ x: number; y: number }> = [];
+  const addPoint = (point: SurnameSurfaceProjectionPoint) => {
+    if (point.visibility >= 0) visible.push({ x: point.x, y: point.y });
+  };
+  const addEdgeIntersection = (
+    first: SurnameSurfaceProjectionPoint,
+    second: SurnameSurfaceProjectionPoint,
+  ) => {
+    if (first.visibility >= 0 === second.visibility >= 0) return;
+    const denominator = first.visibility - second.visibility;
+    if (Math.abs(denominator) < 1e-12) return;
+    const t = first.visibility / denominator;
+    visible.push({
+      x: first.x + (second.x - first.x) * t,
+      y: first.y + (second.y - first.y) * t,
+    });
+  };
+
+  for (const triangle of triangles) {
+    const first = points[triangle.a];
+    const second = points[triangle.b];
+    const third = points[triangle.c];
+    if (!first || !second || !third) continue;
+    if (first.visibility < 0 && second.visibility < 0 && third.visibility < 0)
+      continue;
+    addPoint(first);
+    addPoint(second);
+    addPoint(third);
+    addEdgeIntersection(first, second);
+    addEdgeIntersection(second, third);
+    addEdgeIntersection(third, first);
+  }
+
+  if (visible.length === 0) return null;
+  return {
+    left: Math.min(...visible.map((point) => point.x)),
+    right: Math.max(...visible.map((point) => point.x)),
+    top: Math.min(...visible.map((point) => point.y)),
+    bottom: Math.max(...visible.map((point) => point.y)),
+    frontPointCount: points.filter((point) => point.visibility >= 0).length,
+  };
 }
 
 export type SurnameLabelHiddenReason =
@@ -26,13 +101,12 @@ export interface SurnameLabelLayout {
   selectedVisible: boolean;
 }
 
-const VIEWPORT_PADDING_PX = 2;
 const OBSTACLE_PADDING_PX = 3;
 
 /**
  * Resolves billboard rectangles in stable priority order. The selected
- * country's label is considered first; smaller labels then get preference so
- * dense regions retain more labels without allowing any overlap.
+ * country's label is considered first; larger readable labels then get
+ * preference so the atlas keeps the strongest country wordmarks visible.
  */
 export function computeSurnameLabelLayout(
   rectangles: readonly SurnameLabelScreenRect[],
@@ -40,13 +114,14 @@ export function computeSurnameLabelLayout(
   viewport: {
     width: number;
     height: number;
-    allowSelectedObstacleOverlap?: boolean;
   },
 ): SurnameLabelLayout {
   const ordered = [...rectangles].sort(
     (a, b) =>
       Number(b.selected) - Number(a.selected) ||
-      rectArea(a) - rectArea(b) ||
+      rectArea(b) - rectArea(a) ||
+      (b.countryArea ?? 0) - (a.countryArea ?? 0) ||
+      (a.centerDistance ?? 0) - (b.centerDistance ?? 0) ||
       a.id.localeCompare(b.id),
   );
   const accepted: SurnameLabelScreenRect[] = [];
@@ -85,21 +160,20 @@ function hiddenReason(
   viewport: {
     width: number;
     height: number;
-    allowSelectedObstacleOverlap?: boolean;
   },
 ): SurnameLabelHiddenReason | null {
   if (!hasFiniteRect(rectangle)) return 'invalid';
   if (!rectangle.frontFacing) return 'backface';
-  if (
-    rectangle.left < VIEWPORT_PADDING_PX ||
-    rectangle.right > viewport.width - VIEWPORT_PADDING_PX ||
-    rectangle.top < VIEWPORT_PADDING_PX ||
-    rectangle.bottom > viewport.height - VIEWPORT_PADDING_PX
-  ) {
+  const visibleArea = clippedRectArea(
+    rectangle,
+    viewport.width,
+    viewport.height,
+  );
+  const totalArea = rectArea(rectangle);
+  if (totalArea <= 0 || visibleArea <= 0 || visibleArea / totalArea < 0.25) {
     return 'outside-viewport';
   }
   if (
-    !(viewport.allowSelectedObstacleOverlap && rectangle.selected) &&
     obstacles.some((obstacle) => intersectsWithPadding(rectangle, obstacle))
   ) {
     return 'obstacle';
@@ -108,6 +182,18 @@ function hiddenReason(
     return 'collision';
   }
   return null;
+}
+
+function clippedRectArea(
+  rectangle: SurnameLabelScreenRect,
+  width: number,
+  height: number,
+): number {
+  const left = Math.max(0, rectangle.left);
+  const right = Math.min(width, rectangle.right);
+  const top = Math.max(0, rectangle.top);
+  const bottom = Math.min(height, rectangle.bottom);
+  return Math.max(0, right - left) * Math.max(0, bottom - top);
 }
 
 function hasFiniteRect(rectangle: SurnameLabelScreenRect): boolean {

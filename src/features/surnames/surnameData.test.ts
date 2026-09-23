@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import dataset from '../../data/generated/surnames-by-country.json';
-import { decodeSurnameDataset, getRankOneSurnameRecord } from './surnameData';
+import coverage from '../../data/generated/surname-coverage.json';
+import {
+  decodeSurnameDataset,
+  getRankOneSurnameRecord,
+  getRankOneSurnameRecords,
+} from './surnameData';
 
 describe('surname observation data', () => {
   it('keeps exact Natural Earth country joins and explicit source coverage', () => {
     const decoded = decodeSurnameDataset(dataset);
-    expect(decoded.countries).toHaveLength(77);
+    expect(decoded.countries).toHaveLength(241);
+    expect(
+      decoded.countries.filter((country) => country.records.length > 0),
+    ).toHaveLength(198);
     expect(decoded.countriesById.get('ne-156')?.countryIso2).toBe('CN');
     expect(decoded.countriesById.get('ne-008')?.records[0]).toMatchObject({
       rank: null,
@@ -67,14 +75,106 @@ describe('surname observation data', () => {
     });
   });
 
-  it('does not promote an unranked source list to the map finding', () => {
+  it('keeps source-listed coverage separate from explicit rank-one coverage', () => {
     const decoded = decodeSurnameDataset(dataset);
     expect(getRankOneSurnameRecord(decoded.countriesById.get('ne-300'))).toBe(
       null,
     );
+    expect(decoded.countriesById.get('ne-300')?.coverageStatus).toBe(
+      'source-listed',
+    );
+    expect(decoded.countriesById.get('ne-156')?.coverageStatus).toBe(
+      'rank-one',
+    );
+    expect(
+      getRankOneSurnameRecords(decoded.countriesById.get('ne-156')),
+    ).toHaveLength(1);
     expect(
       getRankOneSurnameRecord(decoded.countriesById.get('ne-156'))?.rank,
     ).toBe(1);
+  });
+
+  it('keeps an unverified territory empty instead of inventing a surname', () => {
+    const decoded = decodeSurnameDataset(dataset);
+    const antarctica = decoded.countriesById.get('ne-010');
+    expect(antarctica).toMatchObject({
+      countryIso2: 'AQ',
+      sourceUrls: [],
+      records: [],
+      coverageStatus: 'no-source',
+    });
+    expect(getRankOneSurnameRecord(antarctica)).toBeNull();
+  });
+
+  it('does not carry cross-country placeholder names into no-source rows', () => {
+    const decoded = decodeSurnameDataset(dataset);
+    const noSource = decoded.countries.filter(
+      (country) => country.coverageStatus === 'no-source',
+    );
+    expect(noSource).toHaveLength(43);
+    expect(noSource.every((country) => country.records.length === 0)).toBe(
+      true,
+    );
+    expect(noSource.every((country) => country.sourceUrls.length === 0)).toBe(
+      true,
+    );
+  });
+
+  it('audits every generated country anchor with an explicit coverage state', () => {
+    const states = Object.values(coverage.countries).map(
+      (country) => country.status,
+    );
+    expect(states).toHaveLength(240);
+    expect(states.filter((status) => status === 'rank-one')).toHaveLength(74);
+    expect(states.filter((status) => status === 'source-listed')).toHaveLength(
+      54,
+    );
+    expect(
+      states.filter((status) => status === 'manual-observation'),
+    ).toHaveLength(69);
+    expect(states.filter((status) => status === 'no-source')).toHaveLength(43);
+    expect(coverage.sovereignCountryCount).toBe(195);
+    expect(Object.values(coverage.sovereignCountries)).toHaveLength(195);
+    expect(
+      Object.values(coverage.sovereignCountries).every(
+        (country) => country.status !== 'no-source',
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps sovereign coverage independent from the 240-anchor map inventory', () => {
+    const sovereign = Object.values(coverage.sovereignCountries);
+    expect(sovereign).toHaveLength(195);
+    expect(sovereign.every((country) => country.status !== 'no-source')).toBe(
+      true,
+    );
+    // Tuvalu is a sovereign data row, but the pinned Natural Earth anchor
+    // inventory has no selectable 50m polygon for it. It must remain data
+    // backed without changing the map-anchor denominator.
+    expect(coverage.sovereignCountries.TV).toMatchObject({
+      countryId: null,
+      status: 'manual-observation',
+      recordCount: 1,
+    });
+  });
+
+  it('keeps fixed sovereign observations unranked', () => {
+    const decoded = decodeSurnameDataset(dataset);
+    const manualSource =
+      'https://en.wikipedia.org/wiki/Lists_of_most_common_surnames';
+    const manualCountries = decoded.countries.filter((country) =>
+      country.sourceUrls.includes(manualSource),
+    );
+    expect(manualCountries.length).toBeGreaterThan(0);
+    expect(
+      manualCountries.every((country) =>
+        country.records.every((record) =>
+          [record.rank, record.count, record.share, record.statYear].every(
+            (value) => value === null,
+          ),
+        ),
+      ),
+    ).toBe(true);
   });
 
   it('rejects malformed rows instead of silently accepting them', () => {

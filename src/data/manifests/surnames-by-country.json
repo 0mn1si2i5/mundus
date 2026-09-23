@@ -1,13 +1,13 @@
 {
   "id": "surnames-by-country",
-  "sourceName": "Community surname observations with Sweden and Iran supplements",
+  "sourceName": "Community surname observations with reviewed country supplements",
   "sourceUrl": "https://github.com/sigpwned/popular-names-by-country-dataset/tree/v1.2",
   "distributionUrl": "https://raw.githubusercontent.com/sigpwned/popular-names-by-country-dataset/v1.2/common-surnames-by-country.csv",
-  "licenseName": "Primary dataset CC0; Sweden row is a CC BY-SA 4.0 Wikipedia-derived observation citing Statistics Sweden; Iran supplement Apache-2.0; upstream Wikipedia lists retain CC BY-SA 4.0 provenance",
+  "licenseName": "Primary dataset CC0; Sweden row is a CC BY-SA 4.0 Wikipedia-derived observation citing Statistics Sweden; Iran supplement Apache-2.0; African and manual records are source-listed factual observations and are not a unified ranking",
   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
-  "version": "v1.2 surname CSV; Wikipedia lists collected during the week of 2023-07-08; Sweden Statistics Sweden 2012 table via Wayback capture 2013-09-21; Iran supplement commit 9fb2fdccb62445b52e933d4d7929a52e01bd6011 captured 2026-09-22",
-  "retrievedAt": "2026-09-22",
-  "derivedAssetSha256": "f9c4a179d10a56996de2775554c98f82b8e102e5f394f701bb540daa302c5693",
+  "version": "v1.2 surname CSV plus fixed country-specific manual observations; collected 2026-09-23",
+  "retrievedAt": "2026-09-23",
+  "derivedAssetSha256": "d2ca10f3590387954ef832aeb28fe598e5dd70ce26de7fb5cfafaa22b039e246",
   "auxiliarySources": [
     {
       "sourceName": "Iranian Surname Frequencies community supplement",
@@ -31,6 +31,13 @@
       "purpose": "Preserve the CC BY-SA 4.0 source-list provenance and the Sweden table citation used to review the supplement."
     },
     {
+      "sourceName": "African source-listed surname observations",
+      "distributionUrl": "https://www.pulse.ng/story/these-are-the-most-common-surnames-in-every-african-country-2024121210174957832",
+      "version": "Article retrieved 2026-09-23; one observation per listed country",
+      "sha256": "118665614e9acb4df31ecdd540b0513d3371d6e0bd548b95918321dafe9a7d51",
+      "purpose": "Expand African country coverage without asserting a numeric rank; records remain source-listed and are not compared with ranked sources."
+    },
+    {
       "sourceName": "GeoNames countryInfo numeric ISO mapping",
       "distributionUrl": "https://download.geonames.org/export/dump/countryInfo.txt",
       "version": "capture used for ISO2 to Natural Earth numeric joins",
@@ -38,7 +45,7 @@
       "purpose": "Map source ISO2 codes to the Natural Earth numeric country ids used by the globe."
     }
   ],
-  "attribution": "Community-compiled surname records from the v1.2 dataset plus the Sweden Statistics Sweden and Iran supplements; underlying Wikipedia list provenance remains CC BY-SA 4.0.",
+  "attribution": "Community-compiled surname records from the v1.2 dataset plus reviewed Sweden, Iran, African, and fixed country-specific observations; underlying Wikipedia list provenance remains CC BY-SA 4.0.",
   "redistribution": "allowed",
   "transformations": [
     "Keep every source country and Rank=1 rows; preserve source-listed unranked rows when a country has no numeric rank, without presenting them as ranked results",
@@ -46,15 +53,18 @@
     "Join ISO2 source codes to Natural Earth numeric ids with the pinned GeoNames countryInfo capture",
     "Keep source count and percent only when present; no year is inferred from the source snapshot",
     "Add one manually reviewed Sweden rank-one record from the pinned Statistics Sweden snapshot; keep its 2012 year and count separate from the community CSV",
-    "Add only a small manually reviewed Chinese presentation set; all other Chinese fields remain null"
+    "Generate local transliteration and Chinese presentation forms at runtime when the source record omits them",
+    "Keep country anchors without a country-specific surname source as explicit no-source records; do not synthesize or borrow a surname",
+    "Add the African article observations as source-listed records with no inferred rank or count",
+    "Add fixed country-specific manual observations only for sovereign countries missing from the pinned tables; keep rank, count, share, and year unknown"
   ],
-  "missingValuePolicy": "Missing rank-one records, unranked source lists, counts, shares, years, local spellings, romanizations, and Chinese presentations remain explicit null or empty arrays and are never imputed.",
+  "missingValuePolicy": "Missing counts, shares, years, and rank values remain explicit; countries without a source-backed record have no map wordmark.",
   "boundaryPolicy": "A community-compiled source-listed observation, not a unified official global surname ranking or a census comparison.",
-  "recordCount": 167,
-  "rawBytes": 42822,
-  "gzipBytes": 4410,
-  "staticDecodedBytesEstimate": 171288,
-  "runtimeDecodedBytesEstimate": 256932,
+  "recordCount": 288,
+  "rawBytes": 93515,
+  "gzipBytes": 7226,
+  "staticDecodedBytesEstimate": 374060,
+  "runtimeDecodedBytesEstimate": 561090,
   "sourceAssets": {
     "csv": {
       "distributionUrl": "https://raw.githubusercontent.com/sigpwned/popular-names-by-country-dataset/v1.2/common-surnames-by-country.csv",
@@ -65,5 +75,5 @@
       "sha256": "93bafc525813f22e4711ff9ed6d626343094ce48c26388dc7c49189b3d7d5512"
     }
   },
-  "coverageNote": "Community-compiled source-listed records, not a unified official global ranking. The Sweden record is a separate Statistics Sweden 2012 snapshot and the Iran record is a separate Persian-language community sample; neither is numerically compared with the Wikipedia-derived country lists. Numeric rank-one records are absent for some countries; their unranked source lists remain visible without an inferred rank."
+  "coverageNote": "Source-listed records are community observations, not a unified global ranking. The African supplement provides one article-listed observation per listed country and does not establish rank. Fixed manual observations are country-specific, unranked, and kept separate from numeric sources. Non-sovereign anchors without a country-specific source remain empty and are not assigned a borrowed or synthesized surname."
 }

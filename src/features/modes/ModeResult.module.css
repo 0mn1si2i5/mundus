@@ -149,6 +149,28 @@
   width: 19rem;
 }
 
+.surnameWordmark {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+  padding: 0.65rem 0;
+  border-block: 1px solid var(--color-line);
+}
+
+.surnameWordmark strong {
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.surnameWordmark small {
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  line-height: 1.4;
+}
+
 .surnameRecords {
   display: grid;
   gap: 0.75rem;
@@ -162,9 +184,7 @@
   border-top: 1px solid var(--color-line);
 }
 
-.surnameRecord > small,
-.surnameScope small,
-.surnameScope a {
+.surnameRecord > small {
   color: var(--color-muted);
   font-size: 0.62rem;
   line-height: 1.4;
@@ -187,21 +207,8 @@
   background: var(--color-control);
 }
 
-.surnameScope a {
-  pointer-events: auto;
-  text-decoration: underline;
-}
-
 .surnameRecord > small::first-letter {
   color: var(--color-text);
-}
-
-.surnameScope {
-  display: grid;
-  gap: 0.35rem;
-  margin-top: 0.65rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--color-line);
 }
 
 @media (min-width: 761px) and (max-width: 900px) {
@@ -292,9 +299,12 @@
     text-align: inherit;
   }
 
+  .surnameResult > .surnameWordmark {
+    grid-column: 1 / -1;
+  }
+
   .surnameResult > strong,
-  .surnameResult > .surnameRecords,
-  .surnameResult > .surnameScope {
+  .surnameResult > .surnameRecords {
     grid-column: 1 / -1;
   }
 

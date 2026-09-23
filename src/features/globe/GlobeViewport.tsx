@@ -14,6 +14,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
   type Ref,
   type RefObject,
@@ -25,17 +26,18 @@ import type {
   MeshStandardMaterial,
   PerspectiveCamera,
   ShaderMaterial,
-  Sprite,
 } from 'three';
 import {
   BackSide,
   Color,
-  CanvasTexture,
+  DataTexture,
   FrontSide,
   LinearFilter,
   MathUtils,
   Quaternion,
+  RGBAFormat,
   SRGBColorSpace,
+  TextureLoader,
   Vector3,
 } from 'three';
 import { useAppStore } from '../../state/appStore';
@@ -44,6 +46,7 @@ import {
   createCountryHighlightTexture,
   createCountryTexture,
   getCountryDataset,
+  getSurnameCountryFeatures,
 } from './countryData';
 import {
   antipodeOf,
@@ -79,23 +82,38 @@ import { cssPixelsToWorldUnits } from './screenSpace';
 import { VectorGlobeLayer, type VectorGlobeState } from './VectorGlobeLayer';
 import type { VectorGlobeResources } from './vectorGlobe';
 import {
-  COUNTRY_LABEL_HEIGHT_RATIO,
   getCountryLabelAnchor,
   getCountryLabelAnchorForId,
-  getCountryLabelWorldWidth,
   type CountryLabelAnchor,
 } from './countryLabel';
 import {
+  computeVisibleSurnameSurfaceBounds,
   computeSurnameLabelLayout,
   type SurnameLabelObstacle,
   type SurnameLabelHiddenReason,
   type SurnameLabelScreenRect,
+  type SurnameSurfaceProjectionPoint,
+  type SurnameSurfaceTriangle,
 } from './surnameLabelLayout';
 import {
-  getSafeSurnameLabelRadius,
-  SURNAME_LABEL_BASE_RADIUS,
-} from './surnameLabelGeometry';
+  createSphericalSurnameLabelGeometry,
+  SURNAME_LABEL_SURFACE_LIFT,
+} from './sphericalSurnameLabel';
 import type { SurnameMapLabel } from '../surnames/surnameData';
+import {
+  createSurnameWordmarkSvg,
+  getSurnameWordmarkHeightRatio,
+  getSurnameWordmarkAngularFootprintDegrees,
+  getSurnameWordmarkWorldWidth,
+  resolveSurnameWordmark,
+} from '../surnames/surnameWordmark';
+import type { SurnameWordmark } from '../surnames/surnameWordmark';
+import type { SurnameDisplayMode } from '../../state/urlState';
+import {
+  chooseAlternativeSurnameLabelSlot,
+  chooseSurnameLabelSlot,
+  type SurnameLabelSlot,
+} from './surnameLabelSlots';
 import {
   CAMERA_FOCUS_DURATION_MS,
   cameraFocusAnimationProgress,
@@ -117,6 +135,7 @@ interface GlobeViewportProps {
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
   surnameMapLabels: readonly SurnameMapLabel[];
+  surnameDisplayMode: SurnameDisplayMode;
 }
 
 export interface SunlineRenderState {
@@ -128,6 +147,7 @@ interface GlobeKeyboardController {
   rotateVertical: (radians: number) => void;
   zoom: (factor: number) => void;
   selectCenter: () => void;
+  cancelCameraGesture: () => void;
 }
 
 interface PointerStart {
@@ -135,6 +155,11 @@ interface PointerStart {
   y: number;
   pointerType: string;
   dragging: boolean;
+}
+
+interface OrbitControlsHandle {
+  update: () => void;
+  enabled: boolean;
 }
 
 export function GlobeViewport({
@@ -151,9 +176,19 @@ export function GlobeViewport({
   sunline,
   antipodeRelation,
   surnameMapLabels,
+  surnameDisplayMode,
 }: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
   const [profile] = useState(detectQualityProfile);
+  const activeMode = useAppStore((state) => state.activeMode);
+  const vectorProfile = useMemo<QualityProfile>(() => {
+    if (activeMode !== 'surnames' || profile.vectorDetail === '50m') {
+      return profile;
+    }
+    // The surname atlas includes small islands that are absent from 110m.
+    // The existing 50m asset keeps every generated wordmark on real land.
+    return { ...profile, vectorDetail: '50m' };
+  }, [activeMode, profile]);
   const [dragDiagnosticsEnabled] = useState(() =>
     new URLSearchParams(window.location.search).has('dragDiagnostics'),
   );
@@ -170,6 +205,7 @@ export function GlobeViewport({
   >(null);
   const [surnameLabelVisible, setSurnameLabelVisible] = useState(false);
   const [surnameLabelLayout, setSurnameLabelLayout] = useState({
+    entryCount: 0,
     visibleCount: 0,
     collisionCount: 0,
     selectedHiddenReason: null as SurnameLabelHiddenReason | null,
@@ -183,6 +219,7 @@ export function GlobeViewport({
   } | null>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const keyboardController = useRef<GlobeKeyboardController>(null);
+  const cancelCameraGesture = useRef<(() => void) | null>(null);
   const [pointerStarts] = useState(() => new Map<number, PointerStart>());
   const [antipodeDragActive, setAntipodeDragActive] = useState(false);
   const [dragModeActive, setDragModeActive] = useState(showAntipodes);
@@ -424,6 +461,10 @@ export function GlobeViewport({
   }
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    // Cancel programmatic focus at the first user gesture, before
+    // OrbitControls receives its own start event. This prevents a disabled
+    // controls instance from letting focus animation win the first drag.
+    cancelCameraGesture.current?.();
     pointerStarts.set(event.pointerId, {
       x: event.clientX,
       y: event.clientY,
@@ -465,6 +506,12 @@ export function GlobeViewport({
       markMeaningfulInteraction();
       setCameraFocusFree();
     }
+  }
+
+  function handlePointerCancel(event: ReactPointerEvent<HTMLDivElement>) {
+    pointerStarts.delete(event.pointerId);
+    syncDragActive();
+    cancelCameraGesture.current?.();
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -517,6 +564,7 @@ export function GlobeViewport({
       event.preventDefault();
       pointerStarts.clear();
       setAntipodeDragActive(false);
+      cancelCameraGesture.current?.();
       setContextLost(true);
     };
     const restored = () => {
@@ -535,6 +583,7 @@ export function GlobeViewport({
     const clear = () => {
       pointers.clear();
       setAntipodeDragActive(false);
+      cancelCameraGesture.current?.();
     };
     window.addEventListener('blur', clear);
     return () => {
@@ -585,7 +634,7 @@ export function GlobeViewport({
       aria-label={ariaLabel}
       aria-describedby="globe-keyboard-instructions"
       data-quality={profile.level}
-      data-vector-detail={profile.vectorDetail}
+      data-vector-detail={vectorProfile.vectorDetail}
       data-vector-state={vectorState}
       data-vector-geometry-id={vectorGeometryId || undefined}
       data-vector-palette-version={
@@ -664,7 +713,7 @@ export function GlobeViewport({
       }
       data-surname-map-label={
         selectedSurnameMapLabel
-          ? `${selectedSurnameMapLabel.countryId}:${selectedSurnameMapLabel.record.localForms[0]?.value ?? selectedSurnameMapLabel.record.romanizedForms[0] ?? ''}`
+          ? `${selectedSurnameMapLabel.countryId}:${resolveSurnameWordmark(selectedSurnameMapLabel.record, surnameDisplayMode)?.value ?? ''}`
           : undefined
       }
       data-surname-map-label-country={
@@ -676,6 +725,11 @@ export function GlobeViewport({
       data-surname-map-label-count={
         surnameMapLabels.length > 0
           ? String(surnameMapLabels.length)
+          : undefined
+      }
+      data-surname-map-label-entry-count={
+        surnameMapLabels.length > 0
+          ? String(surnameLabelLayout.entryCount)
           : undefined
       }
       data-surname-map-label-visible-count={
@@ -720,15 +774,10 @@ export function GlobeViewport({
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onPointerCancel={(event) => {
-        pointerStarts.delete(event.pointerId);
-        syncDragActive();
-      }}
-      onLostPointerCapture={(event) => {
-        pointerStarts.delete(event.pointerId);
-        syncDragActive();
-      }}
+      onPointerCancel={handlePointerCancel}
+      onLostPointerCapture={handlePointerCancel}
       onWheel={() => {
+        cancelCameraGesture.current?.();
         clearCameraDiagnostic();
         markMeaningfulInteraction();
         setCameraFocusFree();
@@ -748,7 +797,7 @@ export function GlobeViewport({
         }}
       >
         <GlobeScene
-          profile={profile}
+          profile={vectorProfile}
           benchmarkActive={benchmark.active}
           recordBenchmarkFrame={benchmark.recordFrame}
           keyboardController={keyboardController}
@@ -759,6 +808,8 @@ export function GlobeViewport({
           sunline={sunline}
           antipodeRelation={antipodeRelation}
           surnameMapLabels={surnameMapLabels}
+          surnameDisplayMode={surnameDisplayMode}
+          cameraGestureCancelRef={cancelCameraGesture}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}
           onSurnameLabelLayoutChange={setSurnameLabelLayout}
           onCameraFocusStart={clearCameraDiagnostic}
@@ -817,8 +868,11 @@ interface GlobeSceneProps {
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
   surnameMapLabels: readonly SurnameMapLabel[];
+  surnameDisplayMode: SurnameDisplayMode;
+  cameraGestureCancelRef: MutableRefObject<(() => void) | null>;
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
   onSurnameLabelLayoutChange: (layout: {
+    entryCount: number;
     visibleCount: number;
     collisionCount: number;
     selectedHiddenReason: SurnameLabelHiddenReason | null;
@@ -896,6 +950,8 @@ function GlobeScene({
   sunline,
   antipodeRelation,
   surnameMapLabels,
+  surnameDisplayMode,
+  cameraGestureCancelRef,
   onSurnameLabelVisibilityChange,
   onSurnameLabelLayoutChange,
   onCameraFocusStart,
@@ -926,6 +982,9 @@ function GlobeScene({
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
   const cameraTarget = useAppStore((state) => state.cameraFocusIntent.target);
   const hasInteracted = useAppStore((state) => state.hasInteracted);
+  const hasMeaningfulInteraction = useAppStore(
+    (state) => state.hasMeaningfulInteraction,
+  );
   const selectPoint = useAppStore((state) => state.selectPoint);
   const markInteraction = useAppStore((state) => state.markInteraction);
   const markMeaningfulInteraction = useAppStore(
@@ -938,6 +997,8 @@ function GlobeScene({
   const clearCameraTarget = useAppStore((state) => state.clearCameraTarget);
   const group = useRef<Group>(null);
   const interactionStart = useRef<Vector3>(null);
+  const lastUserGestureAt = useRef(0);
+  const orbitControls = useRef<OrbitControlsHandle | null>(null);
   const cameraFocusAnimation = useRef<{
     target: GeoPoint;
     startedAt: number;
@@ -948,8 +1009,24 @@ function GlobeScene({
     target: GeoPoint;
     startedAt: number;
   } | null>(null);
+  const focusFrameRef = useRef<number | null>(null);
+  const cameraFocusGeneration = useRef(0);
+  const cameraOwner = useRef<'idle' | 'focus' | 'user'>('idle');
+  // OrbitControls and the programmatic focus animation both write to the
+  // camera. Once the user starts a gesture, the gesture owns the camera until
+  // the focus target is cleared from the store.
+  const manualCameraInteraction = useRef(false);
+  // Zustand updates and React renders are asynchronous relative to an
+  // OrbitControls pointer gesture. Keep the imperative camera loop's target
+  // in sync immediately so a just-cleared focus cannot reassert itself on the
+  // next frame and pull the globe back in the opposite direction.
+  const cameraTargetRef = useRef<GeoPoint | null>(cameraTarget);
+  useEffect(() => {
+    cameraTargetRef.current = cameraTarget;
+  }, [cameraTarget]);
   const surnameFocusKey = useRef('');
   const surnameFocusAttempt = useRef({ countryId: '', nextOffsetIndex: 0 });
+  const surnameScaleAttempt = useRef({ countryId: '', count: 0 });
   const markerDiagnostic = useRef<MarkerDiagnosticHandle>(null);
   const antipodeRelationDiagnostic =
     useRef<AntipodeRelationDiagnosticHandle>(null);
@@ -963,7 +1040,36 @@ function GlobeScene({
   const innerWall = useRef<Mesh>(null);
   const innerMaterial = useRef<MeshBasicMaterial>(null);
   const [vectorReady, setVectorReady] = useState(false);
-  const { camera, gl, invalidate } = useThree();
+  const [cameraGestureActive, setCameraGestureActive] = useState(false);
+  const [surnameSlotOverrides, setSurnameSlotOverrides] = useState<
+    Readonly<Record<string, SurnameLabelSlot>>
+  >({});
+  const { camera, gl, invalidate, size } = useThree();
+  const surnameOverrideKey = `${selectedCountry?.countryId ?? ''}:${surnameDisplayMode}:${size.width}:${size.height}`;
+  const clearCameraFocus = useCallback(() => {
+    cameraFocusGeneration.current += 1;
+    if (focusFrameRef.current !== null) {
+      cancelAnimationFrame(focusFrameRef.current);
+      focusFrameRef.current = null;
+    }
+    cameraFocusRequest.current = null;
+    cameraFocusAnimation.current = null;
+    cameraTargetRef.current = null;
+    cameraOwner.current = 'idle';
+    manualCameraInteraction.current = false;
+    interactionStart.current = null;
+    setCameraGestureActive(false);
+    if (orbitControls.current) orbitControls.current.enabled = true;
+    clearCameraTarget();
+  }, [clearCameraTarget]);
+  useEffect(() => {
+    cameraGestureCancelRef.current = clearCameraFocus;
+    return () => {
+      if (cameraGestureCancelRef.current === clearCameraFocus) {
+        cameraGestureCancelRef.current = null;
+      }
+    };
+  }, [cameraGestureCancelRef, clearCameraFocus]);
   const onCameraFocusStartRef = useRef(onCameraFocusStart);
   const onCameraFocusAnimationStartRef = useRef(onCameraFocusAnimationStart);
   const invalidateRef = useRef(invalidate);
@@ -975,6 +1081,10 @@ function GlobeScene({
   const reducedMotion = useReducedMotion();
   const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const countries = useMemo(() => getCountryDataset(), []);
+  const surnameCountries = useMemo(
+    () => (activeMode === 'surnames' ? getSurnameCountryFeatures() : []),
+    [activeMode],
+  );
   const selectedSurnameMapLabel = useMemo(
     () =>
       surnameMapLabels.find(
@@ -984,40 +1094,74 @@ function GlobeScene({
   );
   const surnameAnchor = useMemo(() => {
     if (!selectedSurnameMapLabel) return null;
-    const country = countries.countries.features.find(
+    const country = surnameCountries.find(
       (candidate) =>
         candidate.properties.countryId === selectedSurnameMapLabel.countryId,
     );
     return country
       ? getCountryLabelAnchor(country)
       : getCountryLabelAnchorForId(selectedSurnameMapLabel.countryId);
-  }, [countries, selectedSurnameMapLabel]);
-  const surnameLabelEntries = useMemo(
-    () =>
-      surnameMapLabels.flatMap((label) => {
-        const country = countries.countries.features.find(
-          (candidate) => candidate.properties.countryId === label.countryId,
+  }, [selectedSurnameMapLabel, surnameCountries]);
+  const surnameLabelEntries = useMemo(() => {
+    // Do not block the vector asset request on the CPU geometry pass. The
+    // labels are mounted only after the 50m surface is ready, so computing
+    // them before that point only delays the ready signal.
+    if (!vectorReady) return [];
+    return surnameMapLabels.flatMap((label) => {
+      const country = surnameCountries.find(
+        (candidate) => candidate.properties.countryId === label.countryId,
+      );
+      const anchor = country
+        ? (getCountryLabelAnchor(country) ??
+          getCountryLabelAnchorForId(label.countryId))
+        : getCountryLabelAnchorForId(label.countryId);
+      if (!anchor) return [];
+      const wordmark = resolveSurnameWordmark(label.record, surnameDisplayMode);
+      if (!wordmark) return [];
+      const slot =
+        (surnameSlotOverrides[`${surnameOverrideKey}:${label.countryId}`]
+          ?.layout === wordmark.layout
+          ? surnameSlotOverrides[`${surnameOverrideKey}:${label.countryId}`]
+          : null) ??
+        chooseSurnameLabelSlot(
+          label.countryId,
+          anchor,
+          wordmark,
+          surnameCountries,
         );
-        const anchor = country
-          ? getCountryLabelAnchor(country)
-          : getCountryLabelAnchorForId(label.countryId);
-        if (!anchor) return [];
-        return [
-          {
-            label: {
-              ...label,
-              countryName: country?.properties.name ?? label.countryName,
-            },
-            anchor,
+      if (!slot) return [];
+      return [
+        {
+          label: {
+            ...label,
+            countryName: country?.properties.name ?? label.countryName,
           },
-        ];
-      }),
-    [countries, surnameMapLabels],
+          anchor,
+          slot,
+          wordmark,
+        },
+      ];
+    });
+  }, [
+    surnameCountries,
+    surnameDisplayMode,
+    surnameMapLabels,
+    surnameSlotOverrides,
+    surnameOverrideKey,
+    vectorReady,
+  ]);
+  const selectedSurnameSlot = useMemo(
+    () =>
+      surnameLabelEntries.find(
+        (entry) => entry.label.countryId === selectedCountry?.countryId,
+      )?.slot ?? null,
+    [selectedCountry?.countryId, surnameLabelEntries],
   );
   useEffect(() => {
     if (activeMode !== 'surnames') {
       surnameFocusKey.current = '';
       surnameFocusAttempt.current = { countryId: '', nextOffsetIndex: 0 };
+      surnameScaleAttempt.current = { countryId: '', count: 0 };
       return;
     }
     if (
@@ -1032,11 +1176,134 @@ function GlobeScene({
       countryId: selectedSurnameMapLabel.countryId,
       nextOffsetIndex: 0,
     };
-    requestCameraFocus(getSurnameCameraFocusPoint(surnameAnchor.point));
-  }, [activeMode, requestCameraFocus, surnameAnchor, selectedSurnameMapLabel]);
+    surnameScaleAttempt.current = {
+      countryId: selectedSurnameMapLabel.countryId,
+      count: 0,
+    };
+    requestCameraFocus(
+      getSurnameCameraFocusPoint(
+        selectedSurnameSlot?.center ?? surnameAnchor.point,
+        typeof window !== 'undefined' && window.innerWidth <= 760 ? 18 : 0,
+      ),
+    );
+  }, [
+    activeMode,
+    requestCameraFocus,
+    selectedSurnameMapLabel,
+    selectedSurnameSlot,
+    surnameAnchor,
+  ]);
   const handleSelectedSurnameLabelBlocked = useCallback(() => {
+    const compactViewport = window.innerWidth <= 760;
+    const userGestureRecentlyEnded =
+      performance.now() - lastUserGestureAt.current < 6000;
+    const userOwnsCamera =
+      manualCameraInteraction.current ||
+      hasMeaningfulInteraction ||
+      userGestureRecentlyEnded;
+    if (
+      userOwnsCamera &&
+      activeMode === 'surnames' &&
+      selectedSurnameMapLabel &&
+      selectedSurnameSlot
+    ) {
+      const scaleAttempt = surnameScaleAttempt.current;
+      if (scaleAttempt.countryId !== selectedSurnameMapLabel.countryId) {
+        scaleAttempt.countryId = selectedSurnameMapLabel.countryId;
+        scaleAttempt.count = 0;
+      }
+      if (scaleAttempt.count < 4) {
+        scaleAttempt.count += 1;
+        setSurnameSlotOverrides((current) => ({
+          ...current,
+          [`${surnameOverrideKey}:${selectedSurnameMapLabel.countryId}`]: {
+            ...selectedSurnameSlot,
+            maxAngularDegrees: Math.max(
+              0.18,
+              selectedSurnameSlot.maxAngularDegrees * 0.68,
+            ),
+            squareMax:
+              selectedSurnameSlot.squareMax === undefined
+                ? undefined
+                : Math.max(0.18, selectedSurnameSlot.squareMax * 0.68),
+          },
+        }));
+        return;
+      }
+    }
+    if (
+      activeMode === 'surnames' &&
+      selectedSurnameMapLabel &&
+      surnameAnchor &&
+      selectedSurnameSlot &&
+      (!compactViewport ||
+        manualCameraInteraction.current ||
+        hasMeaningfulInteraction ||
+        userGestureRecentlyEnded)
+    ) {
+      const selectedWordmark = resolveSurnameWordmark(
+        selectedSurnameMapLabel.record,
+        surnameDisplayMode,
+      );
+      const alternate = selectedWordmark
+        ? chooseAlternativeSurnameLabelSlot(
+            selectedSurnameMapLabel.countryId,
+            surnameAnchor,
+            selectedWordmark,
+            surnameCountries,
+            selectedSurnameSlot,
+          )
+        : null;
+      if (alternate) {
+        surnameFocusAttempt.current.nextOffsetIndex = 0;
+        setSurnameSlotOverrides((current) => ({
+          ...current,
+          [`${surnameOverrideKey}:${selectedSurnameMapLabel.countryId}`]:
+            alternate,
+        }));
+        if (
+          !manualCameraInteraction.current &&
+          !hasMeaningfulInteraction &&
+          !userGestureRecentlyEnded
+        ) {
+          requestCameraFocus(getSurnameCameraFocusPoint(alternate.center));
+        }
+        return;
+      }
+    }
+    // On compact layouts the header and intro occupy the upper half of the
+    // globe canvas. Re-center the selected country below that shell before
+    // spending time evaluating alternate slots; otherwise each candidate can
+    // be individually safe yet still land under the same full-width panel.
+    if (
+      compactViewport &&
+      activeMode === 'surnames' &&
+      !manualCameraInteraction.current &&
+      !hasMeaningfulInteraction &&
+      !userGestureRecentlyEnded &&
+      selectedSurnameMapLabel &&
+      surnameAnchor
+    ) {
+      const offset =
+        SURNAME_FOCUS_RETRY_OFFSETS[
+          surnameFocusAttempt.current.nextOffsetIndex
+        ] ?? null;
+      if (offset !== null) {
+        surnameFocusAttempt.current.nextOffsetIndex += 1;
+        requestCameraFocus(
+          getSurnameCameraFocusPoint(
+            selectedSurnameSlot?.center ?? surnameAnchor.point,
+            Math.abs(offset),
+          ),
+        );
+        return;
+      }
+    }
     if (
       activeMode !== 'surnames' ||
+      manualCameraInteraction.current ||
+      hasMeaningfulInteraction ||
+      userGestureRecentlyEnded ||
       !selectedSurnameMapLabel ||
       !surnameAnchor ||
       typeof window === 'undefined'
@@ -1048,8 +1315,24 @@ function GlobeScene({
     const offset = SURNAME_FOCUS_RETRY_OFFSETS[attempt.nextOffsetIndex] ?? null;
     if (offset === null) return;
     attempt.nextOffsetIndex += 1;
-    requestCameraFocus(getSurnameCameraFocusPoint(surnameAnchor.point, offset));
-  }, [activeMode, requestCameraFocus, selectedSurnameMapLabel, surnameAnchor]);
+    requestCameraFocus(
+      getSurnameCameraFocusPoint(
+        selectedSurnameSlot?.center ?? surnameAnchor.point,
+        offset,
+      ),
+    );
+  }, [
+    activeMode,
+    hasMeaningfulInteraction,
+    requestCameraFocus,
+    selectedSurnameMapLabel,
+    selectedSurnameSlot,
+    surnameCountries,
+    surnameOverrideKey,
+    setSurnameSlotOverrides,
+    surnameAnchor,
+    surnameDisplayMode,
+  ]);
   const rasterCountryFills = vectorReady ? null : countryFills;
   const texture = useMemo(
     () =>
@@ -1110,13 +1393,23 @@ function GlobeScene({
 
   useImperativeHandle(keyboardController, () => {
     function finishCameraMove() {
+      manualCameraInteraction.current = true;
+      cameraFocusAnimation.current = null;
+      cameraFocusRequest.current = null;
+      cameraTargetRef.current = null;
+      cameraOwner.current = 'idle';
+      if (orbitControls.current) orbitControls.current.enabled = true;
       camera.lookAt(0, 0, 0);
       camera.updateMatrixWorld();
+      // Keep OrbitControls' cached spherical state aligned with keyboard and
+      // programmatic camera moves before the next pointer gesture takes over.
+      orbitControls.current?.update();
       markerDiagnostic.current?.request('interaction');
       antipodeRelationDiagnostic.current?.request('interaction');
       sunlineDiagnostic.current?.request('interaction');
       onCameraFocusStart();
       setCameraFocusFree();
+      manualCameraInteraction.current = false;
       markMeaningfulInteraction();
       invalidate();
     }
@@ -1145,6 +1438,7 @@ function GlobeScene({
         setSelectedCountry(countries.findCountry(center));
         invalidate();
       },
+      cancelCameraGesture: clearCameraFocus,
     };
   }, [
     camera,
@@ -1155,16 +1449,33 @@ function GlobeScene({
     selectPoint,
     setSelectedCountry,
     setCameraFocusFree,
+    clearCameraFocus,
   ]);
 
   useEffect(() => () => texture.dispose(), [texture]);
   useEffect(() => () => highlights.texture.dispose(), [highlights]);
   useEffect(() => {
     if (!cameraTarget) {
+      cameraFocusGeneration.current += 1;
+      if (focusFrameRef.current !== null) {
+        cancelAnimationFrame(focusFrameRef.current);
+        focusFrameRef.current = null;
+      }
       cameraFocusRequest.current = null;
       cameraFocusAnimation.current = null;
+      cameraTargetRef.current = null;
+      if (cameraOwner.current === 'focus') cameraOwner.current = 'idle';
+      if (cameraOwner.current !== 'user' && orbitControls.current) {
+        orbitControls.current.enabled = true;
+      }
       return;
     }
+    if (manualCameraInteraction.current) return;
+    const generation = ++cameraFocusGeneration.current;
+    cameraTargetRef.current = cameraTarget;
+    manualCameraInteraction.current = false;
+    cameraOwner.current = 'focus';
+    if (orbitControls.current) orbitControls.current.enabled = false;
     cameraFocusRequest.current = {
       target: cameraTarget,
       startedAt: performance.now(),
@@ -1172,16 +1483,29 @@ function GlobeScene({
     onCameraFocusAnimationStartRef.current(
       cameraFocusRequest.current.startedAt,
     );
-    let frame = 0;
     const startedAt = cameraFocusRequest.current.startedAt;
     const requestFocusFrame = (timestamp: number) => {
       invalidateRef.current();
+      if (
+        generation !== cameraFocusGeneration.current ||
+        cameraOwner.current !== 'focus'
+      ) {
+        focusFrameRef.current = null;
+        return;
+      }
       if (timestamp - startedAt <= CAMERA_FOCUS_DURATION_MS) {
-        frame = requestAnimationFrame(requestFocusFrame);
+        focusFrameRef.current = requestAnimationFrame(requestFocusFrame);
+      } else {
+        focusFrameRef.current = null;
       }
     };
-    frame = requestAnimationFrame(requestFocusFrame);
-    return () => cancelAnimationFrame(frame);
+    focusFrameRef.current = requestAnimationFrame(requestFocusFrame);
+    return () => {
+      if (focusFrameRef.current !== null) {
+        cancelAnimationFrame(focusFrameRef.current);
+        focusFrameRef.current = null;
+      }
+    };
   }, [cameraTarget]);
   useEffect(() => {
     if (!showAntipodes) return;
@@ -1255,33 +1579,44 @@ function GlobeScene({
   ]);
 
   useFrame((_, delta) => {
+    const activeCameraTarget = cameraTargetRef.current;
     if (benchmarkActive) {
       recordBenchmarkFrame(performance.now());
       invalidate();
     }
-    if (!hasInteracted && !reducedMotion && group.current) {
+    if (
+      !hasInteracted &&
+      !manualCameraInteraction.current &&
+      !reducedMotion &&
+      group.current
+    ) {
       group.current.rotation.y += delta * 0.035;
       invalidate();
     }
-    if (cameraTarget && group.current) {
+    if (
+      activeCameraTarget &&
+      !manualCameraInteraction.current &&
+      cameraOwner.current !== 'user' &&
+      group.current
+    ) {
       const cameraDistance = clampGlobeCameraDistance(camera.position.length());
       const currentDirection = camera.position.clone().normalize();
-      if (cameraFocusAnimation.current?.target !== cameraTarget) {
+      if (cameraFocusAnimation.current?.target !== activeCameraTarget) {
         cameraFocusAnimation.current = {
-          target: cameraTarget,
+          target: activeCameraTarget,
           startedAt:
-            cameraFocusRequest.current?.target === cameraTarget
+            cameraFocusRequest.current?.target === activeCameraTarget
               ? cameraFocusRequest.current.startedAt
               : performance.now(),
           startDirection: currentDirection,
-          targetDirection: geoToVector3(cameraTarget)
+          targetDirection: geoToVector3(activeCameraTarget)
             .applyQuaternion(group.current.quaternion)
             .normalize(),
         };
       }
       const animation = cameraFocusAnimation.current;
       animation.targetDirection
-        .copy(geoToVector3(cameraTarget))
+        .copy(geoToVector3(activeCameraTarget))
         .applyQuaternion(group.current.quaternion)
         .normalize();
       const { progress, complete } = cameraFocusAnimationProgress(
@@ -1294,10 +1629,11 @@ function GlobeScene({
         camera.position.copy(targetDirection.multiplyScalar(cameraDistance));
         camera.lookAt(0, 0, 0);
         camera.updateMatrixWorld();
+        orbitControls.current?.update();
         markerDiagnostic.current?.request('camera-focus');
         antipodeRelationDiagnostic.current?.request(
           'camera-focus',
-          cameraTarget,
+          activeCameraTarget,
         );
         sunlineDiagnostic.current?.request('camera-focus');
         onCameraFocusComplete(
@@ -1312,8 +1648,8 @@ function GlobeScene({
         const antipodeCity =
           antipodeRelation?.antipode.nearestMajorCity?.city.point;
         const matchesTarget = (candidate: GeoPoint | undefined) =>
-          candidate?.latitude === cameraTarget.latitude &&
-          candidate.longitude === cameraTarget.longitude;
+          candidate?.latitude === activeCameraTarget.latitude &&
+          candidate.longitude === activeCameraTarget.longitude;
         const focusedSide =
           matchesTarget(relationOrigin) || matchesTarget(originCity)
             ? antipodeRelation?.origin
@@ -1353,8 +1689,12 @@ function GlobeScene({
             `markerTarget:${formatDiagnosticCoordinate(markerPoint.latitude)},${formatDiagnosticCoordinate(markerPoint.longitude)},markerRadius:${markerRadius},markerFrontFacing:${markerFrontFacing},markerInViewport:${inViewport(marker)}`,
           );
         }
-        clearCameraTarget(cameraTarget);
+        clearCameraTarget(activeCameraTarget);
+        cameraTargetRef.current = null;
+        cameraFocusRequest.current = null;
         cameraFocusAnimation.current = null;
+        cameraOwner.current = 'idle';
+        if (orbitControls.current) orbitControls.current.enabled = true;
       } else {
         const rotation = new Quaternion().setFromUnitVectors(
           animation.startDirection,
@@ -1366,9 +1706,62 @@ function GlobeScene({
           .multiplyScalar(cameraDistance);
       }
       camera.lookAt(0, 0, 0);
+      orbitControls.current?.update();
       invalidate();
     }
   });
+
+  const handleOrbitStart = useCallback(() => {
+    lastUserGestureAt.current = performance.now();
+    interactionStart.current = camera.position.clone();
+    manualCameraInteraction.current = true;
+    cameraFocusGeneration.current += 1;
+    cameraOwner.current = 'user';
+    setCameraGestureActive(true);
+    if (focusFrameRef.current !== null) {
+      cancelAnimationFrame(focusFrameRef.current);
+      focusFrameRef.current = null;
+    }
+    cameraFocusAnimation.current = null;
+    cameraFocusRequest.current = null;
+    cameraTargetRef.current = null;
+    if (orbitControls.current) orbitControls.current.enabled = true;
+    onCameraFocusStart();
+    clearCameraTarget();
+    markInteraction();
+  }, [camera, clearCameraTarget, markInteraction, onCameraFocusStart]);
+
+  const handleOrbitChange = useCallback(() => {
+    invalidate();
+  }, [invalidate]);
+
+  const handleOrbitEnd = useCallback(() => {
+    lastUserGestureAt.current = performance.now();
+    if (
+      interactionStart.current &&
+      interactionStart.current.distanceToSquared(camera.position) > 1e-8
+    ) {
+      markMeaningfulInteraction();
+      setCameraFocusFree();
+    }
+    manualCameraInteraction.current = false;
+    cameraFocusGeneration.current += 1;
+    cameraTargetRef.current = null;
+    clearCameraTarget();
+    cameraOwner.current = 'idle';
+    setCameraGestureActive(false);
+    interactionStart.current = null;
+    markerDiagnostic.current?.request('interaction');
+    antipodeRelationDiagnostic.current?.request('interaction');
+    sunlineDiagnostic.current?.request('interaction');
+    invalidate();
+  }, [
+    camera,
+    clearCameraTarget,
+    invalidate,
+    markMeaningfulInteraction,
+    setCameraFocusFree,
+  ]);
 
   function handleSelect(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
@@ -1441,14 +1834,16 @@ function GlobeScene({
           onRenderEvidence={onVectorRenderEvidence}
           renderSampleKey={vectorRenderSampleKey}
         />
-        {surnameLabelEntries.length > 0 ? (
+        {vectorReady && surnameLabelEntries.length > 0 ? (
           <SurnameMapLabelLayer
             entries={surnameLabelEntries}
+            displayMode={surnameDisplayMode}
             selectedCountryId={selectedCountry?.countryId ?? null}
             cameraFocusTarget={cameraTarget}
             onVisibilityChange={onSurnameLabelVisibilityChange}
             onLayoutChange={onSurnameLabelLayoutChange}
             onSelectedLabelBlocked={handleSelectedSurnameLabelBlocked}
+            cameraGestureActive={cameraGestureActive}
           />
         ) : null}
         <mesh
@@ -1594,32 +1989,18 @@ function GlobeScene({
         ) : null}
       </group>
       <OrbitControls
+        ref={(controls) => {
+          orbitControls.current = controls;
+        }}
         enablePan={false}
+        enableDamping={false}
         minDistance={GLOBE_CAMERA_DISTANCE.min}
         maxDistance={GLOBE_CAMERA_DISTANCE.max}
         rotateSpeed={0.55}
         zoomSpeed={0.65}
-        onStart={() => {
-          interactionStart.current = camera.position.clone();
-          onCameraFocusStart();
-          clearCameraTarget();
-          markInteraction();
-        }}
-        onChange={() => invalidate()}
-        onEnd={() => {
-          if (
-            interactionStart.current &&
-            interactionStart.current.distanceToSquared(camera.position) > 1e-8
-          ) {
-            markMeaningfulInteraction();
-            setCameraFocusFree();
-          }
-          interactionStart.current = null;
-          markerDiagnostic.current?.request('interaction');
-          antipodeRelationDiagnostic.current?.request('interaction');
-          sunlineDiagnostic.current?.request('interaction');
-          invalidate();
-        }}
+        onStart={handleOrbitStart}
+        onChange={handleOrbitChange}
+        onEnd={handleOrbitEnd}
         makeDefault
       />
     </>
@@ -1781,6 +2162,8 @@ function BenchmarkPanel({
 interface SurnameLabelEntry {
   label: SurnameMapLabel;
   anchor: CountryLabelAnchor;
+  slot: SurnameLabelSlot;
+  wordmark: SurnameWordmark;
 }
 
 // Retry by moving the camera south when a desktop shell obstacle blocks the
@@ -1799,17 +2182,21 @@ function getSurnameCameraFocusPoint(
 
 function SurnameMapLabelLayer({
   entries,
+  displayMode,
   selectedCountryId,
   cameraFocusTarget,
   onVisibilityChange,
   onLayoutChange,
   onSelectedLabelBlocked,
+  cameraGestureActive,
 }: {
   entries: readonly SurnameLabelEntry[];
+  displayMode: SurnameDisplayMode;
   selectedCountryId: string | null;
   cameraFocusTarget: GeoPoint | null;
   onVisibilityChange: (visible: boolean) => void;
   onLayoutChange: (layout: {
+    entryCount: number;
     visibleCount: number;
     collisionCount: number;
     selectedHiddenReason: SurnameLabelHiddenReason | null;
@@ -1817,29 +2204,45 @@ function SurnameMapLabelLayer({
     visibleRectangles: string;
   }) => void;
   onSelectedLabelBlocked: (reason: SurnameLabelHiddenReason) => void;
+  cameraGestureActive: boolean;
 }) {
-  const sprites = useRef(new Map<string, Sprite>());
-  const previousEvidence = useRef('');
+  const meshes = useRef(new Map<string, Mesh>());
+  const loadedLabelKey = useRef('');
+  const [loadableLabelIds, setLoadableLabelIds] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
   const previousBlockedEvidence = useRef('');
-  const { camera, gl, size } = useThree();
-  const register = useCallback((id: string, sprite: Sprite | null) => {
-    if (sprite) sprites.current.set(id, sprite);
-    else sprites.current.delete(id);
-  }, []);
+  const previousStructuralEvidence = useRef('');
+  const { camera, gl, size, invalidate } = useThree();
+  useEffect(() => {
+    invalidate();
+  }, [displayMode, entries, invalidate]);
+  useEffect(() => {
+    previousStructuralEvidence.current = '';
+    previousBlockedEvidence.current = '';
+    invalidate();
+  }, [invalidate]);
+  const register = useCallback(
+    (id: string, mesh: Mesh | null) => {
+      if (mesh) meshes.current.set(id, mesh);
+      else meshes.current.delete(id);
+      previousStructuralEvidence.current = '';
+      previousBlockedEvidence.current = '';
+      // The globe uses frameloop="demand". A label mesh may register after the
+      // first layout pass, so wake the layer when its measurable geometry exists.
+      invalidate();
+    },
+    [invalidate],
+  );
 
   useFrame(() => {
-    const cameraRight = new Vector3()
-      .setFromMatrixColumn(camera.matrixWorld, 0)
-      .normalize();
-    const cameraUp = new Vector3()
-      .setFromMatrixColumn(camera.matrixWorld, 1)
-      .normalize();
-    const cameraOffset = new Vector3();
+    // OrbitControls owns the camera during a gesture. Keep the last accepted
+    // label set until the gesture ends instead of projecting every curved
+    // wordmark on every drag sample.
+    if (cameraGestureActive) return;
     const worldPosition = new Vector3();
-    const worldScale = new Vector3();
-    const corner = new Vector3();
-    const direction = new Vector3();
     const projected = new Vector3();
+    const vertex = new Vector3();
     const canvasRect = gl.domElement.getBoundingClientRect();
     const obstacles: SurnameLabelObstacle[] = Array.from(
       document.querySelectorAll<HTMLElement>('[data-surname-label-obstacle]'),
@@ -1854,76 +2257,115 @@ function SurnameMapLabelLayer({
         };
       })
       .filter((rect) => rect.right > rect.left && rect.bottom > rect.top);
-    const rectangles: (SurnameLabelScreenRect & { sprite: Sprite })[] = [];
+    const rectangles: (SurnameLabelScreenRect & { mesh: Mesh })[] = [];
     let minimumCornerRadius = Number.POSITIVE_INFINITY;
 
     for (const entry of entries) {
-      const sprite = sprites.current.get(entry.label.countryId);
-      if (!sprite) continue;
-      const width = getCountryLabelWorldWidth(entry.anchor.clearanceDegrees);
-      direction.copy(geoToVector3(entry.anchor.point)).normalize();
-      sprite.position.copy(
-        direction
+      const mesh = meshes.current.get(entry.label.countryId);
+      if (!mesh) continue;
+      mesh.updateMatrixWorld(true);
+      const center = geoToVector3(
+        entry.slot.center,
+        SURNAME_LABEL_SURFACE_LIFT,
+      ).applyMatrix4(mesh.matrixWorld);
+      worldPosition.copy(center);
+      const centerFrontFacing =
+        worldPosition
           .clone()
-          .multiplyScalar(
-            getSafeSurnameLabelRadius(
-              direction,
-              width,
-              COUNTRY_LABEL_HEIGHT_RATIO,
-              cameraRight,
-              cameraUp,
-            ),
-          ),
-      );
-      sprite.getWorldPosition(worldPosition);
-      sprite.getWorldScale(worldScale);
-      cameraOffset.subVectors(camera.position, worldPosition);
-      const frontFacing =
-        worldPosition.clone().normalize().dot(cameraOffset.normalize()) > 0.12;
-      const halfWidth = worldScale.x / 2;
-      const halfHeight = worldScale.y / 2;
+          .normalize()
+          .dot(camera.position.clone().sub(worldPosition).normalize()) > 0.12;
       let left = Number.POSITIVE_INFINITY;
       let right = Number.NEGATIVE_INFINITY;
       let top = Number.POSITIVE_INFINITY;
       let bottom = Number.NEGATIVE_INFINITY;
-      for (const horizontal of [-1, 1]) {
-        for (const vertical of [-1, 1]) {
-          corner
-            .copy(worldPosition)
-            .addScaledVector(cameraRight, halfWidth * horizontal)
-            .addScaledVector(cameraUp, halfHeight * vertical);
-          minimumCornerRadius = Math.min(minimumCornerRadius, corner.length());
-          projected.copy(corner).project(camera);
-          const x = ((projected.x + 1) * size.width) / 2;
-          const y = ((1 - projected.y) * size.height) / 2;
-          left = Math.min(left, x);
-          right = Math.max(right, x);
-          top = Math.min(top, y);
-          bottom = Math.max(bottom, y);
+      const projectedCenter = worldPosition.clone().project(camera);
+      const positionAttribute = mesh.geometry.getAttribute('position');
+      const surfacePoints: SurnameSurfaceProjectionPoint[] = [];
+      for (let index = 0; index < positionAttribute.count; index += 1) {
+        vertex
+          .set(
+            positionAttribute.getX(index),
+            positionAttribute.getY(index),
+            positionAttribute.getZ(index),
+          )
+          .applyMatrix4(mesh.matrixWorld);
+        minimumCornerRadius = Math.min(minimumCornerRadius, vertex.length());
+        projected.copy(vertex).project(camera);
+        const x = ((projected.x + 1) * size.width) / 2;
+        const y = ((1 - projected.y) * size.height) / 2;
+        const visibility = vertex
+          .clone()
+          .normalize()
+          .dot(camera.position.clone().sub(vertex).normalize());
+        surfacePoints.push({ x, y, visibility });
+      }
+      const indexAttribute = mesh.geometry.getIndex();
+      const triangles: SurnameSurfaceTriangle[] = [];
+      if (indexAttribute) {
+        for (let index = 0; index + 2 < indexAttribute.count; index += 3) {
+          triangles.push({
+            a: indexAttribute.getX(index),
+            b: indexAttribute.getX(index + 1),
+            c: indexAttribute.getX(index + 2),
+          });
         }
+      } else {
+        for (let index = 0; index + 2 < positionAttribute.count; index += 3) {
+          triangles.push({ a: index, b: index + 1, c: index + 2 });
+        }
+      }
+      const visibleBounds = computeVisibleSurnameSurfaceBounds(
+        surfacePoints,
+        triangles,
+      );
+      if (visibleBounds) {
+        left = visibleBounds.left;
+        right = visibleBounds.right;
+        top = visibleBounds.top;
+        bottom = visibleBounds.bottom;
+      } else {
+        // Keep finite bounds for the layout diagnostic; frontFacing is false,
+        // so the pure layout function reports the stable backface reason.
+        left = right = ((projectedCenter.x + 1) * size.width) / 2;
+        top = bottom = ((1 - projectedCenter.y) * size.height) / 2;
       }
       rectangles.push({
         id: entry.label.countryId,
-        sprite,
+        mesh,
         left,
         right,
         top,
         bottom,
-        frontFacing,
+        // A curved label can remain readable after its center crosses the
+        // silhouette. Use the projected surface sample ratio rather than a
+        // single center-normal threshold so partial ocean overflow survives.
+        frontFacing:
+          Boolean(visibleBounds) &&
+          ((visibleBounds?.frontPointCount ?? 0) /
+            Math.max(1, positionAttribute.count) >=
+            0.25 ||
+            centerFrontFacing),
         selected: entry.label.countryId === selectedCountryId,
+        countryArea: entry.slot.areaSteradians ?? 0,
+        centerDistance: Math.hypot(
+          ((projectedCenter.x + 1) * size.width) / 2 - size.width / 2,
+          ((1 - projectedCenter.y) * size.height) / 2 - size.height / 2,
+        ),
       });
     }
 
     const layout = computeSurnameLabelLayout(rectangles, obstacles, {
       width: size.width,
       height: size.height,
-      // The compact shell overlays most of the canvas. Keep the selected
-      // label visible while retaining viewport, backface, and label collisions.
-      allowSelectedObstacleOverlap:
-        typeof window !== 'undefined' && window.innerWidth <= 760,
     });
     for (const rectangle of rectangles) {
-      rectangle.sprite.visible = layout.visibleIds.has(rectangle.id);
+      rectangle.mesh.visible = layout.visibleIds.has(rectangle.id);
+    }
+    const nextLoadedLabelKey = [...layout.visibleIds].sort().join('|');
+    if (loadedLabelKey.current !== nextLoadedLabelKey) {
+      loadedLabelKey.current = nextLoadedLabelKey;
+      setLoadableLabelIds(new Set(layout.visibleIds));
+      invalidate();
     }
     const selectedHiddenReason = selectedCountryId
       ? (layout.hiddenReasons.get(selectedCountryId) ?? null)
@@ -1934,46 +2376,59 @@ function SurnameMapLabelLayer({
         .sort((a, b) => a.id.localeCompare(b.id))
         .map((rectangle) => ({
           id: rectangle.id,
-          left: Math.round(rectangle.left),
-          right: Math.round(rectangle.right),
-          top: Math.round(rectangle.top),
-          bottom: Math.round(rectangle.bottom),
+          // Report the visible portion of an ocean-overflowing wordmark.
+          // Collision/layout still uses the full surface envelope, while
+          // diagnostics describe what is actually inside the canvas.
+          left: Math.round(Math.max(0, rectangle.left)),
+          right: Math.round(Math.min(size.width, rectangle.right)),
+          top: Math.round(Math.max(0, rectangle.top)),
+          bottom: Math.round(Math.min(size.height, rectangle.bottom)),
         })),
     );
     const roundedMinimumCornerRadius = Number(minimumCornerRadius.toFixed(6));
     const focusEvidence = cameraFocusTarget
       ? `${cameraFocusTarget.latitude},${cameraFocusTarget.longitude}`
       : 'settled';
-    const evidence = `${layout.visibleCount}:${layout.collisionCount}:${layout.selectedVisible}:${selectedHiddenReason ?? ''}:${visibleRectangles}:${roundedMinimumCornerRadius}:${focusEvidence}`;
-    if (previousEvidence.current !== evidence) {
-      previousEvidence.current = evidence;
+    const structuralEvidence = `${entries.length}:${layout.visibleCount}:${layout.collisionCount}:${layout.selectedVisible}:${selectedHiddenReason ?? ''}`;
+    const structuralChanged =
+      previousStructuralEvidence.current !== structuralEvidence;
+    if (structuralChanged) {
+      previousStructuralEvidence.current = structuralEvidence;
       onVisibilityChange(layout.selectedVisible);
       onLayoutChange({
+        entryCount: entries.length,
         visibleCount: layout.visibleCount,
         collisionCount: layout.collisionCount,
         selectedHiddenReason,
         minimumCornerRadius: roundedMinimumCornerRadius,
         visibleRectangles,
       });
-      const blockedEvidence = `${selectedCountryId ?? ''}:${selectedHiddenReason ?? ''}:${visibleRectangles}:${cameraFocusTarget ? `${cameraFocusTarget.latitude},${cameraFocusTarget.longitude}` : 'settled'}`;
-      if (
-        selectedHiddenReason &&
-        previousBlockedEvidence.current !== blockedEvidence
-      ) {
-        previousBlockedEvidence.current = blockedEvidence;
-        if (!cameraFocusTarget) onSelectedLabelBlocked(selectedHiddenReason);
-      } else if (!selectedHiddenReason) {
-        previousBlockedEvidence.current = '';
-      }
+    }
+    const selectedSlot = entries.find(
+      (entry) => entry.label.countryId === selectedCountryId,
+    )?.slot;
+    const slotEvidence = selectedSlot
+      ? `${selectedSlot.center.latitude},${selectedSlot.center.longitude},${selectedSlot.maxAngularDegrees}`
+      : '';
+    const blockedEvidence = `${selectedCountryId ?? ''}:${selectedHiddenReason ?? ''}:${focusEvidence}:${slotEvidence}`;
+    if (
+      selectedHiddenReason &&
+      previousBlockedEvidence.current !== blockedEvidence
+    ) {
+      previousBlockedEvidence.current = blockedEvidence;
+      if (!cameraFocusTarget) onSelectedLabelBlocked(selectedHiddenReason);
+    } else if (!selectedHiddenReason) {
+      previousBlockedEvidence.current = '';
     }
   });
 
   return (
     <>
       {entries.map((entry) => (
-        <SurnameMapLabelSprite
-          key={entry.label.countryId}
+        <SurnameMapLabelSurface
+          key={`${entry.label.countryId}:${displayMode}`}
           entry={entry}
+          loadTexture={loadableLabelIds.has(entry.label.countryId)}
           register={register}
         />
       ))}
@@ -1981,91 +2436,89 @@ function SurnameMapLabelLayer({
   );
 }
 
-function SurnameMapLabelSprite({
+function SurnameMapLabelSurface({
   entry,
+  loadTexture,
   register,
 }: {
   entry: SurnameLabelEntry;
-  register: (id: string, sprite: Sprite | null) => void;
+  loadTexture: boolean;
+  register: (id: string, mesh: Mesh | null) => void;
 }) {
-  const texture = useMemo(
-    () => createSurnameLabelTexture(entry.label),
-    [entry.label],
+  const wordmark = entry.wordmark;
+  const placeholder = useMemo(() => {
+    const placeholder = new DataTexture(
+      new Uint8Array([0, 0, 0, 0]),
+      1,
+      1,
+      RGBAFormat,
+    );
+    placeholder.needsUpdate = true;
+    return placeholder;
+  }, []);
+  const [texture, setTexture] = useState<import('three').Texture>(placeholder);
+  useEffect(() => {
+    if (!wordmark || !loadTexture) return;
+    const loader = new TextureLoader();
+    const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(createSurnameWordmarkSvg(wordmark))}`;
+    let disposed = false;
+    const loaded = loader.load(dataUri, (nextTexture) => {
+      if (disposed) {
+        nextTexture.dispose();
+        return;
+      }
+      nextTexture.colorSpace = SRGBColorSpace;
+      nextTexture.minFilter = LinearFilter;
+      nextTexture.magFilter = LinearFilter;
+      nextTexture.needsUpdate = true;
+      setTexture(nextTexture);
+    });
+    return () => {
+      disposed = true;
+      loaded.dispose();
+    };
+  }, [loadTexture, placeholder, wordmark]);
+  const width = getSurnameWordmarkWorldWidth(
+    entry.slot.maxAngularDegrees,
+    wordmark,
   );
-  const width = getCountryLabelWorldWidth(entry.anchor.clearanceDegrees);
-  const position = useMemo(
-    () => geoToVector3(entry.anchor.point, SURNAME_LABEL_BASE_RADIUS),
-    [entry.anchor],
+  const geometry = useMemo(
+    () =>
+      createSphericalSurnameLabelGeometry({
+        center: entry.slot.center,
+        angularRadiusDegrees: getSurnameWordmarkAngularFootprintDegrees(
+          width,
+          wordmark,
+        ),
+        aspectRatio: getSurnameWordmarkHeightRatio(wordmark),
+        rotationDegrees: entry.slot.rotationDegrees,
+      }),
+    [entry.slot.center, entry.slot.rotationDegrees, width, wordmark],
   );
 
-  useEffect(() => () => texture.dispose(), [texture]);
+  useEffect(() => () => placeholder.dispose(), [placeholder]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  if (!wordmark) return null;
+
+  const materialTexture = loadTexture ? texture : placeholder;
 
   return (
-    <sprite
-      ref={(sprite) => register(entry.label.countryId, sprite)}
-      position={[position.x, position.y, position.z]}
-      scale={[width, width * COUNTRY_LABEL_HEIGHT_RATIO, 1]}
+    <mesh
+      ref={(mesh) => register(entry.label.countryId, mesh)}
+      geometry={geometry}
       renderOrder={6}
       raycast={ignoreRaycast}
     >
-      <spriteMaterial
-        map={texture}
+      <meshBasicMaterial
+        map={materialTexture}
         transparent
         depthTest
         depthWrite={false}
-        sizeAttenuation
+        side={FrontSide}
       />
-    </sprite>
+    </mesh>
   );
-}
-
-function createSurnameLabelTexture(label: SurnameMapLabel): CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 720;
-  canvas.height = 240;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Canvas 2D is required for surname labels');
-
-  context.fillStyle = 'rgba(244, 239, 226, 0.94)';
-  context.fillRect(2, 2, canvas.width - 4, canvas.height - 4);
-  context.strokeStyle = 'rgba(67, 66, 58, 0.86)';
-  context.lineWidth = 4;
-  context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillStyle = '#2f342f';
-  const lines = [
-    compactSurnameForm(label.record.localForms[0]?.value),
-    compactSurnameForm(label.record.zhDisplay),
-    compactSurnameForm(label.record.romanizedForms[0]),
-  ];
-  lines.forEach((line, index) => {
-    const preferredSize = index === 0 ? 86 : 58;
-    const maximumSize = index === 0 ? 140 : 110;
-    context.font = `${preferredSize}px sans-serif`;
-    const measured = Math.max(1, context.measureText(line).width);
-    const fittedSize = Math.min(
-      maximumSize,
-      Math.max(preferredSize, (canvas.width * 0.82 * preferredSize) / measured),
-    );
-    context.font = `${fittedSize}px sans-serif`;
-    context.fillText(line, canvas.width / 2, 52 + index * 70);
-  });
-
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  texture.minFilter = LinearFilter;
-  texture.magFilter = LinearFilter;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-function compactSurnameForm(value: string | undefined | null): string {
-  if (!value) return '—';
-  const characters = Array.from(value);
-  return characters.length > 16
-    ? `${characters.slice(0, 15).join('')}…`
-    : value;
 }
 
 type MarkerRole = 'origin' | 'antipode' | 'selected';

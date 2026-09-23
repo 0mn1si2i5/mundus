@@ -7,7 +7,9 @@ import type { DevelopmentIndicator } from '../features/development/developmentDa
 import {
   parseNavigationNotice,
   parseUrlState,
+  DEFAULT_SURNAME_DISPLAY_MODE,
   type NavigationNotice,
+  type SurnameDisplayMode,
 } from './urlState';
 import type { SunlineClockMode } from './urlState';
 import { clampSunlineTime } from '../features/sunline/solar';
@@ -28,6 +30,7 @@ interface AppState {
   sunlineTimeMs: number;
   sunlineClockMode: SunlineClockMode;
   sunlinePlaying: boolean;
+  surnameDisplayMode: SurnameDisplayMode;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -48,6 +51,9 @@ interface AppState {
   syncSunlineLiveTime: (timestampMs?: number) => void;
   setSunlinePlaying: (playing: boolean) => void;
   returnSunlineToLive: (timestampMs?: number) => void;
+  setSurnameDisplayMode: (
+    mode: import('./urlState').SurnameDisplayMode,
+  ) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
   setAntipodeCountry: (country: CountryRef | null) => void;
@@ -72,6 +78,8 @@ const initialUrlState = parseUrlState(initialSearch);
 export const useAppStore = create<AppState>((set) => ({
   locale: preferredLocale(),
   ...initialUrlState,
+  surnameDisplayMode:
+    initialUrlState.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
   previewMode: null,
   navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
@@ -154,6 +162,7 @@ export const useAppStore = create<AppState>((set) => ({
       sunlinePlaying,
       sunlineClockMode: sunlinePlaying ? 'fixed' : state.sunlineClockMode,
     })),
+  setSurnameDisplayMode: (surnameDisplayMode) => set({ surnameDisplayMode }),
   returnSunlineToLive: (timestampMs = Date.now()) =>
     set({
       sunlineTimeMs: clampSunlineTime(timestampMs),

@@ -278,6 +278,7 @@ export function App() {
               sunline={globe.sunline}
               antipodeRelation={globe.antipodeRelation}
               surnameMapLabels={globe.surnameMapLabels}
+              surnameDisplayMode={globe.surnameDisplayMode}
             />
           </Suspense>
         </ErrorBoundary>

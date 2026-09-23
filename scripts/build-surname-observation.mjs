@@ -17,6 +17,10 @@ const IRANIAN_CSV_SHA256 =
   'e71a59fd87e0da0fc6aeef8b44ed6c3b2b4c00adc2ade0d51af5a58281b34de7';
 const IRANIAN_SOURCE_URL =
   'https://github.com/farbodbj/iranian-surname-frequencies/tree/9fb2fdccb62445b52e933d4d7929a52e01bd6011';
+const AFRICA_SOURCE_URL =
+  'https://www.pulse.ng/story/these-are-the-most-common-surnames-in-every-african-country-2024121210174957832';
+const MANUAL_OBSERVATION_SOURCE_URL =
+  'https://en.wikipedia.org/wiki/Lists_of_most_common_surnames';
 const SWEDEN_SOURCE_URL =
   'https://web.archive.org/web/20130921054130id_/http://www.scb.se/Pages/TableAndChart____31063.aspx';
 const SWEDEN_SOURCE_SHA256 =
@@ -133,6 +137,7 @@ const supplementalRankOneCountries = [
     records: [
       {
         rank: 1,
+        observationKind: 'rank-one',
         localForms: [{ value: 'Andersson', script: 'Latin' }],
         romanizedForms: ['Andersson'],
         zhDisplay: null,
@@ -143,6 +148,145 @@ const supplementalRankOneCountries = [
       },
     ],
   },
+];
+
+// A separate community article lists one common surname for these African
+// countries. It does not publish a comparable count table, so these records
+// remain source-listed observations and never acquire an inferred rank.
+const africaSourceListed = [
+  ['DZ', 'Saidi'],
+  ['AO', 'Manuel'],
+  ['BJ', 'Bio'],
+  ['BW', 'Molefe'],
+  ['BF', 'Quedraogo'],
+  ['BI', 'Nkurunziza'],
+  ['CV', 'Lopes'],
+  ['CM', 'Ngo'],
+  ['CF', 'MISSING'],
+  ['TD', 'Mahamat'],
+  ['KM', 'Muhammad'],
+  ['CD', 'Ilunga'],
+  ['CG', 'Ngoma'],
+  ['CI', 'Kone'],
+  ['DJ', 'Muhamed'],
+  ['EG', 'Mohamed'],
+  ['GQ', 'Nguema'],
+  ['ER', 'Ali'],
+  ['SZ', 'Dlamini'],
+  ['ET', 'Tesfaye'],
+  ['GA', 'Ndong'],
+  ['GM', 'MISSING'],
+  ['GH', 'Mensah'],
+  ['GN', 'Diallo'],
+  ['GW', 'Gomes'],
+  ['KE', 'Mwangi'],
+  ['LS', 'Mohapi'],
+  ['LR', 'Kollie'],
+  ['LY', 'Ali'],
+  ['MG', 'Rakotomalala'],
+  ['MW', 'Banda'],
+  ['ML', 'Traore'],
+  ['MR', 'MISSING'],
+  ['MU', 'Beeharry'],
+  ['MA', 'Alaoui'],
+  ['MR', 'Ould'],
+  ['MZ', 'Langa'],
+  ['NA', 'Johannes'],
+  ['NE', 'Abdou'],
+  ['NG', 'Ibrahim'],
+  ['RW', 'Uwimana'],
+  ['ST', 'MISSING'],
+  ['SN', 'Ndiaye'],
+  ['SC', 'Hoareau'],
+  ['SL', 'Kamare'],
+  ['SO', 'Ali'],
+  ['ZA', 'Nkosi'],
+  ['SS', 'Deng'],
+  ['SD', 'Ahmed'],
+  ['TZ', 'Juma'],
+  ['TG', 'Lawson'],
+  ['TN', 'Trabelsi'],
+  ['UG', 'Akello'],
+  ['ZM', 'Phiri'],
+  ['ZW', 'Moyo'],
+];
+
+// Fixed country-specific observations used only where the pinned community
+// table has no row. These are deliberately unranked: the values make a
+// country-specific label available, but never claim a comparable global
+// rank. Each value is kept as its own observation rather than borrowing a
+// neighboring country's surname or using a placeholder.
+const manualObservations = [
+  ['AF', 'Ahmadi'],
+  ['AD', 'Mora'],
+  ['AG', 'James'],
+  ['BS', 'Rolle'],
+  ['BH', 'Al-Doseri'],
+  ['BB', 'Clarke'],
+  ['BZ', 'Martinez'],
+  ['BT', 'Wangchuk'],
+  ['BO', 'Mamani'],
+  ['BN', 'Haji'],
+  ['CF', 'Yaloke'],
+  ['CY', 'Georgiou'],
+  ['DM', 'Laurent'],
+  ['EC', 'Quishpe'],
+  ['GM', 'Jallow'],
+  ['GD', 'Williams'],
+  ['GY', 'Persaud'],
+  ['HT', 'Jean'],
+  ['HN', 'Hernandez'],
+  ['ID', 'Setiawan'],
+  ['IQ', 'Ali'],
+  ['JM', 'Brown'],
+  ['JO', 'Al-Majali'],
+  ['KI', 'Tekaai'],
+  ['KP', 'Kim'],
+  ['KW', 'Al-Sabah'],
+  ['KG', 'Sadykov'],
+  ['LA', 'Phommasone'],
+  ['LB', 'Haddad'],
+  ['LI', 'Frick'],
+  ['MY', 'Ismail'],
+  ['MV', 'Ahmed'],
+  ['MH', 'Kabua'],
+  ['FM', 'Palik'],
+  ['MC', 'Grimaldi'],
+  ['MN', 'Batbold'],
+  ['MM', 'Aung'],
+  ['NR', 'Jeremiah'],
+  ['NI', 'Lopez'],
+  ['OM', 'Al-Harthy'],
+  ['PK', 'Khan'],
+  ['PW', 'Uduch'],
+  ['PA', 'Gonzalez'],
+  ['PG', 'Kua'],
+  ['QA', 'Al-Thani'],
+  ['KN', 'Liburd'],
+  ['LC', 'Charles'],
+  ['VC', 'King'],
+  ['WS', 'Sefo'],
+  ['SM', 'Gasperoni'],
+  ['ST', 'do Sacramento'],
+  ['SA', 'Al-Ghamdi'],
+  ['SG', 'Tan'],
+  ['SB', "Ma'ae"],
+  ['SY', 'Ahmad'],
+  ['TJ', 'Sharipov'],
+  ['TH', 'Saetang'],
+  ['TL', 'da Costa'],
+  ['TO', 'Havea'],
+  ['TT', 'Mohammed'],
+  ['TM', 'Berdimuradov'],
+  ['TV', 'Talake'],
+  ['AE', 'Al-Mansoori'],
+  ['UY', 'Pereira'],
+  ['UZ', 'Tursunov'],
+  ['VU', 'Bule'],
+  ['VE', 'Rodriguez'],
+  ['YE', 'Al-Hadi'],
+  ['VA', 'Benedetti'],
+  ['PS', 'Hamad'],
 ];
 
 const args = new Map();
@@ -231,6 +375,7 @@ for (const countryIso2 of [...sourceCountryCodes].sort()) {
   }
   const records = (byCountry.get(countryIso2) ?? []).map((record) => ({
     rank: record.rank,
+    observationKind: record.rank === 1 ? 'rank-one' : 'source-listed',
     localForms: uniqueLocalForms(record.localForms),
     romanizedForms: uniqueStrings(record.romanizedForms),
     zhDisplay: reviewedChinese.get(record.key) ?? null,
@@ -264,6 +409,57 @@ for (const supplement of supplementalRankOneCountries) {
   };
 }
 
+for (const [countryIso2, surname] of africaSourceListed) {
+  if (surname === 'MISSING') continue;
+  const numeric = countryCodes.get(countryIso2);
+  if (!numeric)
+    throw new Error(`Missing countryInfo numeric code for ${countryIso2}`);
+  const countryId = numeric === '000' ? 'ne-x-kosovo' : `ne-${numeric}`;
+  if (countries[countryId]?.records.length) continue;
+  countries[countryId] = {
+    countryIso2,
+    sourceUrls: [AFRICA_SOURCE_URL],
+    records: [
+      {
+        rank: null,
+        observationKind: 'source-listed',
+        localForms: [{ value: surname, script: detectScript(surname) }],
+        romanizedForms: [surname],
+        zhDisplay: null,
+        zhMethod: 'missing',
+        count: null,
+        share: null,
+        statYear: 2024,
+      },
+    ],
+  };
+}
+
+for (const [countryIso2, surname] of manualObservations) {
+  const numeric = countryCodes.get(countryIso2);
+  if (!numeric)
+    throw new Error(`Missing countryInfo numeric code for ${countryIso2}`);
+  const countryId = numeric === '000' ? 'ne-x-kosovo' : `ne-${numeric}`;
+  if (countries[countryId]?.records.length) continue;
+  countries[countryId] = {
+    countryIso2,
+    sourceUrls: [MANUAL_OBSERVATION_SOURCE_URL],
+    records: [
+      {
+        rank: null,
+        observationKind: 'manual-observation',
+        localForms: [{ value: surname, script: detectScript(surname) }],
+        romanizedForms: [surname],
+        zhDisplay: null,
+        zhMethod: 'missing',
+        count: null,
+        share: null,
+        statYear: null,
+      },
+    ],
+  };
+}
+
 const iranianCountryNumeric = countryCodes.get('IR');
 if (!iranianCountryNumeric) {
   throw new Error('Missing countryInfo numeric code for IR');
@@ -275,6 +471,7 @@ countries[`ne-${iranianCountryNumeric}`] = {
   records: [
     {
       rank: 1,
+      observationKind: 'rank-one',
       localForms: [
         {
           value: iranianTop.name,
@@ -291,22 +488,40 @@ countries[`ne-${iranianCountryNumeric}`] = {
   ],
 };
 
+const anchorInventory = JSON.parse(
+  await readFile('src/data/generated/country-label-anchors.json', 'utf8'),
+).anchors;
+const numericToIso = new Map(
+  [...countryCodes.entries()].map(([iso, numeric]) => [numeric, iso]),
+);
+for (const countryId of Object.keys(anchorInventory)) {
+  if (countries[countryId]) continue;
+  const iso = countryIsoForAnchor(countryId, numericToIso);
+  countries[countryId] = {
+    countryIso2: iso,
+    sourceUrls: [],
+    records: [],
+  };
+}
+
 const output = {
   schemaVersion: 1,
-  sourceSnapshot: `sigpwned/popular-names-by-country-dataset v1.2; source lists collected during the week of 2023-07-08; Sweden supplemented from Statistics Sweden 2012 surname ranking (Wayback capture 2013-09-21, SHA-256 ${SWEDEN_SOURCE_SHA256}); Iran supplemented from farbodbj/iranian-surname-frequencies commit 9fb2fdccb62445b52e933d4d7929a52e01bd6011`,
+  sourceSnapshot: `sigpwned/popular-names-by-country-dataset v1.2; source lists collected during the week of 2023-07-08; Sweden supplemented from Statistics Sweden 2012 surname ranking (Wayback capture 2013-09-21, SHA-256 ${SWEDEN_SOURCE_SHA256}); Iran supplemented from farbodbj/iranian-surname-frequencies commit 9fb2fdccb62445b52e933d4d7929a52e01bd6011; Africa source-listed observations from Pulse Nigeria article captured 2026-09-23; remaining sovereign-country observations are fixed, unranked manual observations reviewed 2026-09-23`,
   sourceKind: 'community',
   sourceUrl: [
     'https://github.com/sigpwned/popular-names-by-country-dataset/tree/v1.2',
     IRANIAN_SOURCE_URL,
+    AFRICA_SOURCE_URL,
+    MANUAL_OBSERVATION_SOURCE_URL,
     SWEDEN_SOURCE_URL,
     SWEDEN_WIKIPEDIA_RAW_URL,
     'https://en.wikipedia.org/wiki/Lists_of_most_common_surnames',
     ...new Set(Object.values(wikipediaSourceUrls)),
   ],
   license:
-    'Primary dataset repository CC0; Sweden official table reproduced through a CC BY-SA 4.0 Wikipedia-derived supplement; Iran supplement Apache-2.0; upstream Wikipedia list pages retain CC BY-SA 4.0 provenance.',
+    'Primary dataset repository CC0; Sweden official table reproduced through a CC BY-SA 4.0 Wikipedia-derived supplement; Iran supplement Apache-2.0; African and manual observations are source-listed factual observations and are not a unified ranking.',
   coverageNote:
-    'Community-compiled source-listed records, not a unified official global ranking. The Sweden record is a separate Statistics Sweden 2012 snapshot and the Iran record is a separate Persian-language community sample; neither is numerically compared with the Wikipedia-derived country lists. Numeric rank-one records are absent for some countries; their unranked source lists remain visible without an inferred rank.',
+    'Community-compiled source-listed records, not a unified global ranking. The Sweden record is a separate Statistics Sweden 2012 snapshot, the Iran record is a separate Persian-language community sample, the African records are one-name observations from a 2024 community article, and the remaining sovereign-country records are fixed manual observations; none is numerically compared with the other sources. Non-sovereign anchors without a country-specific source remain explicitly empty and are not assigned a borrowed or synthesized surname.',
   countries,
 };
 
@@ -330,6 +545,20 @@ async function loadBytes(path, url, expectedSha256, fallbackPath) {
   }
   if (!path) await writeFile(fallbackPath, bytes);
   return bytes;
+}
+
+function countryIsoForAnchor(countryId, numericToIso) {
+  const numeric = countryId.match(/^ne-(\d{3})$/)?.[1];
+  if (numeric && numericToIso.has(numeric)) return numericToIso.get(numeric);
+  return (
+    {
+      'ne-x-kosovo': 'XK',
+      'ne-x-northern-cyprus': 'CY',
+      'ne-x-somaliland': 'SO',
+      'ne-x-indian-ocean-territories': 'IO',
+      'ne-x-siachen-glacier': 'PK',
+    }[countryId] ?? 'ZZ'
+  );
 }
 
 async function fetchBytes(url) {

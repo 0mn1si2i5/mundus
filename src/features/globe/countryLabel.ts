@@ -68,7 +68,11 @@ const FALLBACK_LABEL_ANCHORS: Readonly<Record<string, CountryLabelAnchor>> = {
 export function getFallbackCountryLabelAnchor(
   countryId: string,
 ): CountryLabelAnchor | null {
-  return FALLBACK_LABEL_ANCHORS[countryId] ?? null;
+  return (
+    FALLBACK_LABEL_ANCHORS[countryId] ??
+    GENERATED_LABEL_ANCHORS[countryId] ??
+    null
+  );
 }
 
 type PolygonCoordinates = Polygon['coordinates'];

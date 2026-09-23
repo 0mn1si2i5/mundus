@@ -25,9 +25,11 @@ import {
   type SurnameLoadState,
 } from '../surnames/useSurnameDataset';
 import {
-  getRankOneSurnameRecord,
+  getDisplaySurnameRecord,
   type SurnameMapLabel,
 } from '../surnames/surnameData';
+import type { SurnameDisplayMode } from '../../state/urlState';
+import { DEFAULT_SURNAME_DISPLAY_MODE } from '../../state/urlState';
 
 export interface GlobePresentation {
   countryFills: ReadonlyMap<string, string> | null;
@@ -35,6 +37,7 @@ export interface GlobePresentation {
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
   surnameMapLabels: readonly SurnameMapLabel[];
+  surnameDisplayMode: SurnameDisplayMode;
 }
 
 export type AntipodeRelationLoadState = 'idle' | 'loading' | 'error' | 'ready';
@@ -86,6 +89,9 @@ export function useModePresentation(): ModePresentation | null {
   const indicator = useAppStore((state) => state.developmentIndicator);
   const year = useAppStore((state) => state.developmentYear);
   const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
+  const surnameDisplayMode =
+    useAppStore((state) => state.surnameDisplayMode) ??
+    DEFAULT_SURNAME_DISPLAY_MODE;
   const developmentData = useDevelopmentDataset(activeMode === 'development');
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
   const surnameData = useSurnameDataset(activeMode === 'surnames');
@@ -130,7 +136,7 @@ export function useModePresentation(): ModePresentation | null {
     const country = surnameData.data.countriesById.get(
       selectedCountry.countryId,
     );
-    const record = getRankOneSurnameRecord(country);
+    const record = getDisplaySurnameRecord(country);
     return record
       ? {
           countryId: selectedCountry.countryId,
@@ -152,6 +158,7 @@ export function useModePresentation(): ModePresentation | null {
           sunline: null,
           antipodeRelation: relation,
           surnameMapLabels: [],
+          surnameDisplayMode,
         },
         selectedCountry,
         antipodeCountry,
@@ -169,6 +176,7 @@ export function useModePresentation(): ModePresentation | null {
           sunline: null,
           antipodeRelation: null,
           surnameMapLabels: [],
+          surnameDisplayMode,
         },
         selectedCountry,
         developmentData,
@@ -182,6 +190,7 @@ export function useModePresentation(): ModePresentation | null {
           sunline: { subsolarPoint: sun!.position.subsolarPoint },
           antipodeRelation: null,
           surnameMapLabels: [],
+          surnameDisplayMode,
         },
         point,
         selectedCountry,
@@ -197,6 +206,7 @@ export function useModePresentation(): ModePresentation | null {
           sunline: null,
           antipodeRelation: null,
           surnameMapLabels: surnameMapLabel ? [surnameMapLabel] : [],
+          surnameDisplayMode,
         },
         selectedCountry,
         surnameData,
@@ -220,6 +230,9 @@ export function useGlobePresentation(): GlobePresentation {
   const developmentData = useDevelopmentDataset(activeMode === 'development');
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
   const surnameData = useSurnameDataset(activeMode === 'surnames');
+  const surnameDisplayMode =
+    useAppStore((state) => state.surnameDisplayMode) ??
+    DEFAULT_SURNAME_DISPLAY_MODE;
 
   const countryFills = useMemo(() => {
     if (activeMode !== 'development' || developmentData.status !== 'ready') {
@@ -250,7 +263,7 @@ export function useGlobePresentation(): GlobePresentation {
       return [];
     }
     return surnameData.data.countries.flatMap((country) => {
-      const record = getRankOneSurnameRecord(country);
+      const record = getDisplaySurnameRecord(country);
       return record
         ? [
             {
@@ -281,6 +294,7 @@ export function useGlobePresentation(): GlobePresentation {
     sunline,
     antipodeRelation,
     surnameMapLabels,
+    surnameDisplayMode,
   };
 }
 

@@ -1,0 +1,271 @@
+import { describe, expect, it } from 'vitest';
+import type { CountryFeature } from './countryData';
+import {
+  chooseAlternativeSurnameLabelSlot,
+  chooseSurnameLabelSlot,
+  createSurnameLabelSlotCandidates,
+  isSurnameLabelSlotAllowed,
+  maximizeSurnameLabelSlot,
+  sampleSurnameLabelEnvelope,
+} from './surnameLabelSlots';
+import generatedSlots from '../../data/generated/surname-label-slots.json';
+
+const country = (
+  countryId: string,
+  coordinates: number[][][],
+): CountryFeature => ({
+  type: 'Feature',
+  properties: { countryId, name: countryId },
+  geometry: { type: 'Polygon', coordinates },
+});
+
+describe('surname label slots', () => {
+  it('offers straight and arched deterministic candidates', () => {
+    const straight = createSurnameLabelSlotCandidates(
+      { latitude: 0, longitude: 0 },
+      2,
+      'straight',
+    );
+    const arched = createSurnameLabelSlotCandidates(
+      { latitude: 0, longitude: 0 },
+      2,
+      'arched',
+    );
+    expect(straight).toHaveLength(15);
+    expect(arched.every((slot) => slot.curvature > 0)).toBe(true);
+  });
+
+  it('allows ocean overflow while rejecting sampled neighboring land', () => {
+    const slots = createSurnameLabelSlotCandidates(
+      { latitude: 0, longitude: 0 },
+      2,
+      'straight',
+    );
+    const south = slots.find((slot) => slot.oceanDirection === 'south')!;
+    const neighboringLand = country('neighbor', [
+      [
+        [-1, -1],
+        [-1, 1],
+        [1, 1],
+        [1, -1],
+        [-1, -1],
+      ],
+    ]);
+    expect(isSurnameLabelSlotAllowed(south, 'own', [], 1)).toBe(true);
+    expect(isSurnameLabelSlotAllowed(south, 'own', [neighboringLand], 1)).toBe(
+      false,
+    );
+    expect(sampleSurnameLabelEnvelope(south).length).toBe(25);
+  });
+
+  it('keeps the wordmark center on the selected country', () => {
+    const slots = createSurnameLabelSlotCandidates(
+      { latitude: 0, longitude: 0 },
+      2,
+      'straight',
+    );
+    const own = country('own', [
+      [
+        [-1, -1],
+        [-1, 1],
+        [1, 1],
+        [1, -1],
+        [-1, -1],
+      ],
+    ]);
+    const offshore = {
+      ...slots.find((slot) => slot.oceanDirection === 'south')!,
+      center: { latitude: -5, longitude: 0 },
+    };
+    expect(isSurnameLabelSlotAllowed(offshore, 'own', [own], 0.5)).toBe(false);
+    expect(isSurnameLabelSlotAllowed(slots[0]!, 'own', [own], 0.5)).toBe(true);
+  });
+
+  it('keeps generated 50m safety flags explicit for every candidate', () => {
+    expect(
+      generatedSlots.candidatePolicy.evaluatedCentersPerCountry,
+    ).toBeGreaterThanOrEqual(8);
+    const candidates = Object.values(generatedSlots.slots).flat();
+    expect(candidates.length).toBeGreaterThanOrEqual(240);
+    expect(candidates.every((slot) => typeof slot.landSafe === 'boolean')).toBe(
+      true,
+    );
+    expect(candidates.some((slot) => slot.landSafe === false)).toBe(true);
+    expect(
+      candidates.some(
+        (slot) => slot.landSafe && typeof slot.squareMax === 'number',
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps the generated candidate metadata within its declared geometry caps', () => {
+    const candidates = Object.values(generatedSlots.slots).flat();
+    // A zero-width candidate is an explicit no-safe-envelope sentinel for a
+    // rare disputed or sliver geometry; runtime filtering hides it.
+    expect(candidates.every((slot) => slot.maxAngularDegrees >= 0)).toBe(true);
+    expect(
+      candidates.every(
+        (slot) => slot.maxAngularDegrees <= (slot.countryScaleCap ?? 20) + 1e-9,
+      ),
+    ).toBe(true);
+    expect(
+      candidates.every(
+        (slot) =>
+          (slot.neighborSafe ?? slot.maxAngularDegrees) <=
+          slot.maxAngularDegrees + 1e-9,
+      ),
+    ).toBe(true);
+    const brazil = generatedSlots.slots['ne-076']!;
+    expect(
+      new Set(
+        brazil.map(
+          (slot) => `${slot.center.latitude}:${slot.center.longitude}`,
+        ),
+      ).size,
+    ).toBeGreaterThan(1);
+    const marshallIslands = generatedSlots.slots['ne-584']!;
+    expect(
+      Math.max(...marshallIslands.map((slot) => slot.maxAngularDegrees)),
+    ).toBeLessThanOrEqual(
+      Math.max(...marshallIslands.map((slot) => slot.countryScaleCap ?? 20)) +
+        1e-9,
+    );
+  });
+
+  it('does not let coarse local clearance cap a large country below its area ceiling', () => {
+    const wordmark = {
+      value: 'Silva',
+      source: 'latin' as const,
+      requestedMode: 'latin' as const,
+      fellBack: false,
+      generated: false,
+      layout: 'straight' as const,
+      characterCount: 5,
+    };
+    const expanded = maximizeSurnameLabelSlot(
+      {
+        layout: 'straight',
+        center: { latitude: 0, longitude: 0 },
+        rotationDegrees: 0,
+        curvature: 0,
+        maxAngularDegrees: 9.025,
+        countryScaleCap: 20,
+        localClearance: 9,
+        oceanDirection: 'none',
+        landSafe: true,
+      },
+      'own',
+      [],
+      wordmark,
+    );
+    expect(expanded?.maxAngularDegrees).toBe(20);
+  });
+
+  it('keeps all four generated straight directions when the geometry has room', () => {
+    const brazilDirections = new Set(
+      generatedSlots.slots['ne-076']!.filter(
+        (slot) => slot.layout === 'straight',
+      ).map((slot) => slot.rotationDegrees),
+    );
+    expect(brazilDirections).toEqual(new Set([0, 45, 90, 135]));
+  });
+
+  it('keeps a layout candidate for every generated country after safety fallback', () => {
+    const wordmark = {
+      value: 'Atlas',
+      source: 'latin' as const,
+      requestedMode: 'latin' as const,
+      fellBack: false,
+      generated: false,
+      layout: 'straight' as const,
+      characterCount: 5,
+    };
+    const countryIds = Object.keys(generatedSlots.slots) as Array<
+      keyof typeof generatedSlots.slots
+    >;
+    expect(countryIds).toHaveLength(240);
+    for (const countryId of countryIds) {
+      const first = generatedSlots.slots[countryId]![0]!;
+      expect(
+        chooseSurnameLabelSlot(
+          countryId,
+          { point: first.center, clearanceDegrees: first.maxAngularDegrees },
+          wordmark,
+          [],
+        ),
+      ).not.toBeNull();
+    }
+  });
+
+  it('expands a safe wordmark to the largest sampled envelope', () => {
+    const [slot] = createSurnameLabelSlotCandidates(
+      { latitude: 0, longitude: 0 },
+      2,
+      'straight',
+    );
+    const wordmark = {
+      value: 'Atlas',
+      source: 'latin' as const,
+      requestedMode: 'latin' as const,
+      fellBack: false,
+      generated: false,
+      layout: 'straight' as const,
+      characterCount: 5,
+    };
+    const expanded = maximizeSurnameLabelSlot(slot!, 'own', [], wordmark)!;
+    expect(expanded.maxAngularDegrees).toBe(
+      Math.min(20, slot!.countryScaleCap ?? 20),
+    );
+
+    const neighboringLand = country('neighbor', [
+      [
+        [-20, -20],
+        [-20, 20],
+        [20, 20],
+        [20, -20],
+        [-20, -20],
+      ],
+    ]);
+    expect(
+      maximizeSurnameLabelSlot(slot!, 'own', [neighboringLand], wordmark),
+    ).toBeNull();
+  });
+
+  it('switches a blocked selected wordmark to a different safe candidate', () => {
+    const wordmark = {
+      value: 'Wang',
+      source: 'latin' as const,
+      requestedMode: 'latin' as const,
+      fellBack: false,
+      generated: false,
+      layout: 'straight' as const,
+      characterCount: 4,
+    };
+    const current = chooseSurnameLabelSlot(
+      'ne-156',
+      {
+        point: { latitude: 31.34112, longitude: 109.462995 },
+        clearanceDegrees: 9.75,
+      },
+      wordmark,
+      [],
+    );
+    expect(current).not.toBeNull();
+    const alternate = chooseAlternativeSurnameLabelSlot(
+      'ne-156',
+      {
+        point: { latitude: 31.34112, longitude: 109.462995 },
+        clearanceDegrees: 9.75,
+      },
+      wordmark,
+      [],
+      current!,
+    );
+    expect(alternate).not.toBeNull();
+    expect(
+      `${alternate!.center.latitude.toFixed(5)}:${alternate!.center.longitude.toFixed(5)}`,
+    ).not.toBe(
+      `${current!.center.latitude.toFixed(5)}:${current!.center.longitude.toFixed(5)}`,
+    );
+  });
+});
