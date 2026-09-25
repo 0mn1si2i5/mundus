@@ -137,9 +137,10 @@ Release identity is canonical:
 `package.json` is private build metadata; its `0.1.0` value is not a product
 release identity.
 
-Plan 1 is terminal in:
+Plan 1 is terminal in the historical record. Its execution worktree and raw
+outputs were retired with the Mundus migration packet on 2026-09-25:
 
-- worktree: `.worktrees/codex-ghsl-global-proof`;
+- historical worktree: `.worktrees/codex-ghsl-global-proof`;
 - branch: `codex/ghsl-global-proof`;
 - terminal commit: `6e396d90ef215085a3d5bc8dbf602b6e4f239051`;
 - parent implementation commit: `e2d060518438b9b4b7c86cef53bbd5aeecd94341`.
@@ -156,13 +157,14 @@ Verified terminal evidence at the 2026-08-01 checkpoint:
 - Build A reached 10,000 fill records at about 9,261 records/hour, projecting
   about 10.81 hours for the fill stage and breaching the approved eight-hour
   ceiling;
-- Build A was checkpointed during fill and Build B after outline. Neither is a
-  complete formal build, and neither may be resumed, reused, copied, deleted,
-  or represented as completed Build A/B evidence;
+- Build A was checkpointed during fill and Build B after outline. Neither was a
+  complete formal build; neither was resumed, reused, copied, or represented as
+  completed Build A/B evidence, and both outputs were retired with the migration
+  packet;
 - the terminal decision is `STOP_GLOBAL_MORPHOLOGY`. Plans 2 through 7 are
   frozen and blocked unless separately reopened and approved.
 
-The concise terminal evidence and preserved output paths are recorded in
+The concise terminal evidence and retired output identities are recorded in
 `docs/GHSL_EXECUTION_HANDOFF.md`. V1.1.0 convergence is complete; do not repeat
 its publication steps or treat local GHSL plans as current execution
 instructions.

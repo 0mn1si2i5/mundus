@@ -289,8 +289,10 @@ of these outcomes:
 
 The Surname Atlas implementation is now tracked in `src/features/surnames/`,
 with its data contract and source decision recorded in
-`docs/NAMING_OBSERVATION_RESEARCH.md`. Release validation for this packet must
-still pass the normal protected-main, Pages artifact, and desktop/mobile gates.
+`docs/NAMING_OBSERVATION_RESEARCH.md`. It is currently frozen while the
+terminal migration and GHSL evidence are retired. Release validation for this
+packet must still pass the normal protected-main, Pages artifact, and
+desktop/mobile gates when work resumes.
 
 Do not silently choose on the owner's behalf.
 
@@ -326,30 +328,30 @@ Recommended investigation order:
 
 ## 9. Migration Evidence
 
-Three private repositories preserve device-migration context:
+The dedicated Mundus migration packet was retired on 2026-09-25 after the
+current checkout, terminal GHSL handoff, and local recovery inventory were
+audited. The private repository
+`0mn1si2i5/Mundus-migration-2026-08`, its release, the local
+`/Users/ostrovsky/Mundus-restore` packet, and the stale GHSL worktree were
+removed. There is no remaining restore path for that packet.
+
+The following separate repositories still preserve unrelated device-migration
+context:
 
 - `0mn1si2i5/Zen-migration-2026-08` — cross-project recovery control plane and
   restore evidence;
 - `0mn1si2i5/Codex-session-archive-2026-08` — sanitized historical Codex
   sessions, attachments, and memories;
-- `0mn1si2i5/Mundus-migration-2026-08` — dedicated Mundus Git refs, local-only
-  plans, worktree patches, pinned GHSL source/checkpoint, complete proof tree,
-  stopped builds, and post-snapshot increments.
 
 Use migrated conversations and plans to understand why decisions were made.
 Never treat them as current Git, product, or authorization truth. Verify every
 material claim against this checkout and current remote evidence.
 
-The large Mundus snapshot is not a normal project dependency. Restore it only
-for a separately approved need such as GHSL evidence inspection. Requirements:
-
-- authenticate against the private release;
-- verify every release asset and reconstructed archive hash;
-- reject unsafe archive paths;
-- extract into a new empty staging directory with adequate disk space;
-- inspect snapshot refs and patches before applying anything;
-- never overlay the current clone;
-- never resume, reuse, copy, delete, or call incomplete Build A/B complete.
+The terminal GHSL decision and its measured evidence remain summarized in
+`docs/GHSL_EXECUTION_HANDOFF.md`. The deleted packet contained recovery inputs
+and incomplete build outputs, not a runtime dependency or a completed build.
+Future GHSL work requires a separately approved reopening and a new source and
+execution plan; it cannot rely on the retired packet.
 
 ## 10. Development Workflow After Approval
 

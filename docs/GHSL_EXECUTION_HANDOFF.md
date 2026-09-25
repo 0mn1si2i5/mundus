@@ -2,11 +2,14 @@
 
 Status: terminal `STOP_GLOBAL_MORPHOLOGY`; no active GHSL execution
 
-Updated: 2026-08-01, Asia/Shanghai
+Updated: 2026-09-25, Asia/Shanghai
 
 This tracked handoff records the verified end state of the GHSL Human
-Morphology global feasibility proof. It is evidence and status, not permission
-to restart the 48-hour attempt, resume a build, or begin a later GHSL plan.
+Morphology global feasibility proof. The separate migration packet that held
+the raw source, checkpoints, and incomplete build outputs was retired on
+2026-09-25. This document retains the terminal decision and measured results;
+it is evidence and status, not permission to restart the 48-hour attempt,
+resume a build, or begin a later GHSL plan.
 
 ## Identity
 
@@ -49,10 +52,10 @@ Plans 1 through 7 plus their approval gates complete.
 The terminal decision is `STOP_GLOBAL_MORPHOLOGY`. Plans 2 through 7 are frozen
 and blocked unless the product owner separately reopens and approves the work.
 
-## Preserved Outputs
+## Retired Outputs
 
-All relative `.cache` paths below are relative to
-`/Users/bytedance/Desktop/Zen/Mundus/.worktrees/codex-ghsl-global-proof`.
+The following paths were present only in the retired migration packet and no
+longer exist on this device:
 
 - incomplete Build A:
   `.cache/ghsl/proof/formal-build-a-e2d0605`;
@@ -65,11 +68,13 @@ All relative `.cache` paths below are relative to
 - strict audit evidence:
   `.cache/ghsl/production-ccl/audit.json`.
 
-The incomplete and diagnostic outputs must not be resumed, reused, copied,
-deleted, counted as formal Build A/B, or represented as completed evidence.
-Never hand-edit the SQLite checkpoint or its evidence.
+The incomplete and diagnostic outputs were never resumed, reused, copied,
+counted as formal Build A/B, or represented as completed evidence. Their
+terminal status is retained above; the raw files and checkpoints were deleted
+with the retired packet.
 
-The pinned source archive remains:
+The pinned source archive was also removed with the retired packet. Its
+terminal identity was:
 
 `/Users/bytedance/Desktop/Zen/Mundus/.worktrees/codex-ghsl-morphology-feasibility/.cache/ghsl/downloads/GHS_BUILT_S_E2020_GLOBE_R2023A_54009_100_V1_0.zip`
 
@@ -78,12 +83,11 @@ Its SHA-256 is
 
 ## First Action
 
-Read this terminal status and the current checkpoint in
-`docs/ROADMAP_HANDOFF.md`, then continue the separately authorized V1.1.0
-Parchment Atlas convergence. Do not run recovery commands or restart the
-48-hour attempt. Local plans under `docs/superpowers/` are execution aids, not
-current authorization; durable decisions and final evidence belong in tracked
-documents and PR #5.
+Read this terminal status and the terminal checkpoint summarized in
+`docs/ROADMAP_HANDOFF.md`, then continue only the currently approved Mundus
+work. Do not run recovery commands or restart the 48-hour attempt. Local plans
+under `docs/superpowers/` are execution aids, not current authorization;
+durable decisions and final evidence belong in tracked documents.
 
 ## Reopening Gate
 

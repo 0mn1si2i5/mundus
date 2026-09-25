@@ -458,7 +458,7 @@ pnpm test:e2e
 ```
 
 Local cache inspection is intentionally separate from the release gates:
-`pnpm cache:status` reports known research and GHSL cache occupancy, while
+`pnpm cache:status` reports known research cache occupancy, while
 `pnpm cache:prune` removes only completed run folders, stale PID files, and
 logs. Source archives are never removed by the routine command. Never make
 cache cleanup part of `pnpm check` or CI.

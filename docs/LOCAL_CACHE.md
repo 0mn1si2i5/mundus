@@ -1,7 +1,8 @@
 # Local cache lifecycle
 
-Large research inputs and GHSL evidence are local evidence, not release assets.
-They must stay outside `pnpm check`, Pages builds, and routine browser tests.
+Large research inputs are local evidence, not release assets. They must stay
+outside `pnpm check`, Pages builds, and routine browser tests. The retired GHSL
+proof cache is no longer retained on this device.
 Keep any future large source archive in a user cache or external volume; do not
 put it inside a Git worktree's `tmp/` directory.
 
@@ -24,6 +25,6 @@ pnpm cache:prune
 The command requires `--apply` internally and refuses to touch a cache with a
 live PID. Source archives are never removed by this command.
 
-The cleanup tool never removes `phase0-current-rules`, GHSL proof caches, or
-unregistered worktrees automatically. Those contain review evidence and require
-a separate decision about retention.
+The cleanup tool never removes `phase0-current-rules` or unregistered worktrees
+automatically. Any future large evidence cache requires a separate decision
+about retention and cleanup.
