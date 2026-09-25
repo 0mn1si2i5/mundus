@@ -55,7 +55,6 @@ The release is complete only when:
 
 ### Do not add before launch
 
-- Human Terrain or any fourth mode;
 - new datasets, content modes, analytics, accounts, backend, PWA, or CMS;
 - plugin/runtime marketplace or generalized extension framework;
 - visual redesign unrelated to a release-blocking defect;

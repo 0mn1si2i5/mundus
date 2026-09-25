@@ -18,8 +18,6 @@
     "data:cities": "node scripts/build-geonames-major-cities.mjs",
     "data:cities:capture": "node scripts/build-geonames-major-cities.mjs --capture",
     "data:surnames": "node scripts/build-surname-observation.mjs",
-    "cache:status": "node scripts/manage-local-cache.mjs",
-    "cache:prune": "node scripts/manage-local-cache.mjs --apply",
     "toolchain:verify": "node scripts/verify-toolchain.mjs",
     "data:verify": "pnpm toolchain:verify && node scripts/verify-generated-data.mjs",
     "release:verify": "node scripts/verify-pages-artifact.mjs",

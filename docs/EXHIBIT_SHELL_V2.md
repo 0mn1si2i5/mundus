@@ -26,8 +26,8 @@ The stable product hierarchy is:
   points;
 - the **Mode Atlas**, containing the complete browsable collection;
 - independent **Observation Modes**, each answering one clear question;
-- shared, explicitly designed **Observation Overlays**, such as the stopped
-  GHSL Human Morphology proposal, which do not consume a mode identity.
+- shared, explicitly designed **Observation Overlays**, which do not consume a
+  mode identity.
 
 Other Side remains a long-term observation mode but is no longer required to
 be the automatic product entry. Development and Sunline remain available and
@@ -267,7 +267,6 @@ and live smoke passed on the same SHA.
 Shell V2 does not:
 
 - implement another new observation mode;
-- restart GHSL or restore the large migration snapshot;
 - redesign the scientific meaning of Other Side, Development, or Sunline;
 - introduce accounts, backend services, telemetry, cloud state, PWA/offline
   packaging, arbitrary layers, runtime plugins, or a marketplace;

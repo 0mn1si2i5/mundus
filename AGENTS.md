@@ -24,13 +24,9 @@ The ignored V1.1 convergence plan and the tracked candidate/publication
 documents are historical execution evidence. Do not execute their pre-merge
 steps again or copy the ignored plan into Git.
 
-GHSL Human Morphology is a stopped research direction, not a fourth mode or a
-scheduled product identity.
-GHSL Plan 1 terminated with `STOP_GLOBAL_MORPHOLOGY` at
-`6e396d90ef215085a3d5bc8dbf602b6e4f239051`; Plans 2–7 are frozen. Its detailed
-recovery plan is historical evidence and does not authorize a restart. The
-active roadmap authority is `docs/ROADMAP_HANDOFF.md`; older V1 release text
-below is durable history unless current Git and remote evidence agree with it.
+The active roadmap authority is `docs/ROADMAP_HANDOFF.md`; older V1 release
+text below is durable history unless current Git and remote evidence agree with
+it.
 
 This file is the required starting point for an agent entering this repository
 with no previous context. Read it completely before changing files or remote
@@ -45,14 +41,12 @@ as both Mundus's technical product lead and its primary developer: first
 understand and challenge the next direction, then implement only an accepted,
 bounded product packet.
 
-Do not begin feature implementation merely because an older plan or migration
-snapshot contains executable steps. The first continuation deliverable is a
+Do not begin feature implementation merely because an older plan contains
+executable steps. The first continuation deliverable is a
 current product-and-repository assessment, a decision on the roadmap fork, and
 a proposed next requirements packet for product-owner review. The active status
-and stop conditions remain `docs/ROADMAP_HANDOFF.md` and
-`docs/GHSL_EXECUTION_HANDOFF.md`; this continuation entry does not authorize
-GHSL restart, release metadata changes, migration restoration, or remote-state
-mutation.
+and product boundaries remain in `docs/ROADMAP_HANDOFF.md`; this continuation
+entry does not authorize release metadata changes or remote-state mutation.
 
 ## Local resource impact gate
 
@@ -89,8 +83,8 @@ was removed, and whether another run would require a new download.
 
 Sections 1–13 below preserve the completed V1.0.0 execution contract and must
 not be executed as current release instructions. Current work starts from
-`docs/ROADMAP_HANDOFF.md` and the tracked terminal GHSL handoff. PR #5 remains
-the durable V1.1 review record. In particular, do not repeat V1 visibility,
+`docs/ROADMAP_HANDOFF.md`. PR #5 remains the durable V1.1 review record. In
+particular, do not repeat V1 visibility,
 deployment, tag, or Release actions.
 
 ## 1. Your assignment
@@ -211,8 +205,8 @@ Do not begin by scanning random implementation files. Read the following in
 order so product intent and release boundaries remain intact:
 
 1. `AGENTS.md` — this startup and execution contract.
-2. `docs/ROADMAP_HANDOFF.md` — planning layers, GHSL phase gates, current
-   handoff entry point, and post-GHSL direction.
+2. `docs/ROADMAP_HANDOFF.md` — planning layers, current handoff entry point,
+   and the bounded product direction.
 3. `docs/MVP_RELEASE_PLAN.md` — release packets, P0/P1/P2 rules, and final
    acceptance checklist.
 4. `docs/RELEASE_RUNBOOK.md` — exact Pages artifact, deploy, live-smoke, and
@@ -457,12 +451,6 @@ Complete local desktop/mobile browser gate:
 pnpm test:e2e
 ```
 
-Local cache inspection is intentionally separate from the release gates:
-`pnpm cache:status` reports known research cache occupancy, while
-`pnpm cache:prune` removes only completed run folders, stale PID files, and
-logs. Source archives are never removed by the routine command. Never make
-cache cleanup part of `pnpm check` or CI.
-
 Artifact-only verification:
 
 ```bash
@@ -679,8 +667,8 @@ release is incomplete and identify the exact blocker.
 6. **Overbuilding open-source governance.** Contribution walkthroughs,
    marketplace contracts, Dependabot, and CodeQL are not MVP blockers unless a
    concrete review promotes them to P0/P1.
-7. **Adding a fourth mode.** Human Morphology is a shared overlay, not a mode;
-   V1.2.0 remains gated by GHSL Plans 1–7 and owner approval.
+7. **Adding an unbounded mode.** Every new observation requires a focused
+   product, data, resource, and owner-approval packet.
 8. **Breaking project Pages paths.** Root-relative assets can work locally and
    fail under `/Mundus/`; keep artifact verification intact.
 9. **Publishing source maps.** V1 intentionally prohibits them.
@@ -693,16 +681,10 @@ release is incomplete and identify the exact blocker.
 
 ## 15. Deferred roadmap
 
-V1.1.0 Parchment Atlas is the current public Pages product. Human Morphology
-remains a stopped research direction; it has no scheduled product version.
-The terminal evidence is in `docs/GHSL_EXECUTION_HANDOFF.md`.
-
-GHSL Plan 1 is terminal at `6e396d90ef215085a3d5bc8dbf602b6e4f239051`.
-Do not restart it or begin Plans 2–7 unless GHSL is separately reopened and
-approved. Do not restart the completed V1.1 convergence procedure. New cultural
-or naming observations require their own small data/licensing packet. Also defer
-plugin marketplaces, street-level GIS, weather, time-zone layers, offline/PWA
-work, accounts, and backend services.
+V1.1.0 Parchment Atlas is the current public Pages product. New cultural or
+naming observations require their own small data and licensing packet. Also
+defer plugin marketplaces, street-level GIS, weather, time-zone layers,
+offline/PWA work, accounts, and backend services.
 
 ## 16. Historical kickoff prompt
 
