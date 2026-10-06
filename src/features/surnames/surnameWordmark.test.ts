@@ -4,6 +4,7 @@ import {
   createSurnameWordmarkSvg,
   getSurnameWordmarkAspectRatio,
   getSurnameWordmarkWorldWidth,
+  getSurnameDisplayForms,
   resolveSurnameWordmark,
   SURNAME_WORDMARK_ASPECT_RATIO,
   SURNAME_WORDMARK_HEIGHT_RATIO,
@@ -90,6 +91,22 @@ describe('surname wordmarks', () => {
       value: '罗西',
       source: 'chinese',
       generated: true,
+    });
+  });
+
+  it('never synthesizes an unreviewed Chinese form', () => {
+    const albania = {
+      ...record,
+      localForms: [{ value: 'Hoxha', script: 'Latin' }],
+      romanizedForms: ['Hoxha'],
+      zhDisplay: null,
+    };
+    expect(getSurnameDisplayForms(albania).chinese).toBeNull();
+    // Chinese mode falls back to the source spelling and says so.
+    expect(resolveSurnameWordmark(albania, 'chinese')).toMatchObject({
+      value: 'Hoxha',
+      source: 'local',
+      fellBack: true,
     });
   });
 

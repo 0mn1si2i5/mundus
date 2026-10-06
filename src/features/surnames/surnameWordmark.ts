@@ -402,51 +402,6 @@ const NORMALIZED_CHINESE_SURNAME_FORMS = new Map(
   ]),
 );
 
-const PHONETIC_CHUNKS: readonly [string, string][] = [
-  ['sch', '施'],
-  ['smi', '史密'],
-  ['str', '斯特'],
-  ['zh', '日'],
-  ['ch', '奇'],
-  ['sh', '什'],
-  ['th', '斯'],
-  ['ph', '菲'],
-  ['kh', '克'],
-  ['ng', '恩'],
-  ['ck', '克'],
-  ['qu', '克'],
-  ['ss', '斯'],
-  ['ll', '尔'],
-  ['ov', '奥夫'],
-  ['ic', '奇'],
-  ['j', '杰'],
-  ['q', '克'],
-  ['x', '克斯'],
-  ['z', '兹'],
-  ['s', '斯'],
-  ['a', '阿'],
-  ['b', '布'],
-  ['c', '克'],
-  ['d', '德'],
-  ['e', '埃'],
-  ['f', '弗'],
-  ['g', '格'],
-  ['h', '哈'],
-  ['i', '伊'],
-  ['k', '卡'],
-  ['l', '尔'],
-  ['m', '姆'],
-  ['n', '恩'],
-  ['o', '奥'],
-  ['p', '普'],
-  ['r', '尔'],
-  ['t', '特'],
-  ['u', '乌'],
-  ['v', '维'],
-  ['w', '沃'],
-  ['y', '伊'],
-];
-
 const LATIN_TO_CYRILLIC: Readonly<Record<string, string>> = {
   ж: 'zh',
   х: 'kh',
@@ -510,29 +465,10 @@ function generatedChinese(record: SurnameRecord): string | null {
         .replace(/[\u0300-\u036f]/gu, '')
         .toLocaleLowerCase('en-US'),
     );
-  if (known) return known;
-  const normalized = latin
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/gu, '')
-    .toLocaleLowerCase('en-US')
-    .replace(/[^a-z]/gu, '');
-  let result = '';
-  let index = 0;
-  while (index < normalized.length) {
-    const chunk = PHONETIC_CHUNKS.find(([value]) =>
-      normalized.startsWith(value, index),
-    );
-    if (!chunk) {
-      index += 1;
-      continue;
-    }
-    result += chunk[1];
-    index += chunk[0].length;
-  }
-  // Keep the source spelling as the final deterministic fallback. This is
-  // preferable to inventing a generic placeholder when a script has no
-  // compact pronunciation rule in this module.
-  return result.slice(0, 6) || latin;
+  // Only reviewed forms and established transliterations are presented as
+  // Chinese. Anything else stays explicitly unavailable (see
+  // docs/NAMING_OBSERVATION_RESEARCH.md) rather than being synthesized.
+  return known ?? null;
 }
 
 export function getSurnameDisplayForms(record: SurnameRecord): {
