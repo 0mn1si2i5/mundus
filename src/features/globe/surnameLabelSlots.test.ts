@@ -5,10 +5,12 @@ import {
   chooseSurnameLabelSlot,
   createSurnameLabelSlotCandidates,
   isSurnameLabelSlotAllowed,
+  isSurnameLabelSlotOnRenderedLand,
   maximizeSurnameLabelSlot,
   sampleSurnameLabelEnvelope,
 } from './surnameLabelSlots';
 import generatedSlots from '../../data/generated/surname-label-slots.json';
+import { getCountryDataset } from './countryData';
 
 const country = (
   countryId: string,
@@ -323,5 +325,51 @@ describe('surname label slots', () => {
     ).not.toBe(
       `${current!.center.latitude.toFixed(5)}:${current!.center.longitude.toFixed(5)}`,
     );
+  });
+});
+
+describe('surname label slots on the rendered globe', () => {
+  const slotsByCountry = (
+    generatedSlots as unknown as {
+      slots: Record<
+        string,
+        Parameters<typeof isSurnameLabelSlotOnRenderedLand>[0][]
+      >;
+    }
+  ).slots;
+  const lowDetail = new Map(
+    getCountryDataset().countries.features.map((feature) => [
+      feature.properties.countryId,
+      feature,
+    ]),
+  );
+
+  it('keeps every 50m slot because slots are generated against 50m land', () => {
+    const [maltaSlot] = slotsByCountry['ne-470']!;
+    expect(
+      isSurnameLabelSlotOnRenderedLand(maltaSlot!, 'ne-470', '50m', lowDetail),
+    ).toBe(true);
+  });
+
+  it('drops a 110m wordmark whose country has no rendered land', () => {
+    const [maltaSlot] = slotsByCountry['ne-470']!;
+    expect(lowDetail.has('ne-470')).toBe(false);
+    expect(
+      isSurnameLabelSlotOnRenderedLand(maltaSlot!, 'ne-470', '110m', lowDetail),
+    ).toBe(false);
+  });
+
+  it('keeps a 110m wordmark that sits on its own rendered country', () => {
+    const [italySlot] = slotsByCountry['ne-380']!;
+    expect(
+      isSurnameLabelSlotOnRenderedLand(italySlot!, 'ne-380', '110m', lowDetail),
+    ).toBe(true);
+  });
+
+  it('drops a 110m wordmark that lies on land another country owns', () => {
+    const [italySlot] = slotsByCountry['ne-380']!;
+    expect(
+      isSurnameLabelSlotOnRenderedLand(italySlot!, 'ne-250', '110m', lowDetail),
+    ).toBe(false);
   });
 });

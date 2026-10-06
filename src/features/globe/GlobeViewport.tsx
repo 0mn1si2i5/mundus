@@ -16,7 +16,7 @@ import {
   CLICK_DRAG_THRESHOLD_PX,
   TOUCH_CLICK_DRAG_THRESHOLD_PX,
 } from './interaction';
-import { detectQualityProfile, type QualityProfile } from './quality';
+import { detectQualityProfile } from './quality';
 import { SUNLINE_RENDERING } from './rendering';
 import { supportsWebGL2 } from './webgl';
 import styles from './GlobeViewport.module.css';
@@ -90,17 +90,6 @@ export function GlobeViewport({
 }: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
   const [profile] = useState(detectQualityProfile);
-  const activeMode = useAppStore((state) => state.activeMode);
-  const vectorProfile = useMemo<QualityProfile>(() => {
-    if (activeMode !== 'surnames' || profile.vectorDetail === '110m') {
-      return profile;
-    }
-    // The surname slots are generated against 50m geometry, but the atlas
-    // keeps the globe moving by using the existing 110m render asset. The
-    // label and country index remain complete; boundary detail is secondary
-    // to keeping the wordmarks responsive while the globe is manipulated.
-    return { ...profile, vectorDetail: '110m' };
-  }, [activeMode, profile]);
   const [dragDiagnosticsEnabled] = useState(() =>
     new URLSearchParams(window.location.search).has('dragDiagnostics'),
   );
@@ -339,7 +328,7 @@ export function GlobeViewport({
       aria-label={ariaLabel}
       aria-describedby="globe-keyboard-instructions"
       data-quality={profile.level}
-      data-vector-detail={vectorProfile.vectorDetail}
+      data-vector-detail={profile.vectorDetail}
       data-vector-state={vectorState}
       data-vector-geometry-id={vectorGeometryId || undefined}
       data-vector-palette-version={
@@ -502,7 +491,7 @@ export function GlobeViewport({
         }}
       >
         <GlobeScene
-          profile={vectorProfile}
+          profile={profile}
           benchmarkActive={benchmark.active}
           recordBenchmarkFrame={benchmark.recordFrame}
           keyboardController={keyboardController}

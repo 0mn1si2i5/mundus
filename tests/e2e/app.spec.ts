@@ -205,13 +205,19 @@ test('Development palette updates preserve vector geometry identity', async ({
 
 test('Surname Atlas preserves local, Latin, Chinese, and missing states', async ({
   page,
-}) => {
+}, testInfo) => {
+  await useHighConcurrencyProfile(page);
   await page.goto('./?mode=surnames&point=31.2304%2C121.4737&v=2');
   const globe = globeRegion(page);
   await expect(globe).toHaveAttribute('data-vector-state', 'ready', {
     timeout: 10_000,
   });
-  await expect(globe).toHaveAttribute('data-vector-detail', '110m');
+  // Surname wordmarks use the same quality-selected globe as every mode; the
+  // 50m desktop surface carries the small islands its slots are built on.
+  await expect(globe).toHaveAttribute(
+    'data-vector-detail',
+    testInfo.project.name === 'mobile' ? '110m' : '50m',
+  );
   await expect(globe).toHaveAttribute(
     'data-vector-raster-fallback-visible',
     'false',

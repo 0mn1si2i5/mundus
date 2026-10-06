@@ -62,6 +62,7 @@ import type { SurnameDisplayMode } from '../../state/urlState';
 import {
   chooseAlternativeSurnameLabelSlot,
   chooseSurnameLabelSlot,
+  isSurnameLabelSlotOnRenderedLand,
   type SurnameLabelSlot,
 } from './surnameLabelSlots';
 import {
@@ -313,9 +314,19 @@ export function GlobeScene({
       ? getCountryLabelAnchor(country)
       : getCountryLabelAnchorForId(selectedSurnameMapLabel.countryId);
   }, [selectedSurnameMapLabel, surnameCountries]);
+  const renderedCountriesById = useMemo(
+    () =>
+      new Map(
+        countries.countries.features.map((feature) => [
+          feature.properties.countryId,
+          feature,
+        ]),
+      ),
+    [countries],
+  );
   const surnameLabelEntries = useMemo(() => {
     // Do not block the vector asset request on the CPU geometry pass. The
-    // labels are mounted only after the 50m surface is ready, so computing
+    // labels are mounted only after the vector surface is ready, so computing
     // them before that point only delays the ready signal.
     if (!vectorReady) return [];
     const countriesById = new Map(
@@ -344,7 +355,17 @@ export function GlobeScene({
           wordmark,
           surnameCountries,
         );
-      if (!slot) return [];
+      if (
+        !slot ||
+        !isSurnameLabelSlotOnRenderedLand(
+          slot,
+          label.countryId,
+          profile.vectorDetail,
+          renderedCountriesById,
+        )
+      ) {
+        return [];
+      }
       return [
         {
           label: {
@@ -358,6 +379,8 @@ export function GlobeScene({
       ];
     });
   }, [
+    profile.vectorDetail,
+    renderedCountriesById,
     surnameCountries,
     surnameDisplayMode,
     surnameMapLabels,
@@ -460,7 +483,7 @@ export function GlobeScene({
         selectedSurnameMapLabel.record,
         surnameDisplayMode,
       );
-      const alternate = selectedWordmark
+      const candidate = selectedWordmark
         ? chooseAlternativeSurnameLabelSlot(
             selectedSurnameMapLabel.countryId,
             surnameAnchor,
@@ -469,6 +492,16 @@ export function GlobeScene({
             selectedSurnameSlot,
           )
         : null;
+      const alternate =
+        candidate &&
+        isSurnameLabelSlotOnRenderedLand(
+          candidate,
+          selectedSurnameMapLabel.countryId,
+          profile.vectorDetail,
+          renderedCountriesById,
+        )
+          ? candidate
+          : null;
       if (alternate) {
         surnameFocusAttempt.current.nextOffsetIndex = 0;
         setSurnameSlotOverrides((current) => ({
@@ -539,6 +572,8 @@ export function GlobeScene({
   }, [
     activeMode,
     hasMeaningfulInteraction,
+    profile.vectorDetail,
+    renderedCountriesById,
     requestCameraFocus,
     selectedSurnameMapLabel,
     selectedSurnameSlot,

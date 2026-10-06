@@ -339,6 +339,25 @@ export function sampleSurnameLabelEnvelope(
 }
 
 /** Selects the largest safe candidate for the requested word layout. */
+/**
+ * Slots are generated against Natural Earth 50m land. The phone-class 110m
+ * globe omits many small island countries, so a wordmark there is drawn only
+ * when its centre sits on that country's rendered land; otherwise it would
+ * float over empty ocean. Such countries keep their side-panel record.
+ */
+export function isSurnameLabelSlotOnRenderedLand(
+  slot: Pick<SurnameLabelSlot, 'center'>,
+  countryId: string,
+  vectorDetail: '110m' | '50m',
+  renderedCountries: ReadonlyMap<string, CountryFeature>,
+): boolean {
+  if (vectorDetail === '50m') return true;
+  const country = renderedCountries.get(countryId);
+  return country
+    ? geoContains(country, [slot.center.longitude, slot.center.latitude])
+    : false;
+}
+
 export function chooseSurnameLabelSlot(
   countryId: string,
   anchor: { point: GeoPoint; clearanceDegrees: number },
