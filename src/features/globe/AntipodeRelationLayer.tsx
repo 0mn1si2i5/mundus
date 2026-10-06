@@ -14,6 +14,7 @@ import type { AntipodeRelation } from '../antipodes/relation';
 import { sampleShortGeodesic } from '../antipodes/relation';
 import { geoToVector3 } from './geo';
 import { allPointsInClip, cssPixelsToWorldUnits } from './screenSpace';
+import { ignoreRaycast } from './sceneUtils';
 
 const RELATION_RADIUS = 1.018;
 
@@ -297,5 +298,3 @@ const CityMarker = forwardRef(function CityMarker(
     </group>
   );
 });
-
-function ignoreRaycast() {}

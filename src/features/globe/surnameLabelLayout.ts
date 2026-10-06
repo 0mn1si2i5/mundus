@@ -1,3 +1,39 @@
+import type { SurnameMapLabel } from '../surnames/surnameData';
+import type { SurnameWordmark } from '../surnames/surnameWordmark';
+import type { CountryLabelAnchor } from './countryLabel';
+import type { GeoPoint } from './geo';
+import type { SurnameLabelSlot } from './surnameLabelSlots';
+
+export interface SurnameLabelEntry {
+  label: SurnameMapLabel;
+  anchor: CountryLabelAnchor;
+  slot: SurnameLabelSlot;
+  wordmark: SurnameWordmark;
+}
+
+/** Layout facts the viewport publishes as browser-test evidence. */
+export interface SurnameLabelLayoutEvidence {
+  visibleCount: number;
+  collisionCount: number;
+  selectedHiddenReason: SurnameLabelHiddenReason | null;
+  minimumCornerRadius: number;
+  visibleRectangles: string;
+}
+
+// Retry by moving the camera south when a desktop shell obstacle blocks the
+// selected label. Mobile shell panels cover the compact canvas by design.
+export const SURNAME_FOCUS_RETRY_OFFSETS = [-8, -16, -24, -32] as const;
+
+export function getSurnameCameraFocusPoint(
+  point: GeoPoint,
+  retryOffset = 0,
+): GeoPoint {
+  return {
+    latitude: Math.max(-75, Math.min(75, point.latitude + retryOffset)),
+    longitude: point.longitude,
+  };
+}
+
 export interface SurnameLabelScreenRect {
   id: string;
   left: number;
