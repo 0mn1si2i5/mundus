@@ -1,6 +1,12 @@
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
-import { geoArea, geoBounds, geoCentroid, geoContains } from 'd3-geo';
+import {
+  geoArea,
+  geoBounds,
+  geoCentroid,
+  geoContains,
+  geoDistance,
+} from 'd3-geo';
 import { feature } from 'topojson-client';
 
 const ATLAS_PATH = 'node_modules/world-atlas/countries-50m.json';
@@ -14,9 +20,25 @@ const ATLAS_SHA256 =
 const SEARCH_STEPS = 6;
 const COARSE_ENVELOPE_SAMPLES = [-1, 0, 1];
 const ENVELOPE_SAMPLES = [-1, -0.5, 0, 0.5, 1];
-// A surname is a cartographic label, so its baseline always follows the local
-// parallel. Narrow countries get a smaller word instead of a rotated one.
+// A surname is a cartographic label, so its baseline follows the local
+// parallel by default. Only countries whose horizontal fit is starved by their
+// shape (Chile, Italy, Norway, ...) are offered a straight rotated wordmark,
+// and only when the rotation makes it materially larger.
 const ROTATIONS = [0];
+const NARROW_ROTATIONS = [-75, -60, -45, -30, -15, 15, 30, 45, 60, 75, 90];
+// A country is "narrow" when its interior points spread at least this many
+// times further along their principal axis than across it. Rotations are
+// tried only within ROTATION_AXIS_TOLERANCE of that axis, so compact countries
+// such as France always keep a horizontal wordmark.
+const ELONGATION_THRESHOLD = 2;
+const ROTATION_AXIS_TOLERANCE = 35;
+const ROTATION_GAIN = 1.15;
+const SHAPE_GRID = 24;
+const RANK_STEPS = 7;
+const REFINE_ROUNDS = 4;
+// Rounding keeps the derived asset byte-stable across V8 builds whose libm
+// differs in the last floating-point digit.
+const OUTPUT_DECIMALS = 6;
 const HEIGHT_RATIOS = { long: 0.28, medium: 0.5, square: 1 };
 const MAX_FOOTPRINT_DEGREES = 20;
 const TOP_CANDIDATES = 12;
@@ -37,8 +59,12 @@ const surnameCountries = Object.keys(
   ).countries,
 );
 const countryLimit = Number(process.env.SURNAME_SLOT_COUNTRY_LIMIT ?? 0);
-const countriesToBuild =
-  countryLimit > 0 ? surnameCountries.slice(0, countryLimit) : surnameCountries;
+const countryFilter = process.env.SURNAME_SLOT_COUNTRIES?.split(',');
+const countriesToBuild = countryFilter
+  ? surnameCountries.filter((countryId) => countryFilter.includes(countryId))
+  : countryLimit > 0
+    ? surnameCountries.slice(0, countryLimit)
+    : surnameCountries;
 const atlasBytes = await readFile(ATLAS_PATH);
 const atlasSha256 = createHash('sha256').update(atlasBytes).digest('hex');
 if (atlasSha256 !== ATLAS_SHA256) {
@@ -76,29 +102,62 @@ for (const countryId of countriesToBuild) {
     0.35,
     MAX_FOOTPRINT_DEGREES,
   );
-  const centers = createInteriorCenters(country, anchor.point)
-    .map((center) => ({
-      center,
-      // Use a coarse probe while ranking the 25 grid centers. Only the few
-      // best centers receive the dense directional clearance below.
-      localClearance: localBoundaryClearance(
-        { center, rotationDegrees: 0, countryScaleCap },
-        countryId,
-        COARSE_ENVELOPE_SAMPLES,
-        2,
-      ),
-    }))
-    .sort(
-      (a, b) =>
-        b.localClearance - a.localClearance ||
-        a.center.latitude - b.center.latitude ||
-        a.center.longitude - b.center.longitude,
+  const interiorCenters = createInteriorCenters(country, anchor.point);
+  // Rank every interior center by how large a long horizontal wordmark fits,
+  // then move the best one toward the widest clear area. Ranking by a coarse
+  // square probe tied most centers of large countries and left the evaluated
+  // centers effectively arbitrary (Algeria's wordmark sat in a corner).
+  const horizontal = rankCenters(
+    interiorCenters,
+    countryId,
+    0,
+    countryScaleCap,
+    anchor.point,
+  );
+  const evaluated = horizontal
+    .slice(0, countryScaleCap >= 4 ? MAX_EVALUATED_CENTERS : 3)
+    .map((entry) => ({ ...entry, rotationDegrees: 0 }));
+  const bestHorizontalFit = evaluated[0]?.fit ?? 0;
+  const shape = principalAxis(country);
+  if (shape.elongation >= ELONGATION_THRESHOLD) {
+    const rotated = NARROW_ROTATIONS.filter(
+      (rotationDegrees) =>
+        lineAngleDifference(rotationDegrees, shape.axisDegrees) <=
+        ROTATION_AXIS_TOLERANCE,
     )
-    .slice(0, countryScaleCap >= 4 ? MAX_EVALUATED_CENTERS : 3);
+      .map((rotationDegrees) => ({
+        rotationDegrees,
+        ...(rankCenters(
+          interiorCenters,
+          countryId,
+          rotationDegrees,
+          countryScaleCap,
+          anchor.point,
+          1,
+        )[0] ?? { center: anchor.point, fit: 0 }),
+      }))
+      .filter(
+        (entry) =>
+          entry.fit >= ROTATION_GAIN * bestHorizontalFit && entry.fit > 0.05,
+      )
+      .sort(
+        (a, b) =>
+          b.fit - a.fit ||
+          Math.abs(a.rotationDegrees) - Math.abs(b.rotationDegrees),
+      )
+      .slice(0, 2);
+    evaluated.unshift(...rotated);
+  }
   const candidates = [];
-  for (const { center, localClearance } of centers) {
+  for (const { center, rotationDegrees } of evaluated) {
+    const localClearance = localBoundaryClearance(
+      { center, rotationDegrees, countryScaleCap },
+      countryId,
+      COARSE_ENVELOPE_SAMPLES,
+      2,
+    );
     const oceanDirection = directionFrom(anchor.point, center);
-    for (const rotationDegrees of ROTATIONS) {
+    {
       const base = {
         layout: 'straight',
         center,
@@ -107,9 +166,6 @@ for (const countryId of countriesToBuild) {
         oceanDirection,
         countryScaleCap,
         areaSteradians,
-        // The center ranking already measured a coarse interior clearance.
-        // Reusing it avoids four extra polygon searches per center; the dense
-        // neighbour check below remains direction-specific.
         localClearance,
       };
       const foreignClearanceFor = (heightRatio) =>
@@ -224,10 +280,14 @@ const output = {
     coarseEnvelopeSamples: COARSE_ENVELOPE_SAMPLES.length ** 2,
     envelopeSamples: ENVELOPE_SAMPLES.length ** 2,
     countryScaleFormula: 'clamp(1.6 * equivalentRadiusDegrees, 0.35, 20)',
+    centerRanking: `all interior grid centers ranked by a ${RANK_STEPS}-step dense long-envelope fit; best center hill-climbed for ${REFINE_ROUNDS} halving rounds`,
+    narrowRotations: NARROW_ROTATIONS,
+    narrowRotationRule: `offered when interior-point principal-axis elongation >= ${ELONGATION_THRESHOLD}, within ${ROTATION_AXIS_TOLERANCE}deg of that axis; kept when >= ${ROTATION_GAIN} * the best horizontal fit`,
+    numberPrecision: 'toPrecision(9)',
     isolatedOverflowFormula:
       'eligible when foreign clearance >= max(2.5 * strict fit, strict fit + max(0.75deg, 0.9 * equivalent radius)); cap=min(strict fit + 0.8 * equivalent radius, 0.75 * foreign clearance, 2.8 * equivalent radius, 20deg)',
   },
-  slots,
+  slots: roundNumbers(slots),
 };
 const bytes = `${JSON.stringify(output)}\n`;
 const outputPath =
@@ -245,6 +305,176 @@ console.log(
     sha256: createHash('sha256').update(bytes).digest('hex'),
   }),
 );
+
+// Principal axis of a country's interior, measured in a local east/north
+// plane around its centroid from a fixed grid of contained points.
+function principalAxis(country) {
+  const [[west, south], [east, north]] = geoBounds(country);
+  const [centroidLongitude, centroidLatitude] = geoCentroid(country);
+  const longitudeSpan = east >= west ? east - west : east + 360 - west;
+  const cosine = Math.max(
+    POLE_SAFE_COSINE,
+    Math.cos((centroidLatitude * Math.PI) / 180),
+  );
+  const points = [];
+  for (let row = 0; row < SHAPE_GRID; row += 1) {
+    for (let column = 0; column < SHAPE_GRID; column += 1) {
+      const latitude = south + ((row + 0.5) / SHAPE_GRID) * (north - south);
+      const longitude = normalize(
+        west + ((column + 0.5) / SHAPE_GRID) * longitudeSpan,
+      );
+      if (!geoContains(country, [longitude, latitude])) continue;
+      points.push([
+        normalize(longitude - centroidLongitude) * cosine,
+        latitude - centroidLatitude,
+      ]);
+    }
+  }
+  if (points.length < 3) return { elongation: 1, axisDegrees: 0 };
+  const meanX = points.reduce((sum, [x]) => sum + x, 0) / points.length;
+  const meanY = points.reduce((sum, [, y]) => sum + y, 0) / points.length;
+  let xx = 0;
+  let xy = 0;
+  let yy = 0;
+  for (const [x, y] of points) {
+    xx += (x - meanX) ** 2;
+    xy += (x - meanX) * (y - meanY);
+    yy += (y - meanY) ** 2;
+  }
+  const trace = xx + yy;
+  const spread = Math.sqrt(((xx - yy) / 2) ** 2 + xy ** 2);
+  const major = trace / 2 + spread;
+  const minor = Math.max(1e-12, trace / 2 - spread);
+  const axisDegrees = (0.5 * Math.atan2(2 * xy, xx - yy) * 180) / Math.PI;
+  return { elongation: Math.sqrt(major / minor), axisDegrees };
+}
+
+// Difference between two undirected line angles, in [0, 90] degrees.
+function lineAngleDifference(a, b) {
+  const difference = Math.abs((((a - b) % 180) + 180) % 180);
+  return Math.min(difference, 180 - difference);
+}
+
+function rankCenters(
+  centers,
+  countryId,
+  rotationDegrees,
+  countryScaleCap,
+  anchor,
+  limit = Number.POSITIVE_INFINITY,
+) {
+  const ranked = centers
+    .map((center) => ({
+      center,
+      fit: coarseOwnFit(center, countryId, rotationDegrees, countryScaleCap),
+    }))
+    .sort(
+      (a, b) =>
+        b.fit - a.fit ||
+        angularDistance(a.center, anchor) - angularDistance(b.center, anchor) ||
+        a.center.latitude - b.center.latitude ||
+        a.center.longitude - b.center.longitude,
+    );
+  if (ranked[0] && ranked[0].fit > 0) {
+    ranked[0] = refineCenter(
+      ranked[0],
+      countryId,
+      rotationDegrees,
+      countryScaleCap,
+    );
+  }
+  return ranked.slice(0, limit);
+}
+
+// Moves a center across the country toward a larger long-envelope fit. The
+// search is a deterministic eight-direction hill climb with a halving step.
+function refineCenter(start, countryId, rotationDegrees, countryScaleCap) {
+  const country = countriesById.get(countryId);
+  let best = start;
+  let step = Math.max(0.1, start.fit * 0.5);
+  for (let round = 0; round < REFINE_ROUNDS;) {
+    let improved = false;
+    for (const [north, east] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ]) {
+      const latitude = clamp(best.center.latitude + north * step, -89, 89);
+      const center = {
+        latitude,
+        longitude: normalize(
+          best.center.longitude +
+            (east * step) /
+              Math.max(POLE_SAFE_COSINE, Math.cos((latitude * Math.PI) / 180)),
+        ),
+      };
+      if (!geoContains(country, [center.longitude, center.latitude])) continue;
+      const fit = coarseOwnFit(
+        center,
+        countryId,
+        rotationDegrees,
+        countryScaleCap,
+      );
+      if (fit > best.fit + 1e-6) {
+        best = { center, fit };
+        improved = true;
+      }
+    }
+    if (!improved) {
+      step /= 2;
+      round += 1;
+    }
+  }
+  return best;
+}
+
+function coarseOwnFit(center, countryId, rotationDegrees, countryScaleCap) {
+  const base = { center, rotationDegrees };
+  const isAllowed = (radius) =>
+    isOwnCountrySafe(
+      base,
+      countryId,
+      radius,
+      HEIGHT_RATIOS.long,
+      // Thin or ragged countries need the dense envelope: a 3x3 probe
+      // overestimates rotated fits that cross narrow necks or bays.
+      ENVELOPE_SAMPLES,
+    );
+  const minimum = 0.05;
+  const maximum = Math.min(MAX_FOOTPRINT_DEGREES, countryScaleCap);
+  if (!isAllowed(minimum)) return 0;
+  if (isAllowed(maximum)) return maximum;
+  let low = minimum;
+  let high = maximum;
+  for (let step = 0; step < RANK_STEPS; step += 1) {
+    const middle = (low + high) / 2;
+    if (isAllowed(middle)) low = middle;
+    else high = middle;
+  }
+  return low;
+}
+
+function angularDistance(a, b) {
+  return geoDistance([a.longitude, a.latitude], [b.longitude, b.latitude]);
+}
+
+function roundNumbers(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Number(value.toPrecision(9)) : value;
+  }
+  if (Array.isArray(value)) return value.map(roundNumbers);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, roundNumbers(entry)]),
+    );
+  }
+  return value;
+}
 
 function createInteriorCenters(country, anchor) {
   const [[west, south], [east, north]] = geoBounds(country);

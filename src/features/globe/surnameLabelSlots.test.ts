@@ -129,11 +129,21 @@ describe('surname label slots', () => {
     ).toBeGreaterThanOrEqual(3);
     const candidates = Object.values(generatedSlots.slots).flat();
     expect(candidates.length).toBeGreaterThanOrEqual(240);
+    const narrowRotations = new Set<number>(
+      generatedSlots.candidatePolicy.narrowRotations,
+    );
     expect(
       candidates.every(
-        (slot) => slot.layout === 'straight' && slot.rotationDegrees === 0,
+        (slot) =>
+          slot.layout === 'straight' &&
+          (slot.rotationDegrees === 0 ||
+            narrowRotations.has(slot.rotationDegrees)),
       ),
     ).toBe(true);
+    // Horizontal stays the default; rotation is a narrow-country exception.
+    const rotated = candidates.filter((slot) => slot.rotationDegrees !== 0);
+    expect(rotated.length).toBeGreaterThan(0);
+    expect(rotated.length).toBeLessThan(candidates.length / 4);
     expect(candidates.every((slot) => typeof slot.landSafe === 'boolean')).toBe(
       true,
     );
@@ -325,6 +335,56 @@ describe('surname label slots', () => {
     ).not.toBe(
       `${current!.center.latitude.toFixed(5)}:${current!.center.longitude.toFixed(5)}`,
     );
+  });
+});
+
+describe('rotated wordmarks for elongated countries', () => {
+  const latin = (value: string) => ({
+    value,
+    source: 'latin' as const,
+    requestedMode: 'latin' as const,
+    fellBack: false,
+    generated: false,
+    layout: 'straight' as const,
+    characterCount: Array.from(value).length,
+  });
+  const italy = {
+    point: { latitude: 42.8, longitude: 12.6 },
+    clearanceDegrees: 1,
+  };
+
+  it('keeps compact countries on a horizontal parallel', () => {
+    const generated = generatedSlots.slots as Record<
+      string,
+      { rotationDegrees: number }[]
+    >;
+    for (const countryId of ['ne-250', 'ne-076', 'ne-012']) {
+      expect(
+        generated[countryId]!.every((slot) => slot.rotationDegrees === 0),
+      ).toBe(true);
+    }
+  });
+
+  it('turns a long wordmark along a narrow country', () => {
+    const horizontal = chooseSurnameLabelSlot(
+      'ne-380',
+      italy,
+      latin('Rossi'),
+      [],
+    );
+    const long = chooseSurnameLabelSlot('ne-380', italy, latin('Esposito'), []);
+    // A medium word already fits the Po valley on its parallel; only a long
+    // word gains enough from following the peninsula to be rotated.
+    expect(horizontal!.rotationDegrees).toBe(0);
+    expect(horizontal!.maxAngularDegrees).toBeGreaterThan(1.5);
+    expect(Math.abs(long!.rotationDegrees)).toBeGreaterThan(0);
+    expect(long!.maxAngularDegrees).toBeGreaterThan(2);
+  });
+
+  it('never tilts a compact square wordmark', () => {
+    const slot = chooseSurnameLabelSlot('ne-380', italy, latin('Li'), []);
+    expect(slot).not.toBeNull();
+    expect(slot!.rotationDegrees).toBe(0);
   });
 });
 

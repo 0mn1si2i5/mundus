@@ -13,6 +13,11 @@ import generatedSlots from '../../data/generated/surname-label-slots.json' with 
 
 export type SurnameLabelSlotLayout = 'straight' | 'arched';
 
+// Wordmarks below this height/width ratio use the generated long envelope;
+// at or above the square ratio they use the square envelope.
+const LONG_WORDMARK_HEIGHT_RATIO = 0.42;
+const SQUARE_WORDMARK_HEIGHT_RATIO = 0.82;
+
 export interface SurnameLabelSlot {
   layout: SurnameLabelSlotLayout;
   center: GeoPoint;
@@ -402,10 +407,11 @@ function getSurnameLabelCandidatePool(
   wordmark: SurnameWordmark,
   countries: readonly CountryFeature[],
 ): readonly SurnameLabelSlot[] {
+  const mayRotate = allowsRotatedWordmark(wordmark);
   const generatedCandidates = GENERATED_SLOTS[countryId]?.filter(
     (slot) =>
       slot.layout === wordmark.layout &&
-      Math.abs(slot.rotationDegrees) < 1e-6 &&
+      (mayRotate || Math.abs(slot.rotationDegrees) < 1e-6) &&
       slot.maxAngularDegrees > 0,
   );
   // Keep the full generated pool when its safety pass found no candidate. The
@@ -447,17 +453,39 @@ function getSurnameLabelCandidatePool(
   return candidatePool;
 }
 
+/**
+ * Rotated slots exist only for elongated countries. A square word (for
+ * example a single CJK character) always stays upright on its parallel.
+ */
+function allowsRotatedWordmark(wordmark: SurnameWordmark): boolean {
+  return getSurnameWordmarkHeightRatio(wordmark) < SQUARE_WORDMARK_HEIGHT_RATIO;
+}
+
+// Horizontal is the cartographic default; a rotated slot must make this
+// particular wordmark materially larger before it replaces the parallel.
+const ROTATED_WORDMARK_GAIN = 1.15;
+
 function chooseLargestSurnameLabelSlot(
   candidatePool: readonly SurnameLabelSlot[],
 ): SurnameLabelSlot | null {
-  if (candidatePool.length === 0) return null;
-  return (
-    [...candidatePool].sort(
+  const largest = (slots: readonly SurnameLabelSlot[]) =>
+    [...slots].sort(
       (a, b) =>
         b.maxAngularDegrees - a.maxAngularDegrees ||
         a.oceanDirection.localeCompare(b.oceanDirection),
-    )[0] ?? null
+    )[0] ?? null;
+  const horizontal = largest(
+    candidatePool.filter((slot) => Math.abs(slot.rotationDegrees) < 1e-6),
   );
+  const rotated = largest(
+    candidatePool.filter((slot) => Math.abs(slot.rotationDegrees) >= 1e-6),
+  );
+  if (!rotated) return horizontal;
+  if (!horizontal) return rotated;
+  return rotated.maxAngularDegrees >=
+    ROTATED_WORDMARK_GAIN * horizontal.maxAngularDegrees
+    ? rotated
+    : horizontal;
 }
 
 function getWordmarkSlotRadius(
@@ -465,10 +493,10 @@ function getWordmarkSlotRadius(
   wordmark: SurnameWordmark,
 ): number {
   const heightRatio = getSurnameWordmarkHeightRatio(wordmark);
-  if (heightRatio >= 0.82) {
+  if (heightRatio >= SQUARE_WORDMARK_HEIGHT_RATIO) {
     return slot.squareMax ?? slot.maxAngularDegrees;
   }
-  if (heightRatio >= 0.42) {
+  if (heightRatio >= LONG_WORDMARK_HEIGHT_RATIO) {
     return slot.mediumMax ?? slot.maxAngularDegrees;
   }
   return slot.maxAngularDegrees;
@@ -480,14 +508,14 @@ function getStrictSlotRadius(
 ): number {
   if (!wordmark) return slot.strictMaxAngularDegrees ?? slot.maxAngularDegrees;
   const heightRatio = getSurnameWordmarkHeightRatio(wordmark);
-  if (heightRatio >= 0.82) {
+  if (heightRatio >= SQUARE_WORDMARK_HEIGHT_RATIO) {
     return (
       slot.strictSquareMax ??
       slot.strictMaxAngularDegrees ??
       slot.maxAngularDegrees
     );
   }
-  if (heightRatio >= 0.42) {
+  if (heightRatio >= LONG_WORDMARK_HEIGHT_RATIO) {
     return (
       slot.strictMediumMax ??
       slot.strictMaxAngularDegrees ??
