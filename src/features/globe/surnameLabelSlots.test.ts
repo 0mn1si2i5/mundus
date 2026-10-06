@@ -20,7 +20,7 @@ const country = (
 });
 
 describe('surname label slots', () => {
-  it('offers straight and arched deterministic candidates', () => {
+  it('offers deterministic east-west candidates for both legacy layout keys', () => {
     const straight = createSurnameLabelSlotCandidates(
       { latitude: 0, longitude: 0 },
       2,
@@ -31,7 +31,8 @@ describe('surname label slots', () => {
       2,
       'arched',
     );
-    expect(straight).toHaveLength(15);
+    expect(straight).toHaveLength(5);
+    expect(straight.every((slot) => slot.rotationDegrees === 0)).toBe(true);
     expect(arched.every((slot) => slot.curvature > 0)).toBe(true);
   });
 
@@ -58,6 +59,21 @@ describe('surname label slots', () => {
     expect(sampleSurnameLabelEnvelope(south).length).toBe(25);
   });
 
+  it('samples zero-rotation safety envelopes along exact parallels', () => {
+    const slot = createSurnameLabelSlotCandidates(
+      { latitude: 38, longitude: 12 },
+      8,
+      'straight',
+    ).find((candidate) => candidate.oceanDirection === 'none')!;
+    const samples = sampleSurnameLabelEnvelope(slot, 8);
+    for (let across = 0; across < 5; across += 1) {
+      const latitude = samples[across]!.latitude;
+      for (let along = 1; along < 5; along += 1) {
+        expect(samples[along * 5 + across]!.latitude).toBeCloseTo(latitude, 10);
+      }
+    }
+  });
+
   it('keeps the wordmark center on the selected country', () => {
     const slots = createSurnameLabelSlotCandidates(
       { latitude: 0, longitude: 0 },
@@ -78,15 +94,44 @@ describe('surname label slots', () => {
       center: { latitude: -5, longitude: 0 },
     };
     expect(isSurnameLabelSlotAllowed(offshore, 'own', [own], 0.5)).toBe(false);
-    expect(isSurnameLabelSlotAllowed(slots[0]!, 'own', [own], 0.5)).toBe(true);
+    const interior = slots.find((slot) => slot.oceanDirection === 'none')!;
+    expect(isSurnameLabelSlotAllowed(interior, 'own', [own], 0.5)).toBe(true);
+  });
+
+  it('rejects ordinary coastal overflow when the own country is known', () => {
+    const own = country('own', [
+      [
+        [-1, -1],
+        [-1, 1],
+        [1, 1],
+        [1, -1],
+        [-1, -1],
+      ],
+    ]);
+    const slot = {
+      ...createSurnameLabelSlotCandidates(
+        { latitude: 0, longitude: 0 },
+        2,
+        'straight',
+      )[0]!,
+      maxAngularDegrees: 2,
+      countryScaleCap: 2,
+      isolatedOverflow: false,
+    };
+    expect(isSurnameLabelSlotAllowed(slot, 'own', [own], 2)).toBe(false);
   });
 
   it('keeps generated 50m safety flags explicit for every candidate', () => {
     expect(
       generatedSlots.candidatePolicy.evaluatedCentersPerCountry,
-    ).toBeGreaterThanOrEqual(8);
+    ).toBeGreaterThanOrEqual(3);
     const candidates = Object.values(generatedSlots.slots).flat();
     expect(candidates.length).toBeGreaterThanOrEqual(240);
+    expect(
+      candidates.every(
+        (slot) => slot.layout === 'straight' && slot.rotationDegrees === 0,
+      ),
+    ).toBe(true);
     expect(candidates.every((slot) => typeof slot.landSafe === 'boolean')).toBe(
       true,
     );
@@ -94,6 +139,15 @@ describe('surname label slots', () => {
     expect(
       candidates.some(
         (slot) => slot.landSafe && typeof slot.squareMax === 'number',
+      ),
+    ).toBe(true);
+    expect(
+      candidates.some(
+        (slot) =>
+          slot.landSafe &&
+          'foreignClearance' in slot &&
+          'squareForeignClearance' in slot &&
+          slot.foreignClearance !== slot.squareForeignClearance,
       ),
     ).toBe(true);
   });
@@ -105,7 +159,9 @@ describe('surname label slots', () => {
     expect(candidates.every((slot) => slot.maxAngularDegrees >= 0)).toBe(true);
     expect(
       candidates.every(
-        (slot) => slot.maxAngularDegrees <= (slot.countryScaleCap ?? 20) + 1e-9,
+        (slot) =>
+          (slot.strictMaxAngularDegrees ?? slot.maxAngularDegrees) <=
+          (slot.countryScaleCap ?? 20) + 1e-9,
       ),
     ).toBe(true);
     expect(
@@ -161,13 +217,13 @@ describe('surname label slots', () => {
     expect(expanded?.maxAngularDegrees).toBe(20);
   });
 
-  it('keeps all four generated straight directions when the geometry has room', () => {
+  it('keeps only parallel generated straight directions', () => {
     const brazilDirections = new Set(
       generatedSlots.slots['ne-076']!.filter(
         (slot) => slot.layout === 'straight',
       ).map((slot) => slot.rotationDegrees),
     );
-    expect(brazilDirections).toEqual(new Set([0, 45, 90, 135]));
+    expect(brazilDirections).toEqual(new Set([0]));
   });
 
   it('keeps a layout candidate for every generated country after safety fallback', () => {

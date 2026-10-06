@@ -9,6 +9,8 @@ import type { GeoPoint } from './geo';
 
 export const SURNAME_LABEL_SURFACE_LIFT = 1.003;
 export const SURNAME_LABEL_SURFACE_SEGMENTS = { along: 24, across: 6 } as const;
+const POLE_SAFE_COSINE = 0.12;
+const POLE_SAFE_LONGITUDE_SPAN = Math.PI * 0.75;
 
 export interface SphericalSurnameLabelGeometryOptions {
   center: GeoPoint;
@@ -111,25 +113,50 @@ export function createSphericalSurnameLabelPoints(
     .multiplyScalar(Math.cos(angle))
     .addScaledVector(east, -Math.sin(angle));
   const surfaceLift = options.surfaceLift ?? SURNAME_LABEL_SURFACE_LIFT;
+  const followsLatitude = Math.abs(options.rotationDegrees) < 1e-8;
   const points: SphericalSurnameLabelPoint[] = [];
   for (let row = 0; row <= across; row += 1) {
     const v = row / across;
     const y = (v * 2 - 1) * halfHeight;
+    // A zero-rotation wordmark is deliberately parameterized in geographic
+    // coordinates. Every row then has one exact latitude and its baseline
+    // advances east-west along that parallel, rather than approximating the
+    // parallel with a tangent-plane chord.
+    const rowLatitude = Math.max(
+      -Math.PI / 2 + 1e-5,
+      Math.min(Math.PI / 2 - 1e-5, latitude + y),
+    );
+    const rowCosine = Math.cos(rowLatitude);
     for (let column = 0; column <= along; column += 1) {
       const u = column / along;
       const x = (u * 2 - 1) * halfWidth;
-      const tangent = rotatedEast
-        .clone()
-        .multiplyScalar(x)
-        .addScaledVector(rotatedNorth, y);
-      const tangentLength = tangent.length();
-      const surface =
-        tangentLength < 1e-8
-          ? center.clone()
-          : center
-              .clone()
-              .multiplyScalar(Math.cos(tangentLength))
-              .addScaledVector(tangent.normalize(), Math.sin(tangentLength));
+      let surface: Vector3;
+      if (followsLatitude) {
+        // Longitude is undefined at a pole. Keep the row finite and bounded
+        // there while preserving the exact row latitude and a stable seam.
+        const safeCosine = Math.max(Math.abs(rowCosine), POLE_SAFE_COSINE);
+        const longitudeOffset = Math.max(
+          -POLE_SAFE_LONGITUDE_SPAN,
+          Math.min(POLE_SAFE_LONGITUDE_SPAN, x / safeCosine),
+        );
+        surface = geoToVector3({
+          latitude: (rowLatitude * 180) / Math.PI,
+          longitude: ((longitude + longitudeOffset) * 180) / Math.PI,
+        });
+      } else {
+        const tangent = rotatedEast
+          .clone()
+          .multiplyScalar(x)
+          .addScaledVector(rotatedNorth, y);
+        const tangentLength = tangent.length();
+        surface =
+          tangentLength < 1e-8
+            ? center.clone()
+            : center
+                .clone()
+                .multiplyScalar(Math.cos(tangentLength))
+                .addScaledVector(tangent.normalize(), Math.sin(tangentLength));
+      }
       const position = surface.multiplyScalar(surfaceLift);
       points.push({
         position: [position.x, position.y, position.z],

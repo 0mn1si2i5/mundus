@@ -42,4 +42,47 @@ describe('spherical surname label geometry', () => {
     );
     geometry.dispose();
   });
+
+  it('keeps every zero-rotation row on one exact latitude', () => {
+    const across = 4;
+    const along = 8;
+    const points = createSphericalSurnameLabelPoints({
+      center: { latitude: 38, longitude: 12 },
+      angularRadiusDegrees: 18,
+      aspectRatio: 0.34,
+      rotationDegrees: 0,
+      segmentsAlong: along,
+      segmentsAcross: across,
+    });
+    for (let row = 0; row <= across; row += 1) {
+      const start = points[row * (along + 1)]!;
+      const latitude = Math.asin(
+        start.position[1] / SURNAME_LABEL_SURFACE_LIFT,
+      );
+      for (let column = 1; column <= along; column += 1) {
+        const point = points[row * (along + 1) + column]!;
+        expect(
+          Math.asin(point.position[1] / SURNAME_LABEL_SURFACE_LIFT),
+        ).toBeCloseTo(latitude, 10);
+      }
+    }
+  });
+
+  it('keeps high-latitude parallel rows finite and bounded', () => {
+    const points = createSphericalSurnameLabelPoints({
+      center: { latitude: 89.6, longitude: 12 },
+      angularRadiusDegrees: 24,
+      aspectRatio: 0.8,
+      rotationDegrees: 0,
+      segmentsAlong: 12,
+      segmentsAcross: 4,
+    });
+    for (const point of points) {
+      expect(point.position.every(Number.isFinite)).toBe(true);
+      expect(Math.hypot(...point.position)).toBeCloseTo(
+        SURNAME_LABEL_SURFACE_LIFT,
+        6,
+      );
+    }
+  });
 });

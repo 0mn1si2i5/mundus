@@ -1,4 +1,4 @@
-import { geoBounds, geoContains } from 'd3-geo';
+import { geoBounds, geoContains, geoDistance, geoCentroid } from 'd3-geo';
 import { Vector3 } from 'three';
 import type { Feature, Geometry } from 'geojson';
 import type { CountryFeature } from './countryData';
@@ -19,11 +19,19 @@ export interface SurnameLabelSlot {
   rotationDegrees: number;
   curvature: number;
   maxAngularDegrees: number;
+  mediumMax?: number;
   squareMax?: number;
+  strictMaxAngularDegrees?: number;
+  strictMediumMax?: number;
+  strictSquareMax?: number;
   oceanDirection: 'north' | 'east' | 'south' | 'west' | 'none';
   landSafe?: boolean;
   countryScaleCap?: number;
   neighborSafe?: number;
+  mediumNeighborSafe?: number;
+  squareNeighborSafe?: number;
+  foreignClearance?: number;
+  isolatedOverflow?: boolean;
   localClearance?: number;
   areaSteradians?: number;
 }
@@ -51,6 +59,8 @@ const MIN_SEARCH_ANGULAR_DEGREES = 0.02;
 const MAX_SEARCH_ANGULAR_DEGREES = 20;
 const SEARCH_STEPS = 12;
 const MAX_CENTER_OFFSET_DEGREES = 6;
+const POLE_SAFE_COSINE = 0.12;
+const POLE_SAFE_LONGITUDE_SPAN = Math.PI * 0.75;
 
 type CountryBounds = readonly [[number, number], [number, number]];
 const COUNTRY_BOUNDS_CACHE = new WeakMap<
@@ -69,7 +79,10 @@ export function createSurnameLabelSlotCandidates(
   layout: SurnameLabelSlotLayout,
 ): readonly SurnameLabelSlot[] {
   const base = Math.max(0.45, Math.min(18, clearanceDegrees * 2.4));
-  const rotations = layout === 'arched' ? [0, 22, -22] : [0, 90, -90];
+  // Longitude is the only stable reading direction for a globe label. A
+  // narrow country gets a smaller wordmark; rotating it makes the atlas
+  // visually noisy and breaks the parallel rule.
+  const rotations = [0];
   return rotations.flatMap((rotationDegrees) =>
     DIRECTIONS.map((direction) => ({
       layout,
@@ -127,13 +140,92 @@ export function isSurnameLabelSlotAllowed(
     return false;
   }
   const possibleNeighbors = countriesNearSamples(countries, samples);
-  return !possibleNeighbors.some(
-    (country) =>
-      country.properties.countryId !== countryId &&
-      samples.some((point) =>
-        geoContains(country, [point.longitude, point.latitude]),
-      ),
+  if (
+    possibleNeighbors.some(
+      (country) =>
+        country.properties.countryId !== countryId &&
+        samples.some((point) =>
+          geoContains(country, [point.longitude, point.latitude]),
+        ),
+    )
+  ) {
+    return false;
+  }
+  if (!ownCountry) return true;
+  const ownSamples = samples.every((point) =>
+    geoContains(ownCountry, [point.longitude, point.latitude]),
   );
+  if (ownSamples) return true;
+  return isAllowedIsolatedOverflow(
+    slot,
+    countryId,
+    countries,
+    radius,
+    wordmark,
+  );
+}
+
+function isAllowedIsolatedOverflow(
+  slot: SurnameLabelSlot,
+  countryId: string,
+  countries: readonly CountryFeature[],
+  radius: number,
+  wordmark?: SurnameWordmark,
+): boolean {
+  if (!slot.isolatedOverflow) return false;
+  const strict = getStrictSlotRadius(slot, wordmark);
+  if (radius <= strict + 1e-6) return false;
+  const equivalentRadius = slot.areaSteradians
+    ? (Math.acos(
+        Math.max(-1, Math.min(1, 1 - slot.areaSteradians / (2 * Math.PI))),
+      ) *
+        180) /
+      Math.PI
+    : strict / 1.6;
+  const foreignClearance =
+    slot.foreignClearance ??
+    nearestForeignLandDegrees(slot, countryId, countries);
+  const threshold = Math.max(
+    strict * 2.5,
+    strict + 0.75,
+    strict + equivalentRadius * 0.9,
+  );
+  const cap = Math.min(
+    strict + equivalentRadius * 0.8,
+    foreignClearance * 0.75,
+    Math.max(0.35, equivalentRadius * 2.8),
+    20,
+  );
+  return foreignClearance >= threshold && radius <= cap + 1e-6;
+}
+
+function nearestForeignLandDegrees(
+  slot: SurnameLabelSlot,
+  countryId: string,
+  countries: readonly CountryFeature[],
+): number {
+  const foreign = countries.filter(
+    (country) => country.properties.countryId !== countryId,
+  );
+  if (foreign.length === 0) return Number.POSITIVE_INFINITY;
+  const center: [number, number] = [
+    slot.center.longitude,
+    slot.center.latitude,
+  ];
+  let nearest = Number.POSITIVE_INFINITY;
+  for (const country of foreign) {
+    nearest = Math.min(nearest, geoDistance(center, geoCentroid(country)));
+    const [[west, south], [east, north]] = geoBounds(country);
+    for (const point of [
+      [west, south],
+      [west, north],
+      [east, south],
+      [east, north],
+    ] as Array<[number, number]>) {
+      nearest = Math.min(nearest, geoDistance(center, point));
+    }
+  }
+  return (nearest * 180) / Math.PI;
 }
 
 function countriesNearSamples(
@@ -178,7 +270,7 @@ export function sampleSurnameLabelEnvelope(
   wordmark?: SurnameWordmark,
   samples: readonly number[] = [-1, -0.5, 0, 0.5, 1],
 ): readonly GeoPoint[] {
-  const radius = Math.max(0.005, angularDegrees);
+  const radius = (Math.max(0.005, angularDegrees) * Math.PI) / 180;
   const heightRatio = wordmark ? getSurnameWordmarkHeightRatio(wordmark) : 0.42;
   const halfWidth = radius / Math.sqrt(1 + heightRatio ** 2);
   const halfHeight = halfWidth * heightRatio;
@@ -200,12 +292,34 @@ export function sampleSurnameLabelEnvelope(
     .clone()
     .multiplyScalar(Math.cos(angle))
     .addScaledVector(east, -Math.sin(angle));
+  const followsLatitude = Math.abs(slot.rotationDegrees) < 1e-8;
   const points: GeoPoint[] = [];
   // Sample the full envelope, not only its six corner/edge points. A large
   // wordmark can cross a neighbouring polygon through its middle while all
   // six old probes remain outside it.
   for (const along of samples) {
     for (const across of samples) {
+      if (followsLatitude) {
+        const rowLatitude = Math.max(
+          -Math.PI / 2 + 1e-5,
+          Math.min(Math.PI / 2 - 1e-5, latitude + across * halfHeight),
+        );
+        const safeCosine = Math.max(
+          Math.abs(Math.cos(rowLatitude)),
+          POLE_SAFE_COSINE,
+        );
+        const longitudeOffset = Math.max(
+          -POLE_SAFE_LONGITUDE_SPAN,
+          Math.min(POLE_SAFE_LONGITUDE_SPAN, (along * halfWidth) / safeCosine),
+        );
+        points.push({
+          latitude: (rowLatitude * 180) / Math.PI,
+          longitude: normalizeLongitude(
+            ((longitude + longitudeOffset) * 180) / Math.PI,
+          ),
+        });
+        continue;
+      }
       const tangent = rotatedEast
         .clone()
         .multiplyScalar(along * halfWidth)
@@ -270,7 +384,10 @@ function getSurnameLabelCandidatePool(
   countries: readonly CountryFeature[],
 ): readonly SurnameLabelSlot[] {
   const generatedCandidates = GENERATED_SLOTS[countryId]?.filter(
-    (slot) => slot.layout === wordmark.layout && slot.maxAngularDegrees > 0,
+    (slot) =>
+      slot.layout === wordmark.layout &&
+      Math.abs(slot.rotationDegrees) < 1e-6 &&
+      slot.maxAngularDegrees > 0,
   );
   // Keep the full generated pool when its safety pass found no candidate. The
   // smaller runtime envelope fallback below can still be safe for compact or
@@ -302,10 +419,7 @@ function getSurnameLabelCandidatePool(
       if (slot.landSafe && slot.squareMax !== undefined) {
         return {
           ...slot,
-          maxAngularDegrees:
-            getSurnameWordmarkHeightRatio(wordmark) >= 0.7
-              ? slot.squareMax
-              : slot.maxAngularDegrees,
+          maxAngularDegrees: getWordmarkSlotRadius(slot, wordmark),
         };
       }
       return maximizeSurnameLabelSlot(slot, countryId, countries, wordmark);
@@ -318,27 +432,50 @@ function chooseLargestSurnameLabelSlot(
   candidatePool: readonly SurnameLabelSlot[],
 ): SurnameLabelSlot | null {
   if (candidatePool.length === 0) return null;
-  const largest = Math.max(
-    ...candidatePool.map((candidate) => candidate.maxAngularDegrees),
-  );
-  // Keep a horizontal wordmark whenever it gives up only a small amount of
-  // area. A 90-degree label is reserved for genuinely narrow or blocked
-  // countries; otherwise the atlas becomes visually noisy even when the
-  // geometry solver found a nearly equivalent horizontal fit.
-  const horizontal = candidatePool.filter(
-    (candidate) =>
-      candidate.layout === 'straight' &&
-      Math.abs(candidate.rotationDegrees) < 1 &&
-      candidate.maxAngularDegrees >= largest * 0.85,
-  );
   return (
-    [...(horizontal.length > 0 ? horizontal : candidatePool)].sort(
+    [...candidatePool].sort(
       (a, b) =>
         b.maxAngularDegrees - a.maxAngularDegrees ||
-        Math.abs(a.rotationDegrees) - Math.abs(b.rotationDegrees) ||
         a.oceanDirection.localeCompare(b.oceanDirection),
     )[0] ?? null
   );
+}
+
+function getWordmarkSlotRadius(
+  slot: SurnameLabelSlot,
+  wordmark: SurnameWordmark,
+): number {
+  const heightRatio = getSurnameWordmarkHeightRatio(wordmark);
+  if (heightRatio >= 0.82) {
+    return slot.squareMax ?? slot.maxAngularDegrees;
+  }
+  if (heightRatio >= 0.42) {
+    return slot.mediumMax ?? slot.maxAngularDegrees;
+  }
+  return slot.maxAngularDegrees;
+}
+
+function getStrictSlotRadius(
+  slot: SurnameLabelSlot,
+  wordmark?: SurnameWordmark,
+): number {
+  if (!wordmark) return slot.strictMaxAngularDegrees ?? slot.maxAngularDegrees;
+  const heightRatio = getSurnameWordmarkHeightRatio(wordmark);
+  if (heightRatio >= 0.82) {
+    return (
+      slot.strictSquareMax ??
+      slot.strictMaxAngularDegrees ??
+      slot.maxAngularDegrees
+    );
+  }
+  if (heightRatio >= 0.42) {
+    return (
+      slot.strictMediumMax ??
+      slot.strictMaxAngularDegrees ??
+      slot.maxAngularDegrees
+    );
+  }
+  return slot.strictMaxAngularDegrees ?? slot.maxAngularDegrees;
 }
 
 function surnameLabelSlotKey(slot: SurnameLabelSlot): string {

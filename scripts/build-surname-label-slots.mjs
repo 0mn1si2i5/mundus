@@ -11,19 +11,21 @@ const ATLAS_SHA256 =
 // Test the country-scale ceiling first. Only candidates that hit a land
 // collision need the bounded binary refinement, which keeps the global build
 // predictable while avoiding the old single-midpoint under-sizing.
-const SEARCH_STEPS = 5;
+const SEARCH_STEPS = 6;
 const COARSE_ENVELOPE_SAMPLES = [-1, 0, 1];
 const ENVELOPE_SAMPLES = [-1, -0.5, 0, 0.5, 1];
-const ROTATIONS = [0, 45, 90, 135];
-const HEIGHT_RATIOS = { long: 0.34, square: 1 };
+// A surname is a cartographic label, so its baseline always follows the local
+// parallel. Narrow countries get a smaller word instead of a rotated one.
+const ROTATIONS = [0];
+const HEIGHT_RATIOS = { long: 0.28, medium: 0.5, square: 1 };
 const MAX_FOOTPRINT_DEGREES = 20;
-const TOP_CANDIDATES = 24;
-// Evaluate a bounded deterministic subset of the 5x5 interior grid. Two
-// centers systematically favored anchors and missed wide clear areas in large
-// countries such as Brazil and South Africa; eight retains that improvement
-// without turning a routine asset build into a sustained full-core job.
+const TOP_CANDIDATES = 12;
+const POLE_SAFE_COSINE = 0.12;
+const POLE_SAFE_LONGITUDE_SPAN = Math.PI * 0.75;
+// Evaluate a bounded deterministic subset of the 5x5 interior grid. Three
+// centers retain useful alternatives without multiplying runtime candidates.
 const MAX_EVALUATED_CENTERS = Number(
-  process.env.SURNAME_SLOT_MAX_EVALUATED_CENTERS ?? 8,
+  process.env.SURNAME_SLOT_MAX_EVALUATED_CENTERS ?? 3,
 );
 
 const anchors = JSON.parse(
@@ -97,9 +99,6 @@ for (const countryId of countriesToBuild) {
   for (const { center, localClearance } of centers) {
     const oceanDirection = directionFrom(anchor.point, center);
     for (const rotationDegrees of ROTATIONS) {
-      // Straight and arched SVG wordmarks share the same conservative
-      // rectangular safety envelope here. Compute it once per center/direction
-      // and emit both visual layouts from that result.
       const base = {
         layout: 'straight',
         center,
@@ -113,32 +112,71 @@ for (const countryId of countriesToBuild) {
         // neighbour check below remains direction-specific.
         localClearance,
       };
-      const long = maximizeCandidate(base, countryId, HEIGHT_RATIOS.long);
-      const square = maximizeCandidate(base, countryId, HEIGHT_RATIOS.square);
-      if (long.neighborSafe <= 0.02 && square.neighborSafe <= 0.02) continue;
-      for (const layout of ['straight', 'arched']) {
-        candidates.push({
-          ...base,
-          layout,
-          curvature: layout === 'arched' ? 0.24 : 0,
-          // Keep every emitted candidate renderable. A zero square probe can
-          // still accompany a useful long-word probe; the runtime chooses the
-          // requested layout and applies its own final safety check.
-          maxAngularDegrees: Math.max(0.05, long.maxAngularDegrees),
-          squareMax: Math.max(0.05, square.maxAngularDegrees),
-          neighborSafe: long.neighborSafe,
-          localClearance,
-          landSafe: true,
-        });
-      }
+      const foreignClearanceFor = (heightRatio) =>
+        findMaximumRadius(
+          (radius, samples) =>
+            isForeignLandSafe(base, countryId, radius, heightRatio, samples),
+          0.05,
+          MAX_FOOTPRINT_DEGREES,
+        );
+      const longForeignClearance = foreignClearanceFor(HEIGHT_RATIOS.long);
+      const mediumForeignClearance = foreignClearanceFor(HEIGHT_RATIOS.medium);
+      const squareForeignClearance = foreignClearanceFor(HEIGHT_RATIOS.square);
+      const long = solveCandidateFit(
+        base,
+        countryId,
+        HEIGHT_RATIOS.long,
+        equivalentRadiusDegrees,
+        longForeignClearance,
+      );
+      const medium = solveCandidateFit(
+        base,
+        countryId,
+        HEIGHT_RATIOS.medium,
+        equivalentRadiusDegrees,
+        mediumForeignClearance,
+      );
+      const square = solveCandidateFit(
+        base,
+        countryId,
+        HEIGHT_RATIOS.square,
+        equivalentRadiusDegrees,
+        squareForeignClearance,
+      );
+      if (
+        long.maxAngularDegrees <= 0.02 &&
+        medium.maxAngularDegrees <= 0.02 &&
+        square.maxAngularDegrees <= 0.02
+      )
+        continue;
+      candidates.push({
+        ...base,
+        maxAngularDegrees: long.maxAngularDegrees,
+        mediumMax: medium.maxAngularDegrees,
+        squareMax: square.maxAngularDegrees,
+        strictMaxAngularDegrees: long.strictMaxAngularDegrees,
+        strictMediumMax: medium.strictMaxAngularDegrees,
+        strictSquareMax: square.strictMaxAngularDegrees,
+        neighborSafe: long.neighborSafe,
+        mediumNeighborSafe: medium.neighborSafe,
+        squareNeighborSafe: square.neighborSafe,
+        foreignClearance: long.foreignClearance,
+        mediumForeignClearance: medium.foreignClearance,
+        squareForeignClearance: square.foreignClearance,
+        isolatedOverflow:
+          long.isolatedOverflow ||
+          medium.isolatedOverflow ||
+          square.isolatedOverflow,
+        localClearance,
+        landSafe: true,
+      });
     }
   }
   candidates.sort(
     (a, b) =>
       b.maxAngularDegrees - a.maxAngularDegrees ||
+      b.mediumMax - a.mediumMax ||
       b.squareMax - a.squareMax ||
-      Number(a.layout === 'straight') - Number(b.layout === 'straight') ||
-      a.rotationDegrees - b.rotationDegrees ||
       a.center.latitude - b.center.latitude ||
       a.center.longitude - b.center.longitude,
   );
@@ -154,9 +192,16 @@ for (const countryId of countriesToBuild) {
             oceanDirection: 'none',
             countryScaleCap,
             areaSteradians,
-            maxAngularDegrees: 0.05,
-            squareMax: 0.05,
+            maxAngularDegrees: 0,
+            mediumMax: 0,
+            squareMax: 0,
+            strictMaxAngularDegrees: 0,
+            strictMediumMax: 0,
+            strictSquareMax: 0,
             neighborSafe: 0,
+            mediumNeighborSafe: 0,
+            squareNeighborSafe: 0,
+            isolatedOverflow: false,
             localClearance: 0,
             landSafe: false,
           },
@@ -165,7 +210,7 @@ for (const countryId of countriesToBuild) {
 }
 
 const output = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   sourceName: 'Natural Earth country geometry with spherical surname envelopes',
   sourceUrl: ATLAS_URL,
   sourceSha256: ATLAS_SHA256,
@@ -175,9 +220,12 @@ const output = {
     sourceGridCenters: 25,
     evaluatedCentersPerCountry: MAX_EVALUATED_CENTERS,
     rotations: ROTATIONS,
+    heightRatios: HEIGHT_RATIOS,
     coarseEnvelopeSamples: COARSE_ENVELOPE_SAMPLES.length ** 2,
     envelopeSamples: ENVELOPE_SAMPLES.length ** 2,
     countryScaleFormula: 'clamp(1.6 * equivalentRadiusDegrees, 0.35, 20)',
+    isolatedOverflowFormula:
+      'eligible when foreign clearance >= max(2.5 * strict fit, strict fit + max(0.75deg, 0.9 * equivalent radius)); cap=min(strict fit + 0.8 * equivalent radius, 0.75 * foreign clearance, 2.8 * equivalent radius, 20deg)',
   },
   slots,
 };
@@ -244,51 +292,77 @@ function directionFrom(anchor, center) {
   return longitudeDelta < 0 ? 'west' : 'east';
 }
 
-function maximizeCandidate(base, countryId, heightRatio) {
+function solveCandidateFit(
+  base,
+  countryId,
+  heightRatio,
+  equivalentRadiusDegrees,
+  foreignClearance,
+) {
   const minimum = 0.05;
   const maximum = Math.min(MAX_FOOTPRINT_DEGREES, base.countryScaleCap);
-  const isAllowed = (radius, samples = COARSE_ENVELOPE_SAMPLES) =>
-    isLandSafe(base, countryId, radius, heightRatio, samples);
-  if (!isAllowed(minimum))
-    return { maxAngularDegrees: 0, neighborSafe: 0, localClearance: 0 };
-  if (isAllowed(maximum, ENVELOPE_SAMPLES)) {
+  const strictMaxAngularDegrees = findMaximumRadius(
+    (radius, samples) =>
+      isOwnCountrySafe(base, countryId, radius, heightRatio, samples),
+    minimum,
+    maximum,
+  );
+  if (strictMaxAngularDegrees <= 0) {
     return {
-      maxAngularDegrees: maximum,
-      neighborSafe: maximum,
-      localClearance: base.localClearance ?? 0,
+      maxAngularDegrees: 0,
+      strictMaxAngularDegrees: 0,
+      neighborSafe: 0,
+      foreignClearance: 0,
+      isolatedOverflow: false,
     };
   }
+
+  const isolatedThreshold = Math.max(
+    strictMaxAngularDegrees * 2.5,
+    strictMaxAngularDegrees + 0.75,
+    strictMaxAngularDegrees + 0.9 * equivalentRadiusDegrees,
+  );
+  const isolated = foreignClearance >= isolatedThreshold;
+  const overflowMax = isolated
+    ? Math.min(
+        strictMaxAngularDegrees * 1.25 + 0.15,
+        strictMaxAngularDegrees + 0.8 * equivalentRadiusDegrees,
+        foreignClearance * 0.75,
+        Math.max(0.35, equivalentRadiusDegrees * 2.8),
+        MAX_FOOTPRINT_DEGREES,
+      )
+    : strictMaxAngularDegrees;
+  return {
+    maxAngularDegrees: Math.max(strictMaxAngularDegrees, overflowMax),
+    strictMaxAngularDegrees,
+    neighborSafe: Math.max(strictMaxAngularDegrees, overflowMax),
+    foreignClearance,
+    isolatedOverflow: isolated && overflowMax > strictMaxAngularDegrees + 1e-6,
+  };
+}
+
+function findMaximumRadius(isAllowed, minimum, maximum) {
+  if (!isAllowed(minimum, ENVELOPE_SAMPLES)) return 0;
+  if (isAllowed(maximum, ENVELOPE_SAMPLES)) return maximum;
   let low = minimum;
   let high = maximum;
   for (let step = 0; step < SEARCH_STEPS; step += 1) {
     const middle = (low + high) / 2;
-    if (isAllowed(middle)) low = middle;
+    if (isAllowed(middle, COARSE_ENVELOPE_SAMPLES)) low = middle;
     else high = middle;
   }
-  // The binary search uses the 3x3 probe for speed. Recheck the final radius
-  // with the denser 5x5 probe and back off in small deterministic increments
-  // if a neighbouring polygon is found between coarse samples.
-  if (!isAllowed(low, ENVELOPE_SAMPLES)) {
-    let denseLow = minimum;
-    let denseHigh = low;
-    if (!isAllowed(denseLow, ENVELOPE_SAMPLES)) {
-      return { maxAngularDegrees: 0, neighborSafe: 0, localClearance: 0 };
-    }
-    for (let step = 0; step < SEARCH_STEPS; step += 1) {
-      const middle = (denseLow + denseHigh) / 2;
-      if (isAllowed(middle, ENVELOPE_SAMPLES)) denseLow = middle;
-      else denseHigh = middle;
-    }
-    low = denseLow;
+  if (isAllowed(low, ENVELOPE_SAMPLES)) return low;
+  let denseLow = minimum;
+  let denseHigh = low;
+  for (let step = 0; step < SEARCH_STEPS; step += 1) {
+    const middle = (denseLow + denseHigh) / 2;
+    if (isAllowed(middle, ENVELOPE_SAMPLES)) denseLow = middle;
+    else denseHigh = middle;
   }
-  return {
-    maxAngularDegrees: low,
-    neighborSafe: low,
-    localClearance: base.localClearance ?? 0,
-  };
+  return denseLow;
 }
 
-function isLandSafe(
+function isOwnCountrySafe(
   base,
   countryId,
   radius,
@@ -301,6 +375,19 @@ function isLandSafe(
     !geoContains(country, [base.center.longitude, base.center.latitude])
   )
     return false;
+  const envelope = sampleEnvelope(base, radius, heightRatio, samples);
+  return envelope.every((point) =>
+    geoContains(country, [point.longitude, point.latitude]),
+  );
+}
+
+function isForeignLandSafe(
+  base,
+  countryId,
+  radius,
+  heightRatio,
+  samples = ENVELOPE_SAMPLES,
+) {
   const envelope = sampleEnvelope(base, radius, heightRatio, samples);
   return !potentialCountries(envelope).some((candidate) => {
     if (candidate.properties.countryId === countryId) return false;
@@ -365,9 +452,29 @@ function sampleEnvelope(
     scale(north, Math.cos(rotation)),
     scale(east, -Math.sin(rotation)),
   );
+  const followsLatitude = Math.abs(base.rotationDegrees) < 1e-8;
   const points = [];
   for (const along of samples) {
     for (const across of samples) {
+      if (followsLatitude) {
+        const rowLatitude = Math.max(
+          -Math.PI / 2 + 1e-5,
+          Math.min(Math.PI / 2 - 1e-5, latitude + across * halfHeight),
+        );
+        const safeCosine = Math.max(
+          Math.abs(Math.cos(rowLatitude)),
+          POLE_SAFE_COSINE,
+        );
+        const longitudeOffset = Math.max(
+          -POLE_SAFE_LONGITUDE_SPAN,
+          Math.min(POLE_SAFE_LONGITUDE_SPAN, (along * halfWidth) / safeCosine),
+        );
+        points.push({
+          latitude: (rowLatitude * 180) / Math.PI,
+          longitude: normalize(((longitude + longitudeOffset) * 180) / Math.PI),
+        });
+        continue;
+      }
       const tangent = add(
         scale(rotatedEast, along * halfWidth),
         scale(rotatedNorth, across * halfHeight),

@@ -4,7 +4,7 @@
   "sourceUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
   "licenseName": "Natural Earth public domain; derived metadata in Mundus",
   "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
-  "version": "world-atlas 2.0.2 / spherical slot schema 5",
+  "version": "world-atlas 2.0.2 / strict-latitude slot schema 6",
   "retrievedAt": "2026-09-23",
   "sourceAssets": {
     "50m": {
@@ -12,19 +12,19 @@
       "sha256": "04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394"
     }
   },
-  "derivedAssetSha256": "1630b729e896f67a91e069e3aec4bcddab796188db9e98aa8bdbf34932a5a181",
-  "recordCount": 5264,
-  "rawBytes": 1912492,
-  "gzipBytes": 81391,
-  "staticDecodedBytesEstimate": 7649968,
-  "runtimeDecodedBytesEstimate": 11474952,
-  "attribution": "Candidate wordmark slots derived from the pinned Natural Earth country geometry; spherical envelopes, adjacent-land rejection, and country-scale caps are applied before display.",
+  "derivedAssetSha256": "9baa00dfeb2b9e246f90b1dd34a49ca7842a988c7db5c1b55e201769c377c278",
+  "recordCount": 580,
+  "rawBytes": 413965,
+  "gzipBytes": 54242,
+  "staticDecodedBytesEstimate": 1655860,
+  "runtimeDecodedBytesEstimate": 2483790,
+  "attribution": "Candidate wordmark slots derived from the pinned Natural Earth country geometry; strict parallel-latitude envelopes, adjacent-land rejection, and bounded isolated-island overflow are applied before display.",
   "redistribution": "allowed",
   "transformations": [
-    "Derive a fixed 5x5 interior grid and evaluate up to eight clear centers for large countries (three for small countries)",
-    "Precompute spherical adjacent-land safety, country-scale caps, and bounded maximum envelopes from the pinned atlas",
+    "Derive a fixed 5x5 interior grid and evaluate up to three clear centers per country",
+    "Precompute strict own-country envelopes, foreign-land clearance, country-scale caps, and bounded isolated-island overflow from the pinned atlas",
     "Store only compact candidate metadata; do not include raw country geometry"
   ],
   "missingValuePolicy": "Countries without a safe candidate remain visible in the surname side panel but have no map wordmark.",
-  "boundaryPolicy": "A candidate may extend into ocean within the local boundary/ocean allowance and country-scale cap, but is rejected when sampled spherical glyph envelope points intersect another country's land geometry."
+  "boundaryPolicy": "Ordinary candidates remain inside their own country. Isolated-country candidates may extend into ocean within an area-scaled cap, but are rejected when their aspect-specific spherical glyph envelope approaches another country's land geometry."
 }
