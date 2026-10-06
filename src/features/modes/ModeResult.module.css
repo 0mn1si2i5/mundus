@@ -19,6 +19,14 @@
   animation: modeEnter 240ms ease-out both;
 }
 
+/* Grid items default to min-width: auto; long hashes and URLs in source
+   notes must wrap inside the panel instead of widening it off-screen. */
+.result > *,
+.result small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .result span {
   color: var(--color-muted);
   font-size: 0.67rem;
@@ -147,6 +155,11 @@
 .surnameResult {
   top: 22%;
   width: 19rem;
+  max-height: calc(78svh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  pointer-events: auto;
 }
 
 .surnameWordmark {
@@ -289,6 +302,8 @@
 
   .surnameResult {
     top: auto;
+    max-height: none;
+    overflow-y: visible;
     display: grid;
     grid-template-columns: 1fr auto;
     text-align: left;
