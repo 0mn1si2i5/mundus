@@ -113,6 +113,21 @@ describe('surname label layout', () => {
     expect(layout.selectedVisible).toBe(true);
   });
 
+  it('keeps the render budget when overlapping labels are allowed', () => {
+    const layout = computeSurnameLabelLayout(
+      [
+        rect('large', 10, 10, 30, 20),
+        rect('selected', 60, 10, 30, 20, { selected: true }),
+        rect('small', 110, 10, 20, 12),
+      ],
+      [],
+      { width: 200, height: 120, maxVisibleCount: 2, allowCollisions: true },
+    );
+
+    expect([...layout.visibleIds]).toEqual(['selected', 'large']);
+    expect(layout.hiddenReasons.get('small')).toBe('collision');
+  });
+
   it('keeps the previous visible set stable before adding larger new labels', () => {
     const layout = computeSurnameLabelLayout(
       [

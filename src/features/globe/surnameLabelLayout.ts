@@ -198,6 +198,9 @@ export function computeSurnameLabelLayout(
       // with another wordmark.
       reason = null;
     }
+    // Overlap tolerance applies to screen collisions only; the render budget
+    // below must still cap how many labels reach the transparent pass.
+    if (reason === 'collision' && viewport.allowCollisions) reason = null;
     if (
       !reason &&
       viewport.maxVisibleCount !== undefined &&
@@ -209,7 +212,6 @@ export function computeSurnameLabelLayout(
       // rotates and the screen layout changes.
       reason = 'collision';
     }
-    if (reason === 'collision' && viewport.allowCollisions) reason = null;
     if (reason) {
       hiddenReasons.set(rectangle.id, reason);
       if (reason === 'obstacle' || reason === 'collision') {

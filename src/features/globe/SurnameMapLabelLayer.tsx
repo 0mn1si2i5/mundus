@@ -109,9 +109,18 @@ export function SurnameMapLabelLayer({
   const previousStructuralEvidence = useRef('');
   const layoutDirty = useRef(true);
   const lastLayoutAt = useRef(Number.NEGATIVE_INFINITY);
+  const deferredLayout = useRef<number | null>(null);
   const lastCameraMatrix = useRef<number[] | null>(null);
   const gestureWasActive = useRef(false);
   const { camera, gl, size, invalidate } = useThree();
+  useEffect(
+    () => () => {
+      if (deferredLayout.current !== null) {
+        window.clearTimeout(deferredLayout.current);
+      }
+    },
+    [],
+  );
   useEffect(
     () => () => {
       for (const entry of textureCache.values()) entry.texture.dispose();
@@ -171,7 +180,20 @@ export function SurnameMapLabelLayer({
     // Focus animations can invalidate at display refresh rate. Twenty layout
     // passes per second keeps collision changes responsive while the camera is
     // moving; once it settles there is no reason to scan every country again.
-    if (cameraChanged && now - lastLayoutAt.current < 50) return;
+    if (cameraChanged && now - lastLayoutAt.current < 50) {
+      // With frameloop="demand" a throttled frame may be the last frame of a
+      // camera move. Schedule one more frame so the settled view is laid out.
+      if (deferredLayout.current === null) {
+        deferredLayout.current = window.setTimeout(
+          () => {
+            deferredLayout.current = null;
+            invalidate();
+          },
+          50 - (now - lastLayoutAt.current),
+        );
+      }
+      return;
+    }
     lastLayoutAt.current = now;
     layoutDirty.current = false;
     if (!previousCameraMatrix) {
