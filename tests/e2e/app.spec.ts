@@ -3356,6 +3356,38 @@ test('keeps Development data lazy and cached across mode switches', async ({
   expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(1);
 });
 
+test('keeps Surname Atlas geometry lazy and cached across mode switches', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    testInfo.project.name === 'mobile',
+    'One request trace is sufficient',
+  );
+  const runtime = 'surnameAtlasRuntime';
+  const requests: string[] = [];
+  await useHighConcurrencyProfile(page);
+  page.on('request', (request) => requests.push(request.url()));
+  await page.goto('./?mode=antipodes&v=2');
+  await expectVectorReady(page, '50m');
+  expect(requests.some((url) => url.includes(runtime))).toBe(false);
+
+  await switchModeFromAtlas(page, '姓氏观察');
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-surname-map-label-visible-count',
+    /^[1-9]/,
+    { timeout: 10_000 },
+  );
+  expect(requests.filter((url) => url.includes(runtime))).toHaveLength(1);
+  await switchModeFromAtlas(page, '地球另一端');
+  await switchModeFromAtlas(page, '姓氏观察');
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-surname-map-label-visible-count',
+    /^[1-9]/,
+    { timeout: 10_000 },
+  );
+  expect(requests.filter((url) => url.includes(runtime))).toHaveLength(1);
+});
+
 test('loads GeoNames only for Other Side and reuses one lazy asset', async ({
   page,
 }, testInfo) => {

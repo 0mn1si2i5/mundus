@@ -4,7 +4,6 @@ import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from 'three';
 import { feature } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import atlas from 'world-atlas/countries-110m.json';
-import detailedAtlas from 'world-atlas/countries-50m.json';
 import type { GeoPoint } from './geo';
 import type { CountryRef } from './country';
 
@@ -52,7 +51,6 @@ export interface CountryHighlightTexture {
 }
 
 let cachedDataset: CountryDataset | undefined;
-let cachedSurnameCountries: readonly CountryFeature[] | undefined;
 
 export const COUNTRY_TEXTURE_STYLE = {
   oceanColor: '#c7d2cd',
@@ -116,26 +114,22 @@ export function getCountryDataset(): CountryDataset {
   return cachedDataset;
 }
 
-/**
- * The surname slot manifest is generated against Natural Earth 50m geometry.
- * Keep its runtime land tests on the same geometry rather than rechecking a
- * lower-resolution 110m approximation that can erase valid island slots.
- */
-export function getSurnameCountryFeatures(): readonly CountryFeature[] {
-  if (cachedSurnameCountries) return cachedSurnameCountries;
-  const topology = detailedAtlas as unknown as AtlasTopology;
+/** Converts a world-atlas topology into country features with stable ids. */
+export function countryFeaturesFromTopology(
+  atlasTopology: unknown,
+): readonly CountryFeature[] {
+  const topology = atlasTopology as AtlasTopology;
   const raw = feature(
     topology,
     topology.objects.countries,
   ) as unknown as FeatureCollection<Geometry, AtlasProperties>;
-  cachedSurnameCountries = raw.features.map((country) => ({
+  return raw.features.map((country) => ({
     ...country,
     properties: {
       countryId: countryIdFor(country.id, country.properties.name),
       name: country.properties.name,
     },
   }));
-  return cachedSurnameCountries;
 }
 
 function countryIdFor(

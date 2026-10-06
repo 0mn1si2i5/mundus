@@ -22,7 +22,7 @@ import {
   createCountryHighlightTexture,
   createCountryTexture,
   getCountryDataset,
-  getSurnameCountryFeatures,
+  type CountryFeature,
 } from './countryData';
 import {
   antipodeOf,
@@ -59,12 +59,7 @@ import { type SurnameLabelHiddenReason } from './surnameLabelLayout';
 import type { SurnameMapLabel } from '../surnames/surnameData';
 import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
 import type { SurnameDisplayMode } from '../../state/urlState';
-import {
-  chooseAlternativeSurnameLabelSlot,
-  chooseSurnameLabelSlot,
-  isSurnameLabelSlotOnRenderedLand,
-  type SurnameLabelSlot,
-} from './surnameLabelSlots';
+import type { SurnameLabelSlot } from './surnameLabelSlots';
 import {
   CAMERA_FOCUS_DURATION_MS,
   cameraFocusAnimationProgress,
@@ -73,6 +68,7 @@ import {
 } from './camera';
 import { ignoreRaycast } from './sceneUtils';
 import { useReducedMotion } from './useReducedMotion';
+import { useSurnameAtlasRuntime } from './useSurnameAtlasRuntime';
 import { Marker, type MarkerDiagnosticHandle } from './Marker';
 import {
   SunlineLayer,
@@ -102,6 +98,8 @@ interface OrbitControlsHandle {
   update: () => void;
   enabled: boolean;
 }
+
+const NO_COUNTRIES: readonly CountryFeature[] = [];
 
 export interface SunlineRenderState {
   subsolarPoint: GeoPoint;
@@ -293,10 +291,11 @@ export function GlobeScene({
   const reducedMotion = useReducedMotion();
   const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const countries = useMemo(() => getCountryDataset(), []);
-  const surnameCountries = useMemo(
-    () => (activeMode === 'surnames' ? getSurnameCountryFeatures() : []),
-    [activeMode],
-  );
+  const surnameRuntime = useSurnameAtlasRuntime(activeMode === 'surnames');
+  const surnameCountries =
+    activeMode === 'surnames' && surnameRuntime
+      ? surnameRuntime.surnameCountries
+      : NO_COUNTRIES;
   const selectedSurnameMapLabel = useMemo(
     () =>
       surnameMapLabels.find(
@@ -328,7 +327,7 @@ export function GlobeScene({
     // Do not block the vector asset request on the CPU geometry pass. The
     // labels are mounted only after the vector surface is ready, so computing
     // them before that point only delays the ready signal.
-    if (!vectorReady) return [];
+    if (!vectorReady || !surnameRuntime) return [];
     const countriesById = new Map(
       surnameCountries.map((candidate) => [
         candidate.properties.countryId,
@@ -349,7 +348,7 @@ export function GlobeScene({
           ?.layout === wordmark.layout
           ? surnameSlotOverrides[`${surnameOverrideKey}:${label.countryId}`]
           : null) ??
-        chooseSurnameLabelSlot(
+        surnameRuntime.chooseSurnameLabelSlot(
           label.countryId,
           anchor,
           wordmark,
@@ -357,7 +356,7 @@ export function GlobeScene({
         );
       if (
         !slot ||
-        !isSurnameLabelSlotOnRenderedLand(
+        !surnameRuntime.isSurnameLabelSlotOnRenderedLand(
           slot,
           label.countryId,
           profile.vectorDetail,
@@ -384,6 +383,7 @@ export function GlobeScene({
     surnameCountries,
     surnameDisplayMode,
     surnameMapLabels,
+    surnameRuntime,
     surnameSlotOverrides,
     surnameOverrideKey,
     vectorReady,
@@ -483,18 +483,19 @@ export function GlobeScene({
         selectedSurnameMapLabel.record,
         surnameDisplayMode,
       );
-      const candidate = selectedWordmark
-        ? chooseAlternativeSurnameLabelSlot(
-            selectedSurnameMapLabel.countryId,
-            surnameAnchor,
-            selectedWordmark,
-            surnameCountries,
-            selectedSurnameSlot,
-          )
-        : null;
+      const candidate =
+        selectedWordmark && surnameRuntime
+          ? surnameRuntime.chooseAlternativeSurnameLabelSlot(
+              selectedSurnameMapLabel.countryId,
+              surnameAnchor,
+              selectedWordmark,
+              surnameCountries,
+              selectedSurnameSlot,
+            )
+          : null;
       const alternate =
         candidate &&
-        isSurnameLabelSlotOnRenderedLand(
+        surnameRuntime?.isSurnameLabelSlotOnRenderedLand(
           candidate,
           selectedSurnameMapLabel.countryId,
           profile.vectorDetail,
@@ -579,6 +580,7 @@ export function GlobeScene({
     selectedSurnameSlot,
     surnameCountries,
     surnameOverrideKey,
+    surnameRuntime,
     setSurnameSlotOverrides,
     surnameAnchor,
     surnameDisplayMode,
