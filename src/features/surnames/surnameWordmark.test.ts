@@ -131,7 +131,7 @@ describe('surname wordmarks', () => {
     expect(svg).not.toMatch(/<(?:rect|polygon|line)\b/u);
     expect(svg).not.toMatch(/stroke\s*=/u);
     expect(svg.match(/<text(?:\s|>)/gu)).toHaveLength(1);
-    expect(svg).toContain('textLength="198"');
+    expect(svg).not.toMatch(/textLength|lengthAdjust|textPath/u);
     expect(SURNAME_WORDMARK_ASPECT_RATIO * SURNAME_WORDMARK_HEIGHT_RATIO).toBe(
       1,
     );
@@ -140,7 +140,7 @@ describe('surname wordmarks', () => {
     expect(svg).toContain(`font-family="${SURNAME_WORDMARK_CJK_FONT_FAMILY}"`);
   });
 
-  it('uses an arched baseline for long multi-part source forms', () => {
+  it('keeps long multi-part source forms on a straight natural baseline', () => {
     const wordmark = resolveSurnameWordmark(
       {
         ...record,
@@ -150,8 +150,11 @@ describe('surname wordmarks', () => {
       },
       'local',
     )!;
-    expect(wordmark.layout).toBe('arched');
-    expect(createSurnameWordmarkSvg(wordmark)).toContain('<textPath');
+    expect(wordmark.layout).toBe('straight');
+    const svg = createSurnameWordmarkSvg(wordmark);
+    expect(svg).not.toContain('<textPath');
+    expect(svg).not.toContain('lengthAdjust');
+    expect(svg).toMatch(/<text x="[\d.]+" y="198" text-anchor="middle">/u);
   });
 
   it('sizes a single-line wordmark from its own aspect ratio', () => {
@@ -176,7 +179,7 @@ describe('surname wordmarks', () => {
     );
   });
 
-  it('uses most of the transparent SVG width for a Latin wordmark', () => {
+  it('sizes the SVG to the Latin wordmark without stretching its glyphs', () => {
     const wordmark = resolveSurnameWordmark(
       {
         ...record,
@@ -187,10 +190,29 @@ describe('surname wordmarks', () => {
       'local',
     )!;
     const svg = createSurnameWordmarkSvg(wordmark);
-    expect(svg).toContain('textLength="820"');
-    expect(svg).not.toContain('textLength="428"');
+    expect(svg).toContain('viewBox="0 0 552 280"');
+    expect(svg).not.toMatch(/textLength|lengthAdjust/u);
     expect(svg).toContain(
       `font-family="${SURNAME_WORDMARK_LATIN_FONT_FAMILY}"`,
+    );
+  });
+
+  it('uses the natural character classes to distinguish wordmark widths', () => {
+    const makeWordmark = (value: string) =>
+      resolveSurnameWordmark(
+        {
+          ...record,
+          localForms: [{ value, script: 'Latin' }],
+          romanizedForms: [value],
+          zhDisplay: null,
+        },
+        'local',
+      )!;
+    expect(getSurnameWordmarkAspectRatio(makeWordmark('Li'))).toBeLessThan(
+      getSurnameWordmarkAspectRatio(makeWordmark('MacDonald')),
+    );
+    expect(getSurnameWordmarkAspectRatio(makeWordmark('WWWW'))).toBeGreaterThan(
+      getSurnameWordmarkAspectRatio(makeWordmark('iiii')),
     );
   });
 });

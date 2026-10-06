@@ -9,7 +9,7 @@ export interface SurnameWordmark {
   requestedMode: SurnameDisplayMode;
   fellBack: boolean;
   generated: boolean;
-  layout: 'straight' | 'arched';
+  layout: 'straight';
   characterCount: number;
 }
 
@@ -29,18 +29,81 @@ export const SURNAME_WORDMARK_LATIN_FONT_FAMILY =
 export const SURNAME_WORDMARK_CJK_FONT_FAMILY =
   "'Songti SC', 'Noto Serif CJK SC', STSong, SimSun, serif";
 
+interface SurnameWordmarkMetrics {
+  width: number;
+  fontSize: number;
+  baseline: number;
+  cjk: boolean;
+}
+
+const WORDMARK_CANVAS_HEIGHT = 280;
+const WORDMARK_SIDE_PADDING = 32;
+const WORDMARK_LETTER_SPACING = 1;
+
+function isCjkWordmark(value: string): boolean {
+  return /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(
+    value,
+  );
+}
+
+/**
+ * Estimates the natural advance of each glyph category in the selected serif
+ * family. SVG text is intentionally left unstretched; this only determines a
+ * sufficiently padded viewBox and a readable font size.
+ */
+function getWordmarkGlyphUnits(value: string): number {
+  return Array.from(value).reduce((total, character) => {
+    if (
+      /\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}|\p{Script=Hangul}/u.test(
+        character,
+      )
+    ) {
+      return total + 1;
+    }
+    if (/\s/u.test(character)) return total + 0.34;
+    if (/[\p{P}\p{S}]/u.test(character)) return total + 0.42;
+    if (/[A-Z\u00C0-\u024F]/u.test(character)) return total + 0.72;
+    if (/[a-z\u00DF-\u024F]/u.test(character)) return total + 0.54;
+    if (/\p{Number}/u.test(character)) return total + 0.58;
+    return total + 0.68;
+  }, 0);
+}
+
+function getSurnameWordmarkMetrics(
+  wordmark: SurnameWordmark,
+): SurnameWordmarkMetrics {
+  const cjk = isCjkWordmark(wordmark.value);
+  const glyphUnits = Math.max(1, getWordmarkGlyphUnits(wordmark.value));
+  const glyphCount = Math.max(1, Array.from(wordmark.value).length);
+  const fontSize = cjk
+    ? Math.max(112, Math.min(190, 190 - (glyphCount - 1) * 14))
+    : Math.max(100, Math.min(168, 168 - Math.max(0, glyphUnits - 6) * 4));
+  const naturalWidth =
+    glyphUnits * fontSize +
+    WORDMARK_SIDE_PADDING * 2 +
+    Math.max(0, glyphCount - 1) * WORDMARK_LETTER_SPACING;
+  const width = Math.max(
+    cjk && glyphCount === 1 ? 280 : 240,
+    Math.min(1800, Math.ceil(naturalWidth)),
+  );
+  return {
+    width,
+    fontSize,
+    baseline: cjk ? 214 : 198,
+    cjk,
+  };
+}
+
 export function getSurnameWordmarkAspectRatio(
   wordmark: SurnameWordmark,
 ): number {
-  return wordmark.characterCount <= 2 && !/[\s-]/u.test(wordmark.value)
-    ? 1
-    : SURNAME_WORDMARK_ASPECT_RATIO;
+  return getSurnameWordmarkMetrics(wordmark).width / 280;
 }
 
 export function getSurnameWordmarkHeightRatio(
   wordmark: SurnameWordmark,
 ): number {
-  return 1 / getSurnameWordmarkAspectRatio(wordmark);
+  return 280 / getSurnameWordmarkMetrics(wordmark).width;
 }
 
 /**
@@ -553,10 +616,9 @@ export function resolveSurnameWordmark(
   };
 }
 
-export function chooseWordmarkLayout(value: string): 'straight' | 'arched' {
-  return Array.from(value).length > 10 || /[\s-]/u.test(value)
-    ? 'arched'
-    : 'straight';
+export function chooseWordmarkLayout(_value: string): 'straight' {
+  void _value;
+  return 'straight';
 }
 
 export function escapeSvgText(value: string): string {
@@ -571,27 +633,13 @@ export function escapeSvgText(value: string): string {
 /** Creates a transparent, borderless SVG wordmark texture with one word only. */
 export function createSurnameWordmarkSvg(wordmark: SurnameWordmark): string {
   const text = escapeSvgText(wordmark.value);
-  const compact = getSurnameWordmarkAspectRatio(wordmark) === 1;
-  const canvasWidth = compact ? 280 : 1024;
-  const fontSize = Math.max(
-    compact ? 120 : 76,
-    Math.min(
-      compact ? 220 : wordmark.layout === 'arched' ? 154 : 188,
-      Math.round(690 / Math.max(1, wordmark.characterCount)),
-    ),
-  );
-  const textLength = Math.min(
-    compact ? 230 : 820,
-    compact
-      ? Math.round(wordmark.characterCount * fontSize * 0.9)
-      : Math.max(Math.round(fontSize * 0.9), 820),
-  );
-  const glyph =
-    wordmark.layout === 'arched'
-      ? `<path id="baseline" d="M96 214 Q512 18 928 214" fill="none"/><text><textPath href="#baseline" startOffset="50%" text-anchor="middle" textLength="${textLength}" lengthAdjust="spacingAndGlyphs">${text}</textPath></text>`
-      : `<text x="${compact ? 140 : 512}" y="${compact ? 205 : 174}" text-anchor="middle" textLength="${textLength}" lengthAdjust="spacingAndGlyphs">${text}</text>`;
-  const fontFamily = /\p{Script=Han}/u.test(wordmark.value)
+  const metrics = getSurnameWordmarkMetrics(wordmark);
+  const fontFamily = metrics.cjk
     ? SURNAME_WORDMARK_CJK_FONT_FAMILY
     : SURNAME_WORDMARK_LATIN_FONT_FAMILY;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${canvasWidth}" height="280" viewBox="0 0 ${canvasWidth} 280"><defs><filter id="s" x="-20%" y="-30%" width="140%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#102a2b" flood-opacity=".2"/></filter></defs><g fill="#183f40" filter="url(#s)" font-family="${fontFamily}" font-size="${fontSize}" font-weight="600" letter-spacing="1">${glyph}</g></svg>`;
+  const x = metrics.width / 2;
+  const fontSize = metrics.fontSize;
+  const y = metrics.baseline;
+  const glyph = `<text x="${x}" y="${y}" text-anchor="middle">${text}</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${metrics.width}" height="${WORDMARK_CANVAS_HEIGHT}" viewBox="0 0 ${metrics.width} ${WORDMARK_CANVAS_HEIGHT}"><g fill="#183f40" font-family="${fontFamily}" font-size="${fontSize}" font-weight="600" letter-spacing="${WORDMARK_LETTER_SPACING}">${glyph}</g></svg>`;
 }
