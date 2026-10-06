@@ -10,6 +10,7 @@
 > 从一座城市向外扩张，直到第一次遇到一座“足够大”的竞争城市，哪些大城市拥有最大的空间余量？
 
 必须区分：
+
 - **数学/几何孤立**：地球表面的城市间距离；
 - **人口等级孤立**：附近是否存在与自身规模可比的城市；
 - **交通/经济孤立**：航线、道路、贸易、通勤等网络意义上的可达性。
@@ -27,6 +28,7 @@ R_i(\alpha)=\min_{j\ne i,\;P_j\ge\alpha P_i} d(i,j),\qquad 0<\alpha\le1
 R_i(alpha) 称为 **Hierarchical Isolation Radius**。
 
 解释：
+
 - alpha=1：最近的“不小于自己”的城市；
 - alpha=0.5：最近的“至少一半规模”的城市；
 - alpha=0.1：较宽松的区域竞争尺度。
@@ -94,6 +96,7 @@ Mundus 是全球三维地球，不能直接把经纬度当平面坐标。
 MVP 可使用 Haversine / great-circle distance；更严格的数据管线可离线使用 WGS84 ellipsoid geodesic。
 
 实现必须正确处理：
+
 - ±180° 反经线；
 - 极区；
 - 球面 small circle；
@@ -116,15 +119,19 @@ MVP 应选择一个全球一致的 urban agglomeration / urban centre 数据源�
 ## 6. 数据源
 
 ### UN World Urbanization Prospects 2025
+
 权威、全球统一，覆盖 237 个国家和地区，并提供超过 12,000 个 5 万人口以上城市的估计/预测。适合作为人口等级分析的重要来源。正式再分发前需确认具体数据文件许可。
 
 ### GHSL / GHS-POP / Urban Centre Database
+
 JRC Global Human Settlement Layer 适合建立几何上更统一的城市实体，也是未来从“城市点”升级到城市边界/建成区的优选基础。
 
 ### Natural Earth Populated Places
+
 适合显示和原型；人口来源与口径并非完全统一，不建议作为最终科学排名的唯一人口基准。
 
 ### WorldPop / GeoNames
+
 适合补充人口栅格、名称、别名和坐标，不建议单独承担最终全球排名人口基准。
 
 ## 7. 算法
@@ -134,6 +141,7 @@ JRC Global Human Settlement Layer 适合建立几何上更统一的城市实体�
 更好的观察是：对固定城市，把其他城市按距离排序。只有当更远城市的人口足以覆盖此前未覆盖的 alpha 区间时，才产生新的 breakpoint，因此完整 R(alpha) 可压缩为少量“纪录竞争者”。
 
 实现选择：
+
 - BallTree + haversine；
 - 球面点转单位 3D 向量 + KD-tree 做候选搜索，再用 geodesic 精算；
 - 人口降序增量空间索引；
@@ -172,13 +180,16 @@ metadata 必须记录 metric、dataset、referenceYear、populationDefinition、
 ## 9. Mundus 交互设计
 
 ### 默认视图
+
 - Globe 显示达到最低人口门槛的城市；
 - 颜色编码当前 R_i(alpha)；
 - 侧栏展示 alpha 和 Top N；
 - 默认 alpha 建议 0.5。
 
 ### 点击城市
+
 选中后：
+
 1. 高亮城市；
 2. 绘制 geodesic isolation ring；
 3. 高亮当前 competitor；
@@ -186,15 +197,19 @@ metadata 必须记录 metric、dataset、referenceYear、populationDefinition、
 5. 卡片显示 population、alpha、competitor、distance、rank/percentile。
 
 ### Alpha slider
+
 核心控件范围 0.1–1.0。拖动时 ring、competitor、great-circle arc、ranking 和 R(alpha) 图同步变化。
 
 阶梯式跳变是数学结构本身，不应人为平滑。
 
 ### R(alpha) 图
+
 详情卡显示阶梯曲线，当前 alpha 以游标标记。它是解释综合 isolation score 的最佳方式。
 
 ### 三维视觉
+
 推荐：
+
 - 普通城市低亮度；
 - selected city 主强调色；
 - competitor 第二强调色；
@@ -206,6 +221,7 @@ metadata 必须记录 metric、dataset、referenceYear、populationDefinition、
 ## 10. MVP 范围
 
 ### 第一版应实现
+
 - R_i(alpha)；
 - alpha slider 0.1–1.0，默认 0.5；
 - minimum population filter；
@@ -221,6 +237,7 @@ metadata 必须记录 metric、dataset、referenceYear、populationDefinition、
 - 全部离线预计算。
 
 ### 延后到 V2
+
 - weighted Voronoi；
 - gravity/Huff fields；
 - PostGIS backend；
@@ -232,14 +249,18 @@ metadata 必须记录 metric、dataset、referenceYear、populationDefinition、
 ## 11. 测试策略
 
 ### 数学正确性
+
 构造小型人工城市集，验证：
+
 - R(alpha) 单调不减；
 - competitor 满足人口阈值；
 - competitor 确为最近合格城市；
 - breakpoint 积分等于密集 alpha 网格数值积分。
 
 ### 地理边界
+
 测试：
+
 - 反经线两侧；
 - 极区；
 - 几乎同坐标城市；
@@ -247,7 +268,9 @@ metadata 必须记录 metric、dataset、referenceYear、populationDefinition、
 - 最大城市在 alpha=1 时没有更大竞争者的处理。
 
 ### 数据
+
 检查：
+
 - 重复城市；
 - population <= 0；
 - 经纬度非法；
@@ -255,16 +278,19 @@ metadata 必须记录 metric、dataset、referenceYear、populationDefinition、
 - 城市合并/别名。
 
 ### 前端
+
 测试 slider breakpoint 切换、arc/ring 更新、选中状态、移动端、WebGL context 恢复与视觉回归。
 
 ## 12. 产品命名
 
 推荐英文：
+
 - **Urban Isolation**
 - 指标：**Hierarchical Isolation Radius**
 - 综合指标：**Integrated Isolation Score**
 
 中文：
+
 - **城市孤立度**
 - **层级孤立半径**
 - **综合孤立指数**
@@ -276,6 +302,7 @@ metadata 必须记录 metric、dataset、referenceYear、populationDefinition、
 Mundus 第一版应以 R_i(alpha) 为唯一核心数学定义。
 
 它的优势是：
+
 1. 与原始直觉高度一致；
 2. 参数 alpha 有明确语义；
 3. 数学性质简单；
@@ -292,6 +319,7 @@ Mundus 第一版应以 R_i(alpha) 为唯一核心数学定义。
 本研究参考了 UN World Urbanization Prospects、JRC GHSL、Natural Earth、H3、Voronoi / weighted Voronoi 与 gravity/Huff 类空间交互模型资料。
 
 正式实现前应：
+
 1. 固定人口数据集与许可；
 2. 用真实全球数据生成排名，而不是使用候选城市的经验判断；
 3. 对不同人口口径做敏感性分析；
