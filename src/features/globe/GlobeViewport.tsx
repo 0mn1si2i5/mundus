@@ -26,11 +26,13 @@ import type {
   MeshStandardMaterial,
   PerspectiveCamera,
   ShaderMaterial,
+  Texture,
 } from 'three';
 import {
   BackSide,
   Color,
   DataTexture,
+  DoubleSide,
   FrontSide,
   LinearFilter,
   MathUtils,
@@ -97,6 +99,7 @@ import {
 } from './surnameLabelLayout';
 import {
   createSphericalSurnameLabelGeometry,
+  createSphericalSurnameLabelPoints,
   SURNAME_LABEL_SURFACE_LIFT,
 } from './sphericalSurnameLabel';
 import type { SurnameMapLabel } from '../surnames/surnameData';
@@ -182,12 +185,14 @@ export function GlobeViewport({
   const [profile] = useState(detectQualityProfile);
   const activeMode = useAppStore((state) => state.activeMode);
   const vectorProfile = useMemo<QualityProfile>(() => {
-    if (activeMode !== 'surnames' || profile.vectorDetail === '50m') {
+    if (activeMode !== 'surnames' || profile.vectorDetail === '110m') {
       return profile;
     }
-    // The surname atlas includes small islands that are absent from 110m.
-    // The existing 50m asset keeps every generated wordmark on real land.
-    return { ...profile, vectorDetail: '50m' };
+    // The surname slots are generated against 50m geometry, but the atlas
+    // keeps the globe moving by using the existing 110m render asset. The
+    // label and country index remain complete; boundary detail is secondary
+    // to keeping the wordmarks responsive while the globe is manipulated.
+    return { ...profile, vectorDetail: '110m' };
   }, [activeMode, profile]);
   const [dragDiagnosticsEnabled] = useState(() =>
     new URLSearchParams(window.location.search).has('dragDiagnostics'),
@@ -218,6 +223,7 @@ export function GlobeViewport({
     revision: number;
   } | null>(null);
   const viewport = useRef<HTMLDivElement>(null);
+  const pointerActiveRef = useRef(false);
   const keyboardController = useRef<GlobeKeyboardController>(null);
   const cancelCameraGesture = useRef<(() => void) | null>(null);
   const [pointerStarts] = useState(() => new Map<number, PointerStart>());
@@ -465,6 +471,7 @@ export function GlobeViewport({
     // OrbitControls receives its own start event. This prevents a disabled
     // controls instance from letting focus animation win the first drag.
     cancelCameraGesture.current?.();
+    pointerActiveRef.current = true;
     pointerStarts.set(event.pointerId, {
       x: event.clientX,
       y: event.clientY,
@@ -491,6 +498,7 @@ export function GlobeViewport({
   function handlePointerUp(event: ReactPointerEvent<HTMLDivElement>) {
     const start = pointerStarts.get(event.pointerId);
     pointerStarts.delete(event.pointerId);
+    pointerActiveRef.current = pointerStarts.size > 0;
     syncDragActive();
     if (!start) return;
     const distance = Math.hypot(
@@ -510,6 +518,7 @@ export function GlobeViewport({
 
   function handlePointerCancel(event: ReactPointerEvent<HTMLDivElement>) {
     pointerStarts.delete(event.pointerId);
+    pointerActiveRef.current = pointerStarts.size > 0;
     syncDragActive();
     cancelCameraGesture.current?.();
   }
@@ -563,6 +572,7 @@ export function GlobeViewport({
     const lost = (event: Event) => {
       event.preventDefault();
       pointerStarts.clear();
+      pointerActiveRef.current = false;
       setAntipodeDragActive(false);
       cancelCameraGesture.current?.();
       setContextLost(true);
@@ -582,6 +592,7 @@ export function GlobeViewport({
     const pointers = pointerStarts;
     const clear = () => {
       pointers.clear();
+      pointerActiveRef.current = false;
       setAntipodeDragActive(false);
       cancelCameraGesture.current?.();
     };
@@ -839,6 +850,7 @@ export function GlobeViewport({
             }))
           }
           vectorRenderSampleKey={vectorRenderSampleKey}
+          pointerActiveRef={pointerActiveRef}
         />
       </Canvas>
       {contextLost ? (
@@ -929,6 +941,7 @@ interface GlobeSceneProps {
   onVectorSunlineHighlightChange: (evidence: string | null) => void;
   onVectorRenderEvidence: (vectorDraws: number, rendererCalls: number) => void;
   vectorRenderSampleKey: number;
+  pointerActiveRef: MutableRefObject<boolean>;
 }
 
 interface AntipodeMaterialEvidence {
@@ -975,6 +988,7 @@ function GlobeScene({
   onVectorSunlineHighlightChange,
   onVectorRenderEvidence,
   vectorRenderSampleKey,
+  pointerActiveRef,
 }: GlobeSceneProps) {
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
@@ -1040,7 +1054,9 @@ function GlobeScene({
   const innerWall = useRef<Mesh>(null);
   const innerMaterial = useRef<MeshBasicMaterial>(null);
   const [vectorReady, setVectorReady] = useState(false);
-  const [cameraGestureActive, setCameraGestureActive] = useState(false);
+  // Keep the gesture gate synchronous with the pointer event. React state can
+  // commit after OrbitControls has already emitted its first drag frame.
+  const cameraGestureActiveRef = useRef(false);
   const [surnameSlotOverrides, setSurnameSlotOverrides] = useState<
     Readonly<Record<string, SurnameLabelSlot>>
   >({});
@@ -1058,7 +1074,7 @@ function GlobeScene({
     cameraOwner.current = 'idle';
     manualCameraInteraction.current = false;
     interactionStart.current = null;
-    setCameraGestureActive(false);
+    cameraGestureActiveRef.current = false;
     if (orbitControls.current) orbitControls.current.enabled = true;
     clearCameraTarget();
   }, [clearCameraTarget]);
@@ -1585,6 +1601,7 @@ function GlobeScene({
       invalidate();
     }
     if (
+      activeMode !== 'surnames' &&
       !hasInteracted &&
       !manualCameraInteraction.current &&
       !reducedMotion &&
@@ -1717,7 +1734,7 @@ function GlobeScene({
     manualCameraInteraction.current = true;
     cameraFocusGeneration.current += 1;
     cameraOwner.current = 'user';
-    setCameraGestureActive(true);
+    cameraGestureActiveRef.current = true;
     if (focusFrameRef.current !== null) {
       cancelAnimationFrame(focusFrameRef.current);
       focusFrameRef.current = null;
@@ -1749,7 +1766,7 @@ function GlobeScene({
     cameraTargetRef.current = null;
     clearCameraTarget();
     cameraOwner.current = 'idle';
-    setCameraGestureActive(false);
+    cameraGestureActiveRef.current = false;
     interactionStart.current = null;
     markerDiagnostic.current?.request('interaction');
     antipodeRelationDiagnostic.current?.request('interaction');
@@ -1784,6 +1801,10 @@ function GlobeScene({
 
   function handleHover(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
+    // OrbitControls owns pointer movement during a camera gesture. Country
+    // hit-testing walks geographic polygons and offers no useful hover result
+    // while the globe itself is moving.
+    if (cameraGestureActiveRef.current || pointerActiveRef.current) return;
     if (!group.current) return;
     const hoverPoint = vector3ToGeo(
       group.current.worldToLocal(event.point.clone()),
@@ -1836,6 +1857,7 @@ function GlobeScene({
         />
         {vectorReady && surnameLabelEntries.length > 0 ? (
           <SurnameMapLabelLayer
+            key={`surname-label-layer:${surnameDisplayMode}`}
             entries={surnameLabelEntries}
             displayMode={surnameDisplayMode}
             selectedCountryId={selectedCountry?.countryId ?? null}
@@ -1843,7 +1865,9 @@ function GlobeScene({
             onVisibilityChange={onSurnameLabelVisibilityChange}
             onLayoutChange={onSurnameLabelLayoutChange}
             onSelectedLabelBlocked={handleSelectedSurnameLabelBlocked}
-            cameraGestureActive={cameraGestureActive}
+            cameraGestureActiveRef={cameraGestureActiveRef}
+            pointerActiveRef={pointerActiveRef}
+            globeGroupRef={group}
           />
         ) : null}
         <mesh
@@ -2166,6 +2190,28 @@ interface SurnameLabelEntry {
   wordmark: SurnameWordmark;
 }
 
+interface SurnameLayoutSample {
+  key: string;
+  positions: readonly [number, number, number][];
+  points: SurnameSurfaceProjectionPoint[];
+  triangles: SurnameSurfaceTriangle[];
+}
+
+interface SurnameTextureCacheEntry {
+  texture: Texture;
+  ready: Promise<Texture | null>;
+}
+
+type SurnameTextureCache = Map<string, SurnameTextureCacheEntry>;
+
+function configureSurnameTexture(texture: Texture): Texture {
+  texture.colorSpace = SRGBColorSpace;
+  texture.minFilter = LinearFilter;
+  texture.magFilter = LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 // Retry by moving the camera south when a desktop shell obstacle blocks the
 // selected label. Mobile shell panels cover the compact canvas by design.
 const SURNAME_FOCUS_RETRY_OFFSETS = [-8, -16, -24, -32] as const;
@@ -2188,7 +2234,9 @@ function SurnameMapLabelLayer({
   onVisibilityChange,
   onLayoutChange,
   onSelectedLabelBlocked,
-  cameraGestureActive,
+  cameraGestureActiveRef,
+  pointerActiveRef,
+  globeGroupRef,
 }: {
   entries: readonly SurnameLabelEntry[];
   displayMode: SurnameDisplayMode;
@@ -2204,45 +2252,101 @@ function SurnameMapLabelLayer({
     visibleRectangles: string;
   }) => void;
   onSelectedLabelBlocked: (reason: SurnameLabelHiddenReason) => void;
-  cameraGestureActive: boolean;
+  cameraGestureActiveRef: MutableRefObject<boolean>;
+  pointerActiveRef: MutableRefObject<boolean>;
+  globeGroupRef: MutableRefObject<Group | null>;
 }) {
-  const meshes = useRef(new Map<string, Mesh>());
+  const layoutSamples = useRef(new Map<string, SurnameLayoutSample>());
+  const [textureCache] = useState<SurnameTextureCache>(() => new Map());
   const loadedLabelKey = useRef('');
+  const loadableLabelIdsRef = useRef(new Set<string>());
+  const preferredLabelIdsRef = useRef<ReadonlySet<string>>(new Set());
+  const [visibleLabelIds, setVisibleLabelIds] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
   const [loadableLabelIds, setLoadableLabelIds] = useState<ReadonlySet<string>>(
     new Set(),
   );
   const previousBlockedEvidence = useRef('');
   const previousStructuralEvidence = useRef('');
+  const layoutDirty = useRef(true);
+  const lastLayoutAt = useRef(Number.NEGATIVE_INFINITY);
+  const lastCameraMatrix = useRef<number[] | null>(null);
+  const gestureWasActive = useRef(false);
   const { camera, gl, size, invalidate } = useThree();
-  useEffect(() => {
-    invalidate();
-  }, [displayMode, entries, invalidate]);
+  useEffect(
+    () => () => {
+      for (const entry of textureCache.values()) entry.texture.dispose();
+      textureCache.clear();
+    },
+    [textureCache],
+  );
   useEffect(() => {
     previousStructuralEvidence.current = '';
     previousBlockedEvidence.current = '';
+    layoutDirty.current = true;
     invalidate();
-  }, [invalidate]);
-  const register = useCallback(
-    (id: string, mesh: Mesh | null) => {
-      if (mesh) meshes.current.set(id, mesh);
-      else meshes.current.delete(id);
-      previousStructuralEvidence.current = '';
-      previousBlockedEvidence.current = '';
-      // The globe uses frameloop="demand". A label mesh may register after the
-      // first layout pass, so wake the layer when its measurable geometry exists.
-      invalidate();
-    },
-    [invalidate],
-  );
+  }, [
+    cameraFocusTarget,
+    entries,
+    invalidate,
+    selectedCountryId,
+    size.height,
+    size.width,
+  ]);
+  const worldPosition = useRef(new Vector3()).current;
+  const projected = useRef(new Vector3()).current;
+  const vertex = useRef(new Vector3()).current;
+  const normal = useRef(new Vector3()).current;
+  const toCamera = useRef(new Vector3()).current;
+  const cameraPosition = useRef(new Vector3()).current;
 
   useFrame(() => {
     // OrbitControls owns the camera during a gesture. Keep the last accepted
     // label set until the gesture ends instead of projecting every curved
     // wordmark on every drag sample.
-    if (cameraGestureActive) return;
-    const worldPosition = new Vector3();
-    const projected = new Vector3();
-    const vertex = new Vector3();
+    const gestureActive =
+      cameraGestureActiveRef.current || pointerActiveRef.current;
+    if (gestureActive) {
+      gestureWasActive.current = true;
+      return;
+    }
+    if (gestureWasActive.current) {
+      gestureWasActive.current = false;
+      layoutDirty.current = true;
+    }
+    const now = performance.now();
+    const cameraMatrix = camera.matrixWorld.elements;
+    const previousCameraMatrix = lastCameraMatrix.current;
+    let cameraChanged = previousCameraMatrix === null;
+    if (!cameraChanged && previousCameraMatrix) {
+      for (let index = 0; index < cameraMatrix.length; index += 1) {
+        if (
+          Math.abs(cameraMatrix[index]! - previousCameraMatrix[index]!) > 1e-7
+        ) {
+          cameraChanged = true;
+          break;
+        }
+      }
+    }
+    if (!layoutDirty.current && !cameraChanged) return;
+    // Focus animations can invalidate at display refresh rate. Twenty layout
+    // passes per second keeps collision changes responsive while the camera is
+    // moving; once it settles there is no reason to scan every country again.
+    if (cameraChanged && now - lastLayoutAt.current < 50) return;
+    lastLayoutAt.current = now;
+    layoutDirty.current = false;
+    if (!previousCameraMatrix) {
+      lastCameraMatrix.current = [...cameraMatrix];
+    } else {
+      for (let index = 0; index < cameraMatrix.length; index += 1) {
+        previousCameraMatrix[index] = cameraMatrix[index]!;
+      }
+    }
+    const globeMatrix = globeGroupRef.current?.matrixWorld;
+    if (!globeMatrix) return;
+    globeGroupRef.current?.updateMatrixWorld(true);
+    cameraPosition.copy(camera.position);
     const canvasRect = gl.domElement.getBoundingClientRect();
     const obstacles: SurnameLabelObstacle[] = Array.from(
       document.querySelectorAll<HTMLElement>('[data-surname-label-obstacle]'),
@@ -2257,66 +2361,92 @@ function SurnameMapLabelLayer({
         };
       })
       .filter((rect) => rect.right > rect.left && rect.bottom > rect.top);
-    const rectangles: (SurnameLabelScreenRect & { mesh: Mesh })[] = [];
+    const rectangles: SurnameLabelScreenRect[] = [];
     let minimumCornerRadius = Number.POSITIVE_INFINITY;
 
     for (const entry of entries) {
-      const mesh = meshes.current.get(entry.label.countryId);
-      if (!mesh) continue;
-      mesh.updateMatrixWorld(true);
+      const width = getSurnameWordmarkWorldWidth(
+        entry.slot.maxAngularDegrees,
+        entry.wordmark,
+      );
+      const sampleKey = `${entry.slot.center.latitude},${entry.slot.center.longitude}:${entry.slot.rotationDegrees}:${width}:${entry.wordmark.value}`;
+      let sample = layoutSamples.current.get(entry.label.countryId);
+      if (!sample || sample.key !== sampleKey) {
+        const sourcePoints = createSphericalSurnameLabelPoints({
+          center: entry.slot.center,
+          angularRadiusDegrees: getSurnameWordmarkAngularFootprintDegrees(
+            width,
+            entry.wordmark,
+          ),
+          aspectRatio: getSurnameWordmarkHeightRatio(entry.wordmark),
+          rotationDegrees: entry.slot.rotationDegrees,
+          segmentsAlong: 2,
+          segmentsAcross: 2,
+        });
+        const positions = sourcePoints.map(
+          (point) => point.position,
+        ) as readonly [number, number, number][];
+        const points = positions.map(() => ({
+          x: 0,
+          y: 0,
+          visibility: -1,
+        }));
+        const triangles: SurnameSurfaceTriangle[] = [];
+        for (let row = 0; row < 2; row += 1) {
+          for (let column = 0; column < 2; column += 1) {
+            const lowerLeft = row * 3 + column;
+            const lowerRight = lowerLeft + 1;
+            const upperLeft = lowerLeft + 3;
+            const upperRight = upperLeft + 1;
+            triangles.push(
+              { a: lowerLeft, b: lowerRight, c: upperLeft },
+              { a: lowerRight, b: upperRight, c: upperLeft },
+            );
+          }
+        }
+        sample = { key: sampleKey, positions, points, triangles };
+        layoutSamples.current.set(entry.label.countryId, sample);
+      }
       const center = geoToVector3(
         entry.slot.center,
         SURNAME_LABEL_SURFACE_LIFT,
-      ).applyMatrix4(mesh.matrixWorld);
+      ).applyMatrix4(globeMatrix);
       worldPosition.copy(center);
       const centerFrontFacing =
-        worldPosition
-          .clone()
+        normal
+          .copy(worldPosition)
           .normalize()
-          .dot(camera.position.clone().sub(worldPosition).normalize()) > 0.12;
+          .dot(toCamera.subVectors(cameraPosition, worldPosition).normalize()) >
+        0.12;
       let left = Number.POSITIVE_INFINITY;
       let right = Number.NEGATIVE_INFINITY;
       let top = Number.POSITIVE_INFINITY;
       let bottom = Number.NEGATIVE_INFINITY;
-      const projectedCenter = worldPosition.clone().project(camera);
-      const positionAttribute = mesh.geometry.getAttribute('position');
-      const surfacePoints: SurnameSurfaceProjectionPoint[] = [];
-      for (let index = 0; index < positionAttribute.count; index += 1) {
+      projected.copy(worldPosition).project(camera);
+      const projectedCenterX = ((projected.x + 1) * size.width) / 2;
+      const projectedCenterY = ((1 - projected.y) * size.height) / 2;
+      for (let index = 0; index < sample.positions.length; index += 1) {
+        const localPosition = sample.positions[index];
+        const point = sample.points[index];
+        if (!localPosition || !point) continue;
         vertex
-          .set(
-            positionAttribute.getX(index),
-            positionAttribute.getY(index),
-            positionAttribute.getZ(index),
-          )
-          .applyMatrix4(mesh.matrixWorld);
+          .set(localPosition[0], localPosition[1], localPosition[2])
+          .applyMatrix4(globeMatrix);
         minimumCornerRadius = Math.min(minimumCornerRadius, vertex.length());
         projected.copy(vertex).project(camera);
         const x = ((projected.x + 1) * size.width) / 2;
         const y = ((1 - projected.y) * size.height) / 2;
-        const visibility = vertex
-          .clone()
+        const visibility = normal
+          .copy(vertex)
           .normalize()
-          .dot(camera.position.clone().sub(vertex).normalize());
-        surfacePoints.push({ x, y, visibility });
-      }
-      const indexAttribute = mesh.geometry.getIndex();
-      const triangles: SurnameSurfaceTriangle[] = [];
-      if (indexAttribute) {
-        for (let index = 0; index + 2 < indexAttribute.count; index += 3) {
-          triangles.push({
-            a: indexAttribute.getX(index),
-            b: indexAttribute.getX(index + 1),
-            c: indexAttribute.getX(index + 2),
-          });
-        }
-      } else {
-        for (let index = 0; index + 2 < positionAttribute.count; index += 3) {
-          triangles.push({ a: index, b: index + 1, c: index + 2 });
-        }
+          .dot(toCamera.subVectors(cameraPosition, vertex).normalize());
+        point.x = x;
+        point.y = y;
+        point.visibility = visibility;
       }
       const visibleBounds = computeVisibleSurnameSurfaceBounds(
-        surfacePoints,
-        triangles,
+        sample.points,
+        sample.triangles,
       );
       if (visibleBounds) {
         left = visibleBounds.left;
@@ -2326,12 +2456,11 @@ function SurnameMapLabelLayer({
       } else {
         // Keep finite bounds for the layout diagnostic; frontFacing is false,
         // so the pure layout function reports the stable backface reason.
-        left = right = ((projectedCenter.x + 1) * size.width) / 2;
-        top = bottom = ((1 - projectedCenter.y) * size.height) / 2;
+        left = right = projectedCenterX;
+        top = bottom = projectedCenterY;
       }
       rectangles.push({
         id: entry.label.countryId,
-        mesh,
         left,
         right,
         top,
@@ -2342,14 +2471,14 @@ function SurnameMapLabelLayer({
         frontFacing:
           Boolean(visibleBounds) &&
           ((visibleBounds?.frontPointCount ?? 0) /
-            Math.max(1, positionAttribute.count) >=
+            Math.max(1, sample.points.length) >=
             0.25 ||
             centerFrontFacing),
         selected: entry.label.countryId === selectedCountryId,
         countryArea: entry.slot.areaSteradians ?? 0,
         centerDistance: Math.hypot(
-          ((projectedCenter.x + 1) * size.width) / 2 - size.width / 2,
-          ((1 - projectedCenter.y) * size.height) / 2 - size.height / 2,
+          projectedCenterX - size.width / 2,
+          projectedCenterY - size.height / 2,
         ),
       });
     }
@@ -2357,16 +2486,32 @@ function SurnameMapLabelLayer({
     const layout = computeSurnameLabelLayout(rectangles, obstacles, {
       width: size.width,
       height: size.height,
+      preferredIds: preferredLabelIdsRef.current,
+      // Every front-facing country keeps its wordmark. Country slots already
+      // size the text against neighbouring land; projected screen overlap is
+      // preferable to silently dropping a country's surname.
+      allowCollisions: true,
     });
-    for (const rectangle of rectangles) {
-      rectangle.mesh.visible = layout.visibleIds.has(rectangle.id);
-    }
+    preferredLabelIdsRef.current = layout.visibleIds;
     const nextLoadedLabelKey = [...layout.visibleIds].sort().join('|');
     if (loadedLabelKey.current !== nextLoadedLabelKey) {
       loadedLabelKey.current = nextLoadedLabelKey;
-      setLoadableLabelIds(new Set(layout.visibleIds));
+      let loadableChanged = false;
+      for (const id of layout.visibleIds) {
+        if (!loadableLabelIdsRef.current.has(id)) {
+          loadableLabelIdsRef.current.add(id);
+          loadableChanged = true;
+        }
+      }
+      if (loadableChanged)
+        setLoadableLabelIds(new Set(loadableLabelIdsRef.current));
       invalidate();
     }
+    setVisibleLabelIds((current) =>
+      setsEqual(current, layout.visibleIds)
+        ? current
+        : new Set(layout.visibleIds),
+    );
     const selectedHiddenReason = selectedCountryId
       ? (layout.hiddenReasons.get(selectedCountryId) ?? null)
       : null;
@@ -2424,14 +2569,17 @@ function SurnameMapLabelLayer({
 
   return (
     <>
-      {entries.map((entry) => (
-        <SurnameMapLabelSurface
-          key={`${entry.label.countryId}:${displayMode}`}
-          entry={entry}
-          loadTexture={loadableLabelIds.has(entry.label.countryId)}
-          register={register}
-        />
-      ))}
+      {entries
+        .filter((entry) => visibleLabelIds.has(entry.label.countryId))
+        .map((entry) => (
+          <SurnameMapLabelSurface
+            key={`${entry.label.countryId}:${displayMode}`}
+            entry={entry}
+            loadTexture={loadableLabelIds.has(entry.label.countryId)}
+            textureCache={textureCache}
+            invalidate={invalidate}
+          />
+        ))}
     </>
   );
 }
@@ -2439,13 +2587,16 @@ function SurnameMapLabelLayer({
 function SurnameMapLabelSurface({
   entry,
   loadTexture,
-  register,
+  textureCache,
+  invalidate,
 }: {
   entry: SurnameLabelEntry;
   loadTexture: boolean;
-  register: (id: string, mesh: Mesh | null) => void;
+  textureCache: SurnameTextureCache;
+  invalidate: () => void;
 }) {
   const wordmark = entry.wordmark;
+  const cacheKey = `${entry.label.countryId}:${wordmark.requestedMode}:${wordmark.value}`;
   const placeholder = useMemo(() => {
     const placeholder = new DataTexture(
       new Uint8Array([0, 0, 0, 0]),
@@ -2456,28 +2607,50 @@ function SurnameMapLabelSurface({
     placeholder.needsUpdate = true;
     return placeholder;
   }, []);
-  const [texture, setTexture] = useState<import('three').Texture>(placeholder);
+  const [texture, setTexture] = useState<import('three').Texture>(
+    () => textureCache.get(cacheKey)?.texture ?? placeholder,
+  );
   useEffect(() => {
     if (!wordmark || !loadTexture) return;
-    const loader = new TextureLoader();
-    const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(createSurnameWordmarkSvg(wordmark))}`;
+    let textureEntry = textureCache.get(cacheKey);
+    if (!textureEntry) {
+      const loader = new TextureLoader();
+      const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(createSurnameWordmarkSvg(wordmark))}`;
+      let resolveReady: (texture: Texture | null) => void = () => undefined;
+      const ready = new Promise<Texture | null>((resolve) => {
+        resolveReady = resolve;
+      });
+      const loaded = loader.load(
+        dataUri,
+        (nextTexture) => {
+          configureSurnameTexture(nextTexture);
+          resolveReady(nextTexture);
+        },
+        undefined,
+        () => {
+          textureCache.delete(cacheKey);
+          resolveReady(null);
+        },
+      );
+      textureEntry = { texture: configureSurnameTexture(loaded), ready };
+      textureCache.set(cacheKey, textureEntry);
+    }
+    const cachedTexture = textureEntry.texture;
+    configureSurnameTexture(cachedTexture);
     let disposed = false;
-    const loaded = loader.load(dataUri, (nextTexture) => {
-      if (disposed) {
-        nextTexture.dispose();
-        return;
-      }
-      nextTexture.colorSpace = SRGBColorSpace;
-      nextTexture.minFilter = LinearFilter;
-      nextTexture.magFilter = LinearFilter;
-      nextTexture.needsUpdate = true;
-      setTexture(nextTexture);
+    queueMicrotask(() => {
+      if (!disposed) setTexture(cachedTexture);
+    });
+    textureEntry.ready.then((readyTexture) => {
+      if (readyTexture) configureSurnameTexture(readyTexture);
+      invalidate();
+      if (disposed || !readyTexture) return;
+      setTexture(readyTexture);
     });
     return () => {
       disposed = true;
-      loaded.dispose();
     };
-  }, [loadTexture, placeholder, wordmark]);
+  }, [cacheKey, invalidate, loadTexture, textureCache, wordmark]);
   const width = getSurnameWordmarkWorldWidth(
     entry.slot.maxAngularDegrees,
     wordmark,
@@ -2504,18 +2677,12 @@ function SurnameMapLabelSurface({
   const materialTexture = loadTexture ? texture : placeholder;
 
   return (
-    <mesh
-      ref={(mesh) => register(entry.label.countryId, mesh)}
-      geometry={geometry}
-      renderOrder={6}
-      raycast={ignoreRaycast}
-    >
+    <mesh geometry={geometry} renderOrder={6} raycast={ignoreRaycast}>
       <meshBasicMaterial
         map={materialTexture}
         transparent
-        depthTest
         depthWrite={false}
-        side={FrontSide}
+        side={DoubleSide}
       />
     </mesh>
   );
@@ -2547,6 +2714,15 @@ const MARKER_TARGET_CSS_PX = 11;
 const MARKER_CENTER_RATIO = 3 / MARKER_TARGET_CSS_PX;
 
 function ignoreRaycast() {}
+
+function setsEqual(
+  first: ReadonlySet<string>,
+  second: ReadonlySet<string>,
+): boolean {
+  if (first.size !== second.size) return false;
+  for (const value of first) if (!second.has(value)) return false;
+  return true;
+}
 
 function Marker({
   position,

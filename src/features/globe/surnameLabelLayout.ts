@@ -47,24 +47,39 @@ export function computeVisibleSurnameSurfaceBounds(
   points: readonly SurnameSurfaceProjectionPoint[],
   triangles: readonly SurnameSurfaceTriangle[],
 ): SurnameSurfaceBounds | null {
-  const visible: Array<{ x: number; y: number }> = [];
-  const addPoint = (point: SurnameSurfaceProjectionPoint) => {
-    if (point.visibility >= 0) visible.push({ x: point.x, y: point.y });
+  // Keep this hot path allocation-free. The previous implementation appended
+  // every triangle corner and horizon intersection to an array, then mapped
+  // that array four more times for min/max. A 24x6 label grid multiplied this
+  // into tens of thousands of short-lived objects per layout frame.
+  let left = Number.POSITIVE_INFINITY;
+  let right = Number.NEGATIVE_INFINITY;
+  let top = Number.POSITIVE_INFINITY;
+  let bottom = Number.NEGATIVE_INFINITY;
+  let visiblePointCount = 0;
+  let frontPointCount = 0;
+  const include = (x: number, y: number) => {
+    left = Math.min(left, x);
+    right = Math.max(right, x);
+    top = Math.min(top, y);
+    bottom = Math.max(bottom, y);
+    visiblePointCount += 1;
   };
-  const addEdgeIntersection = (
-    first: SurnameSurfaceProjectionPoint,
-    second: SurnameSurfaceProjectionPoint,
+  const includeEdgeIntersection = (
+    edgeFirst: SurnameSurfaceProjectionPoint,
+    edgeSecond: SurnameSurfaceProjectionPoint,
   ) => {
-    if (first.visibility >= 0 === second.visibility >= 0) return;
-    const denominator = first.visibility - second.visibility;
+    if (edgeFirst.visibility >= 0 === edgeSecond.visibility >= 0) return;
+    const denominator = edgeFirst.visibility - edgeSecond.visibility;
     if (Math.abs(denominator) < 1e-12) return;
-    const t = first.visibility / denominator;
-    visible.push({
-      x: first.x + (second.x - first.x) * t,
-      y: first.y + (second.y - first.y) * t,
-    });
+    const t = edgeFirst.visibility / denominator;
+    include(
+      edgeFirst.x + (edgeSecond.x - edgeFirst.x) * t,
+      edgeFirst.y + (edgeSecond.y - edgeFirst.y) * t,
+    );
   };
-
+  for (const point of points) {
+    if (point.visibility >= 0) frontPointCount += 1;
+  }
   for (const triangle of triangles) {
     const first = points[triangle.a];
     const second = points[triangle.b];
@@ -72,21 +87,21 @@ export function computeVisibleSurnameSurfaceBounds(
     if (!first || !second || !third) continue;
     if (first.visibility < 0 && second.visibility < 0 && third.visibility < 0)
       continue;
-    addPoint(first);
-    addPoint(second);
-    addPoint(third);
-    addEdgeIntersection(first, second);
-    addEdgeIntersection(second, third);
-    addEdgeIntersection(third, first);
+    if (first.visibility >= 0) include(first.x, first.y);
+    if (second.visibility >= 0) include(second.x, second.y);
+    if (third.visibility >= 0) include(third.x, third.y);
+    includeEdgeIntersection(first, second);
+    includeEdgeIntersection(second, third);
+    includeEdgeIntersection(third, first);
   }
 
-  if (visible.length === 0) return null;
+  if (visiblePointCount === 0) return null;
   return {
-    left: Math.min(...visible.map((point) => point.x)),
-    right: Math.max(...visible.map((point) => point.x)),
-    top: Math.min(...visible.map((point) => point.y)),
-    bottom: Math.max(...visible.map((point) => point.y)),
-    frontPointCount: points.filter((point) => point.visibility >= 0).length,
+    left,
+    right,
+    top,
+    bottom,
+    frontPointCount,
   };
 }
 
@@ -114,11 +129,20 @@ export function computeSurnameLabelLayout(
   viewport: {
     width: number;
     height: number;
+    /** Maximum number of labels to submit to the transparent render pass. */
+    maxVisibleCount?: number;
+    /** Labels already rendered in the previous stable layout pass. */
+    preferredIds?: ReadonlySet<string>;
+    /** Keep front-facing labels even when their screen rectangles overlap. */
+    allowCollisions?: boolean;
   },
 ): SurnameLabelLayout {
+  const preferredIds = viewport.preferredIds;
   const ordered = [...rectangles].sort(
     (a, b) =>
       Number(b.selected) - Number(a.selected) ||
+      Number(preferredIds?.has(b.id) ?? false) -
+        Number(preferredIds?.has(a.id) ?? false) ||
       rectArea(b) - rectArea(a) ||
       (b.countryArea ?? 0) - (a.countryArea ?? 0) ||
       (a.centerDistance ?? 0) - (b.centerDistance ?? 0) ||
@@ -130,7 +154,26 @@ export function computeSurnameLabelLayout(
   let collisionCount = 0;
 
   for (const rectangle of ordered) {
-    const reason = hiddenReason(rectangle, accepted, obstacles, viewport);
+    let reason = hiddenReason(rectangle, accepted, obstacles, viewport);
+    if (reason === 'obstacle' && rectangle.selected) {
+      // The selected country is the active result of the atlas. Keep it
+      // available after a user drag when a compact shell panel crosses the
+      // label; the selected-first ordering still prevents it from colliding
+      // with another wordmark.
+      reason = null;
+    }
+    if (
+      !reason &&
+      viewport.maxVisibleCount !== undefined &&
+      accepted.length >= Math.max(1, Math.floor(viewport.maxVisibleCount))
+    ) {
+      // Transparent globe labels are expensive on low-power GPUs. The
+      // ordering keeps the selected country and the largest readable labels
+      // in the render budget while other labels become available as the globe
+      // rotates and the screen layout changes.
+      reason = 'collision';
+    }
+    if (reason === 'collision' && viewport.allowCollisions) reason = null;
     if (reason) {
       hiddenReasons.set(rectangle.id, reason);
       if (reason === 'obstacle' || reason === 'collision') {

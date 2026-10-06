@@ -86,6 +86,64 @@ describe('surname label layout', () => {
     expect(layout.selectedVisible).toBe(true);
   });
 
+  it('keeps the selected country available under compact shell obstacles', () => {
+    const layout = computeSurnameLabelLayout(
+      [rect('selected', 40, 40, 50, 20, { selected: true })],
+      [{ left: 20, right: 100, top: 20, bottom: 80 }],
+      { width: 200, height: 120 },
+    );
+
+    expect(layout.visibleIds.has('selected')).toBe(true);
+    expect(layout.selectedVisible).toBe(true);
+  });
+
+  it('enforces a render budget after prioritizing the selected label', () => {
+    const layout = computeSurnameLabelLayout(
+      [
+        rect('large', 10, 10, 30, 20),
+        rect('selected', 60, 10, 30, 20, { selected: true }),
+        rect('small', 110, 10, 20, 12),
+      ],
+      [],
+      { width: 200, height: 120, maxVisibleCount: 2 },
+    );
+
+    expect([...layout.visibleIds]).toEqual(['selected', 'large']);
+    expect(layout.hiddenReasons.get('small')).toBe('collision');
+    expect(layout.selectedVisible).toBe(true);
+  });
+
+  it('keeps the previous visible set stable before adding larger new labels', () => {
+    const layout = computeSurnameLabelLayout(
+      [
+        rect('new-large', 10, 10, 50, 20),
+        rect('previous-small', 70, 10, 18, 10),
+        rect('new-other', 110, 10, 40, 20),
+      ],
+      [],
+      {
+        width: 200,
+        height: 120,
+        maxVisibleCount: 2,
+        preferredIds: new Set(['previous-small']),
+      },
+    );
+
+    expect([...layout.visibleIds]).toEqual(['previous-small', 'new-large']);
+    expect(layout.hiddenReasons.get('new-other')).toBe('collision');
+  });
+
+  it('can retain overlapping front-facing labels for the complete atlas view', () => {
+    const layout = computeSurnameLabelLayout(
+      [rect('first', 40, 40, 80, 30), rect('second', 60, 50, 80, 30)],
+      [],
+      { width: 200, height: 120, allowCollisions: true },
+    );
+
+    expect([...layout.visibleIds]).toEqual(['first', 'second']);
+    expect(layout.hiddenReasons.size).toBe(0);
+  });
+
   it('clips a curved surface envelope at the horizon instead of using back vertices', () => {
     const bounds = computeVisibleSurnameSurfaceBounds(
       [
