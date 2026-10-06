@@ -185,6 +185,18 @@ export function ModeResult({
             <div className={styles.surnameWordmark}>
               <span>{t.surnameWordmark}</span>
               <strong>{wordmark.value}</strong>
+              {wordmark.fellBack ? (
+                <small>
+                  {t.surnameWordmarkFallback}
+                  {
+                    {
+                      local: t.surnameDisplayLocal,
+                      latin: t.surnameDisplayLatin,
+                      chinese: t.surnameDisplayChinese,
+                    }[wordmark.source]
+                  }
+                </small>
+              ) : null}
             </div>
           ) : null}
           {!country ? (
@@ -216,7 +228,9 @@ export function ModeResult({
                         <span>
                           {record.rank !== null
                             ? `${t.surnameRank} ${record.rank}`
-                            : t.surnameListed}
+                            : record.observationKind === 'manual-observation'
+                              ? t.surnameManualObservation
+                              : t.surnameListed}
                         </span>
                         <strong>{forms.local ?? t.surnameMissing}</strong>
                         <small>
@@ -229,6 +243,10 @@ export function ModeResult({
                         <small>
                           {t.surnameRomanized}
                           {forms.latin ?? t.surnameMissing}
+                          {forms.latin &&
+                          !record.romanizedForms.includes(forms.latin)
+                            ? t.surnameGeneratedSuffix
+                            : null}
                         </small>
                         <small>
                           {t.surnameChinese}
@@ -259,6 +277,29 @@ export function ModeResult({
           ) : (
             <strong>{t.surnameNoRecord}</strong>
           )}
+          {loadState.status === 'ready' ? (
+            <details className={styles.surnameScope}>
+              <summary>{t.surnameProvenance}</summary>
+              <small>
+                {t.surnameSourceSnapshot}
+                {loadState.data.sourceSnapshot}
+              </small>
+              <small>
+                {t.surnameCoverage}
+                {loadState.data.coverageNote}
+              </small>
+              <small>
+                {t.surnameLicense}
+                {loadState.data.license}
+              </small>
+              <small>{t.surnameScope}</small>
+              {countryData?.sourceUrls.map((url) => (
+                <a href={url} key={url} rel="noreferrer" target="_blank">
+                  {t.surnameSourceLink}
+                </a>
+              ))}
+            </details>
+          ) : null}
         </aside>
       );
     }

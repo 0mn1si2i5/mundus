@@ -235,8 +235,14 @@ test('Surname Atlas preserves local, Latin, Chinese, and missing states', async 
   await expect(result).toContainText('中文呈现');
   await expect(result).toContainText('占比 · 缺失');
   await expect(result).toContainText('统计年份 · 缺失');
-  await expect(result).not.toContainText('来源快照');
-  await expect(result).not.toContainText('许可证');
+  // Source, coverage and license stay one disclosure away from every record.
+  await result.getByText('来源与许可').click();
+  await expect(result).toContainText('来源快照');
+  await expect(result).toContainText('许可证');
+  await expect(result).toContainText('社区整理');
+  await expect(
+    result.getByRole('link', { name: '查看来源页面' }).first(),
+  ).toHaveAttribute('href', /^https:\/\//);
 
   const surnameControls = page.locator('[data-mode-panel="surname-controls"]');
   const latinOption = page.getByRole('radio', { name: '拉丁转写' });
