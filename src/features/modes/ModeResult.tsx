@@ -169,10 +169,7 @@ export function ModeResult({
           null)
         : null;
       const wordmark = displayRecord
-        ? resolveSurnameWordmark(
-            displayRecord,
-            presentation.globe.surnameDisplayMode,
-          )
+        ? resolveSurnameWordmark(displayRecord, presentation.surnameDisplayMode)
         : null;
       return (
         <aside
