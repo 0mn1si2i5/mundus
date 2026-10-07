@@ -57,7 +57,6 @@ interface GlobeViewportProps {
   keyboardMovedLabel: string;
   keyboardZoomedLabel: string;
   keyboardSelectedLabel: string;
-  countryFills: ReadonlyMap<string, string> | null;
   showAntipodes: boolean;
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
@@ -81,7 +80,6 @@ export function GlobeViewport({
   keyboardMovedLabel,
   keyboardZoomedLabel,
   keyboardSelectedLabel,
-  countryFills,
   showAntipodes,
   sunline,
   antipodeRelation,
@@ -499,7 +497,6 @@ export function GlobeViewport({
           benchmarkActive={benchmark.active}
           recordBenchmarkFrame={benchmark.recordFrame}
           keyboardController={keyboardController}
-          countryFills={countryFills}
           showAntipodes={showAntipodes}
           antipodeDragActive={antipodeDragVisible}
           dragDiagnosticsEnabled={dragDiagnosticsEnabled}

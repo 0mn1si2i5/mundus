@@ -146,7 +146,6 @@ function countryIdFor(
 export function createCountryTexture(
   dataset: CountryDataset,
   textureWidth: number,
-  countryFills: ReadonlyMap<string, string> | null = null,
   maxAnisotropy = 1,
 ): CanvasTexture {
   const canvas = document.createElement('canvas');
@@ -169,17 +168,6 @@ export function createCountryTexture(
   path(dataset.countries);
   context.fillStyle = style.landColor;
   context.fill();
-
-  if (countryFills) {
-    for (const country of dataset.countries.features) {
-      const color = countryFills.get(country.properties.countryId);
-      if (!color) continue;
-      context.beginPath();
-      path(country);
-      context.fillStyle = color;
-      context.fill();
-    }
-  }
 
   context.beginPath();
   path(dataset.countries);

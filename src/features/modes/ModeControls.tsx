@@ -7,11 +7,6 @@ const OtherSideControls = lazy(() =>
     default: module.OtherSideControls,
   })),
 );
-const DevelopmentControls = lazy(() =>
-  import('../development/DevelopmentControls').then((module) => ({
-    default: module.DevelopmentControls,
-  })),
-);
 const SunlineControls = lazy(() =>
   import('../sunline/SunlineControls').then((module) => ({
     default: module.SunlineControls,
@@ -29,15 +24,6 @@ export function ModeControls({
     case 'antipodes':
       controls = (
         <OtherSideControls locale={locale} cityIndex={presentation.cityIndex} />
-      );
-      break;
-    case 'development':
-      controls = (
-        <DevelopmentControls
-          locale={locale}
-          loadState={presentation.developmentData}
-          selectedCountry={presentation.selectedCountry}
-        />
       );
       break;
     case 'sunline':

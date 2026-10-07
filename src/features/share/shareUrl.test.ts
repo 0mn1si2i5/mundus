@@ -5,8 +5,6 @@ describe('createShareUrl', () => {
   const nowMs = Date.parse('2026-07-14T09:37:00Z');
   const base = {
     point: { latitude: 31.2304, longitude: 121.4737 },
-    developmentIndicator: 'hdi' as const,
-    developmentYear: 2023,
     sunlineTimeMs: nowMs,
     sunlineClockMode: 'live' as const,
     surnameDisplayMode: 'local' as const,
@@ -40,18 +38,6 @@ describe('createShareUrl', () => {
       }),
     ).toBe(
       'https://example.com/path?mode=antipodes&point=30.1235%2C120.9877&v=2',
-    );
-  });
-
-  it('preserves the selected development indicator and year', () => {
-    const url = createShareUrl('https://example.com/path', {
-      ...base,
-      activeMode: 'development',
-      developmentIndicator: 'income',
-      developmentYear: 2010,
-    });
-    expect(url).toBe(
-      'https://example.com/path?mode=development&indicator=income&year=2010&v=2',
     );
   });
 

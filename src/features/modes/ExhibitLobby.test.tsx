@@ -23,7 +23,7 @@ describe('ExhibitLobby', () => {
     const onEnter = vi.fn();
     render(<ExhibitLobby locale="en" onEnter={onEnter} />);
     const more = screen.getByRole('list', { name: 'More' });
-    expect(more.querySelectorAll('li')).toHaveLength(2);
+    expect(more.querySelectorAll('li')).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Sunline' }));
     expect(onEnter).toHaveBeenCalledWith('sunline');
   });

@@ -27,17 +27,6 @@ function sample(detail) {
       },
       firstFocus: { focusAtMs: 130, searchReadyMs: 135, focusToReadyMs: 5 },
     },
-    development: {
-      entryAtMs: 200,
-      readyMs: 260,
-      entryToReadyMs: 60,
-      absentImmediatelyBeforeEntry: true,
-      assets: [
-        { name: '/mundus/DevelopmentControls-a.js', startTimeMs: 201 },
-        { name: '/mundus/DevelopmentControls-a.css', startTimeMs: 202 },
-        { name: '/mundus/undp-hdr-a.js', startTimeMs: 203 },
-      ],
-    },
     vector: { detail, asset: `/mundus/${detail}.mvg` },
     failures: {
       consoleErrors: [],
@@ -87,7 +76,7 @@ test('median handles odd and even samples without mutating input', () => {
   assert.equal(median([8, 2, 4, 6]), 5);
 });
 
-test('measurement validation accepts cold GeoNames and post-entry Development invariants', () => {
+test('measurement validation accepts cold GeoNames invariants', () => {
   assert.doesNotThrow(() => validateMeasurementResult(result()));
 });
 
@@ -131,31 +120,6 @@ test('measurement validation keeps first-focus readiness separate from cold load
   assert.throws(
     () => validateMeasurementResult(measured),
     /warm search became ready before first focus/u,
-  );
-});
-
-test('measurement validation requires Development resources absent before entry and started after it', () => {
-  const measured = result();
-  measured.scenarios.desktop.samples[2].development.absentImmediatelyBeforeEntry = false;
-  assert.throws(
-    () => validateMeasurementResult(measured),
-    /Development resources were present immediately before entry/u,
-  );
-
-  measured.scenarios.desktop.samples[2].development.absentImmediatelyBeforeEntry = true;
-  measured.scenarios.desktop.samples[2].development.assets[0].startTimeMs = 199;
-  assert.throws(
-    () => validateMeasurementResult(measured),
-    /Development resource started before entry/u,
-  );
-});
-
-test('measurement validation requires expected Development JS, CSS, and data assets', () => {
-  const measured = result();
-  measured.scenarios.pixel7.samples[0].development.assets.pop();
-  assert.throws(
-    () => validateMeasurementResult(measured),
-    /expected exactly three Development resources/u,
   );
 });
 

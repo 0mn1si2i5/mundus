@@ -7,16 +7,13 @@ different scientific lenses. It is designed as a small digital museum exhibit:
 direct enough to explore, explicit about its methods, and careful about the
 limits of its data.
 
-The current public product includes four observation modes. **V1.1.0 Parchment Atlas**
+The current public product includes three observation modes. **V1.1.0 Parchment Atlas**
 ships:
 
 - **Other Side** calculates exact antipodal endpoints and shows the nearest
   eligible major city to each endpoint in the bundled GeoNames snapshot. These
   are represented major-city results, not nearest settlements, boundaries, or
   built areas.
-- **Development, Unpacked** compares reported HDI with derived health,
-  education, and income dimension indices from the UNDP Human Development
-  Report 2025 dataset.
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
 - **Surname Atlas** places one surname wordmark on every country that has a
@@ -76,7 +73,7 @@ for provenance, transformations, attribution, and caveats, and
 license inventory.
 
 Natural Earth boundaries are a cartographic representation, not a legal
-authority on territorial status. UNDP and solar results are educational
+authority on territorial status. Solar results are educational
 interpretations and must not be used as legal, navigational, or engineering
 advice.
 

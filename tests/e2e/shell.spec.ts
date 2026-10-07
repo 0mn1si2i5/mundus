@@ -79,7 +79,7 @@ test('offers the other observations behind a keyboard-friendly More menu', async
   await page.keyboard.press('Enter');
   await expect(more).toHaveAttribute('aria-expanded', 'true');
   const menu = nav.getByRole('list', { name: '更多观察' });
-  await expect(menu.getByRole('button')).toHaveCount(2);
+  await expect(menu.getByRole('button')).toHaveCount(1);
 
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
@@ -92,27 +92,24 @@ test('switches observations from the header without moving the selected place', 
   page,
 }) => {
   await page.goto('./?point=30.25%2C120.75&v=1');
-  await switchMode(page, '发展的不同侧面');
+  await switchMode(page, '日照线');
 
-  await expect(
-    page.getByRole('heading', { name: '发展的不同侧面' }),
-  ).toBeFocused();
-  await expect(page).toHaveURL(/mode=development/);
+  await expect(page.getByRole('heading', { name: '日照线' })).toBeFocused();
+  await expect(page).toHaveURL(/mode=sunline/);
   await expect(page).toHaveURL(/point=30.25%2C120.75/);
   const nav = page.getByRole('navigation', { name: '观察模式' });
-  await expect(
-    nav.getByRole('button', { name: '发展的不同侧面' }),
-  ).toHaveAttribute('aria-current', 'page');
+  await expect(nav.getByRole('button', { name: '日照线' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
 
   await page.goBack();
   await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
   await expect(page).toHaveURL(/point=30.25%2C120.75/);
 
   await page.goForward();
-  await expect(
-    page.getByRole('heading', { name: '发展的不同侧面' }),
-  ).toBeVisible();
-  await expect(page).toHaveURL(/mode=development/);
+  await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
+  await expect(page).toHaveURL(/mode=sunline/);
   await expect(page).toHaveURL(/point=30.25%2C120.75/);
 });
 
@@ -258,11 +255,11 @@ test('keeps observation mode entry keyboard accessible', async ({ page }) => {
   await page.goto('./');
   await page
     .getByRole('list', { name: '更多观察' })
-    .getByRole('button', { name: '发展的不同侧面' })
+    .getByRole('button', { name: /^日照线/u })
     .focus();
   await page.keyboard.press('Enter');
   await expect(
-    page.getByRole('heading', { level: 1, name: '发展的不同侧面' }),
+    page.getByRole('heading', { level: 1, name: '日照线' }),
   ).toBeFocused();
 });
 
@@ -271,8 +268,8 @@ test('restores shareable state and browser history', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
   await expect(page).toHaveURL(/point=0%2C-140/);
 
-  await switchMode(page, '发展的不同侧面');
-  await expect(page).toHaveURL(/mode=development/);
+  await switchMode(page, '姓氏观察');
+  await expect(page).toHaveURL(/mode=surnames/);
   await page.goBack();
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
 });
@@ -284,10 +281,6 @@ test('accepts legacy whole-degree share URLs without warning or mutation', async
     {
       path: './?point=31%2C121&v=1',
       heading: '地球另一端',
-    },
-    {
-      path: './?mode=development&point=31%2C121&indicator=income&year=2010&v=1',
-      heading: '发展的不同侧面',
     },
     {
       path: './?mode=sunline&point=31%2C121&time=2024-03-20T12%3A00Z&v=1',
@@ -311,18 +304,21 @@ test('accepts legacy whole-degree share URLs without warning or mutation', async
 test('replaces continuous timeline changes instead of flooding history', async ({
   page,
 }, testInfo) => {
-  await page.goto('./?mode=development&indicator=education&year=2005&v=1');
+  await page.goto('./?mode=sunline&v=2');
   if (testInfo.project.name === 'mobile') {
-    await page.getByRole('button', { name: '展开发展控件' }).click();
+    await page.getByRole('button', { name: '展开日照线控件' }).click();
   }
 
-  await page.getByRole('button', { name: '收入' }).click();
-  await page.getByRole('slider', { name: /年份/ }).fill('2010');
-  await page.getByRole('slider', { name: /年份/ }).fill('2011');
+  // Fixing the time is one history entry; scrubbing the fixed time replaces it.
+  const timeline = page.getByRole('slider', { name: /UTC 时间/ });
+  await timeline.fill('0');
+  await expect(page).toHaveURL(/time=/);
+  await timeline.fill('60');
+  await timeline.fill('120');
   await page.goBack();
 
-  await expect(page).toHaveURL(/indicator=education/);
-  await expect(page).toHaveURL(/year=2005/);
+  await expect(page).toHaveURL(/mode=sunline/);
+  await expect(page).not.toHaveURL(/time=/);
 });
 
 test('credits every data source with its license in the About dialog', async ({
@@ -331,7 +327,7 @@ test('credits every data source with its license in the About dialog', async ({
   await page.goto('./?mode=antipodes&v=2');
   // A compact credit line stays on screen; the full notices are one click away.
   const credit = page.getByText(
-    '数据：Natural Earth · GeoNames · UNDP · 社区姓氏数据',
+    '数据：Natural Earth · GeoNames · 社区姓氏数据',
   );
   const isMobile = (page.viewportSize()?.width ?? 0) <= 760;
   if (!isMobile) await expect(credit).toBeVisible();
@@ -341,14 +337,11 @@ test('credits every data source with its license in the About dialog', async ({
   await expect(about).toContainText(
     '包含 GeoNames 数据，按 CC BY 4.0 许可，不提供任何保证。',
   );
-  await expect(about).toContainText('由 Mundus 转换并标注派生指标');
   await expect(about).toContainText('CC BY-SA 4.0');
   await expect(
     about.getByRole('link', { name: 'CC BY 4.0 ↗' }),
   ).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/');
-  await expect(
-    about.getByRole('link', { name: 'CC BY 3.0 IGO ↗' }),
-  ).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/3.0/igo/');
+  await expect(about).not.toContainText('UNDP');
   await expect(
     about.getByRole('link', { name: '来源 ↗' }).first(),
   ).toHaveAttribute('href', 'https://www.naturalearthdata.com/');
@@ -368,7 +361,7 @@ test('keeps mode lifecycle stable across repeated switching', async ({
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('./?mode=sunline&time=2024-03-20T12%3A00Z&v=1');
 
-  const modeTitles = ['地球另一端', '发展的不同侧面', '日照线'];
+  const modeTitles = ['地球另一端', '姓氏观察', '日照线'];
   for (let index = 0; index < 6; index += 1) {
     await switchMode(page, modeTitles[index % 3]);
   }
@@ -505,9 +498,7 @@ test('presents the primary observations and keeps the others one step away', asy
   await expect(list.getByRole('button', { name: /地球另一端/ })).toBeVisible();
   await expect(list.getByRole('button', { name: /姓氏观察/ })).toBeVisible();
   const more = page.getByRole('list', { name: '更多观察' });
-  await expect(
-    more.getByRole('button', { name: '发展的不同侧面' }),
-  ).toBeVisible();
+  await expect(more.getByRole('listitem')).toHaveCount(1);
   await expect(more.getByRole('button', { name: '日照线' })).toBeVisible();
 });
 
@@ -527,7 +518,9 @@ test('@smoke enters a mode from the lobby and only then loads its lazy resources
   expect(
     requests.filter((url) => url.includes('geonames-major-cities')),
   ).toHaveLength(0);
-  expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(0);
+  expect(
+    requests.filter((url) => url.includes('surnames-by-country')),
+  ).toHaveLength(0);
 
   await page
     .locator('section[aria-labelledby="lobby-heading"]')
@@ -544,7 +537,9 @@ test('@smoke enters a mode from the lobby and only then loads its lazy resources
         requests.filter((url) => url.includes('geonames-major-cities')).length,
     )
     .toBe(1);
-  expect(requests.filter((url) => url.includes('undp-hdr'))).toHaveLength(0);
+  expect(
+    requests.filter((url) => url.includes('surnames-by-country')),
+  ).toHaveLength(0);
 });
 
 test('exiting returns to the lobby and preserves the selected point', async ({
@@ -565,10 +560,8 @@ test('exiting returns to the lobby and preserves the selected point', async ({
 });
 
 test('opens every existing mode directly from a V2 URL', async ({ page }) => {
-  await page.goto('./?mode=development&v=2');
-  await expect(
-    page.getByRole('heading', { name: '发展的不同侧面' }),
-  ).toBeVisible();
+  await page.goto('./?mode=surnames&v=2');
+  await expect(page.getByRole('heading', { name: '姓氏观察' })).toBeVisible();
   await page.goto('./?mode=sunline&v=2');
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
   await page.goto('./?mode=antipodes&v=2');
@@ -599,6 +592,30 @@ test('falls back to the lobby with a dismissible notice for an unknown V2 mode',
   await expect(
     page.getByText('这个观察方式暂时不可用，已回到展厅。'),
   ).not.toBeVisible();
+});
+
+test('opens the lobby with a retirement notice for Development links', async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
+  await page.goto(
+    './?mode=development&point=30.25%2C120.75&indicator=income&year=2010&v=1',
+  );
+  await expect(
+    page.getByRole('heading', { name: '选择一种观察' }),
+  ).toBeVisible();
+  await expect(page.getByText('这个观察已下线，已回到展厅。')).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+
+  await page.getByRole('button', { name: '分享' }).click();
+  await expect(page.getByRole('textbox', { name: '分享链接' })).toHaveValue(
+    /point=30\.25%2C120\.75&v=2/,
+  );
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '关闭提示' }).click();
+  await expect(page.getByText('这个观察已下线，已回到展厅。')).toBeHidden();
+  expect(requests.filter((url) => url.includes('undp'))).toHaveLength(0);
 });
 
 test('produces a V2 point link from the lobby share dialog', async ({

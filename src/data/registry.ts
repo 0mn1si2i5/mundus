@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import naturalEarthManifest from './manifests/natural-earth-110m.json';
-import undpDevelopmentManifest from './manifests/undp-hdr-2025-development.json';
 import geoNamesMajorCitiesManifest from './manifests/geonames-major-cities.json';
 import naturalEarthVectorManifest from './manifests/natural-earth-vector-globe.json';
 import surnamesManifest from './manifests/surnames-by-country.json';
@@ -157,7 +156,6 @@ export type DataManifest = z.infer<typeof dataManifestSchema>;
 export const DATA_MANIFESTS: readonly DataManifest[] = [
   dataManifestSchema.parse(naturalEarthManifest),
   dataManifestSchema.parse(naturalEarthVectorManifest),
-  dataManifestSchema.parse(undpDevelopmentManifest),
   dataManifestSchema.parse(geoNamesMajorCitiesManifest),
   dataManifestSchema.parse(surnamesManifest),
   dataManifestSchema.parse(countryLabelAnchorsManifest),

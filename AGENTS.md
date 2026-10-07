@@ -20,8 +20,10 @@ observation while keeping the selected place.
   `page_url` is the authority for the address).
 - The bare address opens a neutral lobby. The header switcher offers the two
   primary observations, **Other Side** (`antipodes`) and **Surname Atlas**
-  (`surnames`); **Development, Unpacked** (`development`) and **Sunline**
-  (`sunline`) sit under "More observations".
+  (`surnames`); **Sunline** (`sunline`) sits under "More observations".
+  **Development, Unpacked** was retired in 2026-10: its links
+  (`mode=development`) open the lobby with a "retired" notice, and its UNDP
+  data, code and attribution were removed.
 - Methods, data sources, licences and software notices live in one About
   dialog; a short credit line on the globe opens it. Working panels carry only
   per-result caveats (for example the "not individually verified" surname
@@ -38,11 +40,6 @@ Observation contracts:
   missing states; local script / Latin / Chinese forms are reviewed by Mundus
   (`src/features/surnames/surnameNameForms.ts`). Data contract:
   `docs/NAMING_OBSERVATION_RESEARCH.md`.
-- **Development, Unpacked** — UNDP HDR 2025 snapshot, 1990–2023; HDI plus
-  health, education and income indices; global median, history and an
-  algorithmic same-year contrast within ±0.020 HDI that implies no similarity,
-  ranking or cause. Missing data stays `null`, never zero. The UNDP asset loads
-  only when the mode is entered.
 - **Sunline** — solar position, terminator, civil twilight, subsolar point and
   approximate sunrise/sunset computed in the browser (NOAA/Meeus-style
   approximations, educational only; never legal, navigational or aviation
@@ -106,6 +103,7 @@ URL contract:
 | `v=2` without `mode`                       | lobby; a valid `point` selects the shared point |
 | `v=2&mode=<id>`                            | that mode                                       |
 | `v=2` with an unknown mode                 | lobby plus a dismissible notice                 |
+| retired `mode=development` (any version)   | lobby plus a dismissible "retired" notice       |
 
 Coordinates serialise to at most four decimals. Continuous time or camera
 updates replace history entries. Opening a dialog never mutates the URL.
@@ -144,7 +142,7 @@ live smoke against the deployed URL. Live smoke only proves the host serves the
 artifact and renders the lobby; it does not replace the browser suites.
 
 Browser tests live in `tests/e2e/`, one file per area (`shell`, `layout`,
-`globe`, `other-side`, `surnames`, `development`, `sunline`) with shared
+`globe`, `other-side`, `surnames`, `sunline`) with shared
 helpers in `helpers.ts`; `@smoke` tags the CI smoke subset.
 
 Test discipline: never loosen an assertion, add retries, raise timeouts or skip

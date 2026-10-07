@@ -231,7 +231,7 @@ const manifest = {
     'Quantize positions to signed normalized 16-bit and encode buffers with meshoptimizer 1.1.1',
   ],
   missingValuePolicy:
-    'Missing Development values use the explicit unknown palette color and are never converted to zero.',
+    'The palette carries no data values: countries use the base land color unless hovered or selected.',
   boundaryPolicy:
     'Natural Earth boundaries are a cartographic view and are not a legal authority on territorial status.',
   sourceAssets,

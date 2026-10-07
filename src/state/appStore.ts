@@ -3,7 +3,6 @@ import type { Locale } from '../i18n/messages';
 import type { ModeId } from '../features/modes/modeRegistry';
 import type { CountryRef } from '../features/globe/country';
 import { antipodeOf, type GeoPoint } from '../features/antipodes/geography';
-import type { DevelopmentIndicator } from '../features/development/developmentData';
 import {
   parseNavigationNotice,
   parseUrlState,
@@ -24,8 +23,6 @@ interface AppState {
   activeMode: ModeId | null;
   navigationNotice: NavigationNotice | null;
   point: GeoPoint;
-  developmentIndicator: DevelopmentIndicator;
-  developmentYear: number;
   sunlineTimeMs: number;
   sunlineClockMode: SunlineClockMode;
   sunlinePlaying: boolean;
@@ -40,8 +37,6 @@ interface AppState {
   exitMode: () => void;
   dismissNavigationNotice: () => void;
   selectPoint: (point: GeoPoint) => void;
-  selectDevelopmentIndicator: (indicator: DevelopmentIndicator) => void;
-  selectDevelopmentYear: (year: number) => void;
   selectSunlineTime: (timestampMs: number) => void;
   advanceSunlineTime: (elapsedRealMs: number) => void;
   syncSunlineLiveTime: (timestampMs?: number) => void;
@@ -107,9 +102,6 @@ export const useAppStore = create<AppState>((set) => ({
       hasInteracted: true,
       hasMeaningfulInteraction: true,
     }),
-  selectDevelopmentIndicator: (developmentIndicator) =>
-    set({ developmentIndicator }),
-  selectDevelopmentYear: (developmentYear) => set({ developmentYear }),
   selectSunlineTime: (sunlineTimeMs) =>
     set({
       sunlineTimeMs: clampSunlineTime(sunlineTimeMs),

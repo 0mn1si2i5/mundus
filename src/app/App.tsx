@@ -126,7 +126,11 @@ export function App() {
     <main className={styles.shell}>
       {navigationNotice ? (
         <div className={styles.notice} role="status">
-          <p>{t.unknownModeNotice}</p>
+          <p>
+            {navigationNotice === 'retired-mode'
+              ? t.retiredModeNotice
+              : t.unknownModeNotice}
+          </p>
           <button
             type="button"
             onClick={dismissNavigationNotice}
@@ -234,7 +238,6 @@ export function App() {
               keyboardMovedLabel={t.globeMoved}
               keyboardZoomedLabel={t.globeZoomed}
               keyboardSelectedLabel={t.globeSelected}
-              countryFills={globe.countryFills}
               showAntipodes={globe.showAntipodes}
               sunline={globe.sunline}
               antipodeRelation={globe.antipodeRelation}

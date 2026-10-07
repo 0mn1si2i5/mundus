@@ -8,7 +8,7 @@ below.
 Where the product shows attribution: every notice below appears in the
 **About** dialog (header button "关于" / "About"), which is always one click
 away, and the desktop layout keeps a compact credit line ("Data: Natural Earth
-· GeoNames · UNDP · community surname data") on screen with a link to it.
+· GeoNames · community surname data") on screen with a link to it.
 
 ## Natural Earth countries, 1:110m
 
@@ -50,9 +50,8 @@ bytes raw and 1,346,186 bytes at the verifier's gzip level; its measured runtime
 GPU buffer and palette allocation is 8,950,732 bytes. Four interior samples per
 triangle plus adaptive boundary subdivision limit dropped candidate area to
 0.00417% at 110m and 0.000149% at 50m, with hard global and representative-country
-gates. Development indicator/year changes update a
-small RGBA palette only. Missing values retain the explicit unknown color and
-are never converted to zero.
+gates. Hover and selection changes update a small RGBA palette only; the
+palette carries no data values.
 
 Coverage is also checked independently against `d3.geoArea` on source country
 features, not against converter candidate triangles. For this snapshot the 50m
@@ -101,26 +100,6 @@ authority. Each relation distance is measured independently from an exact
 endpoint to the nearest eligible entry in this same immutable index, with
 deterministic distance, population, and GeoNames-ID ties. Results do not mean
 nearest settlement, administrative boundary, or built area.
-
-## UNDP Human Development Report 2025
-
-- Source: [UNDP Human Development Report data center](https://hdr.undp.org/data-center/documentation-and-downloads)
-- Edition: HDR 2025 complete time series, covering 1990–2023
-- Terms: [Creative Commons Attribution 3.0 IGO](https://hdr.undp.org/copyright-and-terms-use); redistribution allowed with attribution
-- Use: reported HDI and locally derived health, education, and income dimension
-  indices in Development, Unpacked
-- Transformation: preserve missing values as `null`; calculate dimension
-  indices with the HDR 2025 Technical Note 1 goalposts; join ISO alpha-3 codes
-  to Natural Earth identifiers; round derived values to four decimal places
-- Attribution shown in the product: **Source: United Nations Development
-  Programme, Human Development Report 2025; transformed by Mundus**, next to a
-  link to the CC BY 3.0 IGO terms.
-
-The source, auxiliary Natural Earth file, and derived-asset SHA-256 values are
-recorded in `src/data/manifests/undp-hdr-2025-development.json`. Full formulas
-and quality results are documented in `docs/data/undp-hdr-2025.md`. Small states
-without a Natural Earth 110m polygon remain in the semantic table but cannot be
-painted on the globe at this scale.
 
 ## Community surname observation
 

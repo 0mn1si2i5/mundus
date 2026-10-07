@@ -28,7 +28,6 @@ export type VectorGlobeState = 'loading' | 'ready' | 'error';
 
 interface VectorGlobeLayerProps {
   profile: QualityProfile;
-  countryFills: ReadonlyMap<string, string> | null;
   hoveredCountryId: string | null;
   selectedCountryId: string | null;
   dragActive: boolean;
@@ -88,7 +87,6 @@ const HIGHLIGHT_FRAGMENT_SHADER = `
 
 export function VectorGlobeLayer({
   profile,
-  countryFills,
   hoveredCountryId,
   selectedCountryId,
   dragActive,
@@ -177,17 +175,11 @@ export function VectorGlobeLayer({
 
   useEffect(() => {
     if (!resources) return;
-    updateVectorPalette(
-      resources,
-      countryFills,
-      hoveredCountryId,
-      selectedCountryId,
-    );
+    updateVectorPalette(resources, hoveredCountryId, selectedCountryId);
     onPaletteUpdate(resources.palette.version);
     requestRenderEvidence();
     invalidate();
   }, [
-    countryFills,
     hoveredCountryId,
     invalidate,
     onPaletteUpdate,

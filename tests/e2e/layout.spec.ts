@@ -109,14 +109,6 @@ test('contains compact mode introductions above result surfaces', async ({
       ],
     },
     {
-      name: 'Development',
-      path: './?mode=development&indicator=hdi&year=2023&v=1',
-      panel: 'development-controls',
-      result: null,
-      ready: null,
-      globeAttribute: null,
-    },
-    {
       name: 'Sunline',
       path: './?mode=sunline&time=2024-03-20T12%3A00Z&v=1',
       panel: 'sunline-controls',
@@ -292,53 +284,6 @@ test('protects landscape desktop poster edges with safe-area-aware base rules', 
       ).toBe(false);
     }
   }
-
-  await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
-  const developmentTitle = page.getByRole('heading', {
-    name: '发展的不同侧面',
-  });
-  const developmentPanel = page.locator(
-    '[data-mode-panel="development-controls"]',
-  );
-  const developmentSurfaces = [developmentTitle, developmentPanel];
-  const developmentSurfaceNames = ['title', 'controls'];
-  await Promise.all(
-    developmentSurfaces.map((surface) => expect(surface).toBeVisible()),
-  );
-  const developmentRectangles = await Promise.all(
-    developmentSurfaces.map((surface) => surface.boundingBox()),
-  );
-  for (const [index, rectangle] of developmentRectangles.entries()) {
-    expect(rectangle).not.toBeNull();
-    expect(
-      rectangle!.x,
-      `Development ${developmentSurfaceNames[index]} left edge`,
-    ).toBeGreaterThanOrEqual(0);
-    expect(
-      rectangle!.y,
-      `Development ${developmentSurfaceNames[index]} top edge`,
-    ).toBeGreaterThanOrEqual(0);
-    expect(
-      rectangle!.x + rectangle!.width,
-      `Development ${developmentSurfaceNames[index]} right edge`,
-    ).toBeLessThanOrEqual(viewport.width);
-    expect(
-      rectangle!.y + rectangle!.height,
-      `Development ${developmentSurfaceNames[index]} bottom edge`,
-    ).toBeLessThanOrEqual(viewport.height);
-  }
-  for (let first = 0; first < developmentRectangles.length; first += 1) {
-    for (
-      let second = first + 1;
-      second < developmentRectangles.length;
-      second += 1
-    ) {
-      expect(
-        overlaps(developmentRectangles[first], developmentRectangles[second]),
-        `Development ${developmentSurfaceNames[first]} overlaps ${developmentSurfaceNames[second]}`,
-      ).toBe(false);
-    }
-  }
 });
 
 test('contains expanded desktop modes by height without changing the normal poster', async ({
@@ -353,14 +298,6 @@ test('contains expanded desktop modes by height without changing the normal post
       panel: 'place-controls',
       result: '结果',
       ready: '康科迪亚',
-    },
-    {
-      name: 'Development',
-      path: './?mode=development&indicator=hdi&year=2023&v=1',
-      title: '发展的不同侧面',
-      panel: 'development-controls',
-      result: null,
-      ready: '全球中位数',
     },
     {
       name: 'Sunline',
@@ -449,14 +386,6 @@ test('keeps every expanded compact drawer and navigation reachable', async ({
       primary: () => page.getByLabel('搜索全球主要城市'),
       result: () => page.getByRole('complementary', { name: '结果' }),
       ready: () => page.getByText('康科迪亚', { exact: true }),
-    },
-    {
-      path: './?mode=development&indicator=hdi&year=2023&v=1',
-      panel: 'development-controls',
-      expand: '展开发展控件',
-      primary: () => page.getByRole('slider', { name: /年份/ }),
-      result: () => null,
-      ready: () => page.getByText('全球中位数', { exact: true }),
     },
     {
       path: './?mode=sunline&v=1',
@@ -597,12 +526,10 @@ test('allows the English display title to wrap within 320px', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
+  await page.goto('./?mode=surnames&v=2');
   await page.getByRole('button', { name: '切换为英文' }).click();
 
-  const title = page.getByRole('heading', {
-    name: 'Development, Unpacked',
-  });
+  const title = page.getByRole('heading', { name: 'Surname Atlas' });
   const layout = await title.evaluate((element) => {
     const text = element.textContent ?? '';
     const textNode = element.firstChild;
@@ -637,9 +564,9 @@ test('keeps Chinese display-title phrase units intact at 320px', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 844 });
-  await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
+  await page.goto('./?mode=antipodes&v=2');
 
-  const title = page.getByRole('heading', { name: '发展的不同侧面' });
+  const title = page.getByRole('heading', { name: '地球另一端' });
   const phrases = title.locator('[data-title-phrase]');
   await expect(phrases).toHaveCount(2);
 
@@ -691,7 +618,7 @@ test('keeps Chinese display-title phrase units intact at 320px', async ({
 
   expect(layout.textWrap).toBe('balance');
   expect(layout.titleRight).toBeLessThanOrEqual(layout.viewportWidth);
-  expect(layout.units.map(({ text }) => text).join('')).toBe('发展的不同侧面');
+  expect(layout.units.map(({ text }) => text).join('')).toBe('地球另一端');
   expect(layout.units.every(({ rectCount }) => rectCount === 1)).toBe(true);
   expect(layout.units.every(({ right }) => right <= layout.viewportWidth)).toBe(
     true,
@@ -699,7 +626,7 @@ test('keeps Chinese display-title phrase units intact at 320px', async ({
   expect(layout.units.every(({ whiteSpace }) => whiteSpace === 'nowrap')).toBe(
     true,
   );
-  expect(layout.hanCharacters).toHaveLength(7);
+  expect(layout.hanCharacters).toHaveLength(5);
   // Whether or not it wraps, no line is left with a single orphaned character.
   expect(layout.visualLineLengths.every((length) => length > 1)).toBe(true);
 });
@@ -717,12 +644,10 @@ test('keeps controls reachable after crossing the mobile breakpoint', async ({
   await expect(page.getByLabel('UTC 日期')).toBeVisible();
   await expect(page.getByRole('slider', { name: /UTC 时间/ })).toBeVisible();
 
-  await switchMode(page, '发展的不同侧面');
+  await switchMode(page, '地球另一端');
+  await expect(page.getByRole('heading', { name: '地球另一端' })).toBeFocused();
   await expect(
-    page.getByRole('heading', { name: '发展的不同侧面' }),
-  ).toBeFocused();
-  await expect(
-    page.locator('[data-mode-panel="development-controls"]'),
+    page.locator('[data-mode-panel="place-controls"]'),
   ).toBeVisible();
 });
 
@@ -749,20 +674,6 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
     placePanel.getByRole('button', { name: '马德里' }),
   ]) {
     await expectMinimumHeight(control, 44);
-  }
-
-  await switchMode(page, '发展的不同侧面');
-  const developmentToggle = page.getByRole('button', { name: '展开发展控件' });
-  await expectMinimumHeight(developmentToggle, 44);
-  await developmentToggle.click();
-  const developmentPanel = page.locator(
-    '[data-mode-panel="development-controls"]',
-  );
-  for (const indicator of ['综合 HDI', '健康', '教育', '收入']) {
-    await expectMinimumHeight(
-      developmentPanel.getByRole('button', { name: indicator }),
-      44,
-    );
   }
 
   await switchMode(page, '日照线');
@@ -861,11 +772,6 @@ test('uses the bright parchment atlas contract across modes', async ({
       path: './?mode=antipodes&v=2',
       panel: 'place-controls',
       expand: '展开地点控件',
-    },
-    {
-      path: './?mode=development&indicator=hdi&year=2023&v=1',
-      panel: 'development-controls',
-      expand: '展开发展控件',
     },
     {
       path: './?mode=sunline&time=2024-03-20T12%3A00Z&v=1',

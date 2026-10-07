@@ -6,7 +6,7 @@ export const messages = {
     home: '回到 Mundus 展厅',
     about: '关于',
     moreModes: '更多观察',
-    creditLine: '数据：Natural Earth · GeoNames · UNDP · 社区姓氏数据',
+    creditLine: '数据：Natural Earth · GeoNames · 社区姓氏数据',
     creditMore: '来源与许可',
     share: '分享',
     changeLanguage: '切换为英文',
@@ -74,6 +74,7 @@ export const messages = {
     lobbyDescription: '转动地球，选择地点，再进入一种观察方式。',
     returnToLobby: '返回展厅',
     unknownModeNotice: '这个观察方式暂时不可用，已回到展厅。',
+    retiredModeNotice: '这个观察已下线，已回到展厅。',
     dismissNotice: '关闭提示',
   },
   en: {
@@ -81,8 +82,7 @@ export const messages = {
     home: 'Back to the Mundus lobby',
     about: 'About',
     moreModes: 'More',
-    creditLine:
-      'Data: Natural Earth · GeoNames · UNDP · community surname data',
+    creditLine: 'Data: Natural Earth · GeoNames · community surname data',
     creditMore: 'Sources and licenses',
     share: 'Share',
     changeLanguage: 'Switch to Chinese',
@@ -157,6 +157,8 @@ export const messages = {
     returnToLobby: 'Return to lobby',
     unknownModeNotice:
       'That observation is unavailable; you have been returned to the lobby.',
+    retiredModeNotice:
+      'That observation has been retired; you have been returned to the lobby.',
     dismissNotice: 'Dismiss',
   },
 } as const;

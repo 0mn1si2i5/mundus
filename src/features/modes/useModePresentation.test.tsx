@@ -9,8 +9,6 @@ describe('useGlobePresentation', () => {
       activeMode: null,
       point: { latitude: 31.2304, longitude: 121.4737 },
       selectedCountry: null,
-      developmentIndicator: 'hdi',
-      developmentYear: 2023,
       sunlineTimeMs: Date.parse('2026-07-14T09:37:00Z'),
     });
   });
@@ -18,7 +16,6 @@ describe('useGlobePresentation', () => {
   it('returns a neutral globe in the lobby without loading mode resources', () => {
     const { result } = renderHook(() => useGlobePresentation());
     expect(result.current).toEqual({
-      countryFills: null,
       showAntipodes: false,
       sunline: null,
       antipodeRelation: null,
@@ -32,7 +29,6 @@ describe('useGlobePresentation', () => {
     const { result } = renderHook(() => useGlobePresentation());
     expect(result.current.showAntipodes).toBe(true);
     expect(result.current.sunline).toBeNull();
-    expect(result.current.countryFills).toBeNull();
   });
 
   it('produces a solar presentation for Sunline without throwing', () => {

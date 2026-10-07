@@ -48,8 +48,6 @@ export function ShareDialog({
     const shareableState = {
       activeMode: state.activeMode,
       point: state.point,
-      developmentIndicator: state.developmentIndicator,
-      developmentYear: state.developmentYear,
       sunlineTimeMs: state.sunlineTimeMs,
       sunlineClockMode: state.sunlineClockMode,
       surnameDisplayMode: state.surnameDisplayMode,

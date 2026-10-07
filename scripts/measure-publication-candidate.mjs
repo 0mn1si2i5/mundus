@@ -12,7 +12,6 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dist = join(root, 'dist');
 const mountPath = '/mundus/';
 const scenarioIdentity = 'mundus-v1.1-publication-candidate-v3';
-const developmentResourcePattern = /undp-hdr|DevelopmentControls/u;
 
 export function median(values) {
   if (!values.length)
@@ -87,23 +86,6 @@ export function validateMeasurementResult(result) {
         throw new Error(
           `${label} warm search became ready before first focus.`,
         );
-      }
-      if (!sample.development.absentImmediatelyBeforeEntry) {
-        throw new Error(
-          `${label} Development resources were present immediately before entry.`,
-        );
-      }
-      if (sample.development.assets.length !== 3) {
-        throw new Error(
-          `${label} expected exactly three Development resources, observed ${sample.development.assets.length}`,
-        );
-      }
-      for (const asset of sample.development.assets) {
-        if (asset.startTimeMs < sample.development.entryAtMs) {
-          throw new Error(
-            `${label} Development resource started before entry.`,
-          );
-        }
       }
       const failures = sample.failures;
       for (const [field, value] of [
@@ -399,23 +381,7 @@ async function measureSample(baseURL, scenario, run) {
     await page.getByRole('option').first().waitFor({ state: 'visible' });
     const warmSearchReadyMs = await page.evaluate(() => performance.now());
 
-    const developmentBeforeEntry = (await resourceEntries(page)).filter(
-      (entry) => developmentResourcePattern.test(entry.name),
-    );
-    const developmentEntryAtMs = await page.evaluate(() => performance.now());
-    await page.getByRole('button', { name: /发展的不同侧面/u }).click();
-    if (scenario.name === 'pixel7') {
-      await page.getByRole('button', { name: '展开发展控件' }).click();
-    }
-    await page
-      .getByText('全球中位数', { exact: true })
-      .waitFor({ state: 'visible' });
-    const developmentReadyMs = await page.evaluate(() => performance.now());
-    const developmentHeap = await heapBytes(cdp);
     const finalEntries = await resourceEntries(page);
-    const developmentAfter = finalEntries.filter((entry) =>
-      developmentResourcePattern.test(entry.name),
-    );
     const counts = new Map();
     for (const entry of finalEntries) {
       const path = new URL(entry.name).pathname;
@@ -452,24 +418,15 @@ async function measureSample(baseURL, scenario, run) {
           focusToReadyMs: warmSearchReadyMs - focusAtMs,
         },
       },
-      development: {
-        entryAtMs: developmentEntryAtMs,
-        readyMs: developmentReadyMs,
-        entryToReadyMs: developmentReadyMs - developmentEntryAtMs,
-        absentImmediatelyBeforeEntry: developmentBeforeEntry.length === 0,
-        assets: developmentAfter.map(resource),
-      },
       vector: {
         detail: vectorDetail,
         asset: vectorEntry ? new URL(vectorEntry.name).pathname : null,
         resource: vectorEntry ? resource(vectorEntry) : null,
       },
       heap: {
-        supported: [initialHeap, geonamesHeap, developmentHeap].every(
-          Number.isFinite,
-        ),
-        observedBytes: [initialHeap, geonamesHeap, developmentHeap],
-        peakObservedBytes: [initialHeap, geonamesHeap, developmentHeap]
+        supported: [initialHeap, geonamesHeap].every(Number.isFinite),
+        observedBytes: [initialHeap, geonamesHeap],
+        peakObservedBytes: [initialHeap, geonamesHeap]
           .filter(Number.isFinite)
           .reduce((peak, value) => Math.max(peak, value), 0),
       },
@@ -507,9 +464,6 @@ function summarize(samples) {
     ),
     geonamesTransferBytes: median(
       values((sample) => sample.geonames.asset.transferBytes),
-    ),
-    developmentEntryToReadyMs: median(
-      values((sample) => sample.development.entryToReadyMs),
     ),
     vectorTransferBytes: median(
       values((sample) => sample.vector.resource.transferBytes),

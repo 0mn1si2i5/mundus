@@ -171,7 +171,7 @@ describe('camera focus intent', () => {
 
   it('clears stale semantic sides on mode changes', () => {
     useAppStore.getState().toggleAntipodeFocus();
-    useAppStore.getState().selectMode('development');
+    useAppStore.getState().selectMode('sunline');
     useAppStore.getState().selectMode('antipodes');
 
     expect(useAppStore.getState().cameraFocusIntent).toEqual({

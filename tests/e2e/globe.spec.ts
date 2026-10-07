@@ -30,11 +30,11 @@ test('@smoke loads the quality-selected vector resolution and hides raster after
   expect(vectorRequests[0]).toContain(`-${detail}-`);
 });
 
-test('Development palette updates preserve vector geometry identity', async ({
+test('selection palette updates preserve vector geometry identity', async ({
   page,
 }) => {
   await useHighConcurrencyProfile(page);
-  await page.goto('./?mode=development&indicator=hdi&year=2023&v=1');
+  await page.goto('./?mode=antipodes&v=2');
   await expectVectorReady(
     page,
     test.info().project.name === 'mobile' ? '110m' : '50m',
@@ -48,10 +48,9 @@ test('Development palette updates preserve vector geometry identity', async ({
     await globe.getAttribute('data-vector-render-revision'),
   );
   if (test.info().project.name === 'mobile') {
-    await page.getByRole('button', { name: '展开发展控件' }).click();
+    await page.getByRole('button', { name: '展开地点控件' }).click();
   }
-  await page.getByRole('button', { name: '教育' }).click();
-  await page.getByRole('slider').fill('2005');
+  await page.getByRole('button', { name: '马德里' }).click();
   await expect(globe).toHaveAttribute('data-vector-geometry-id', geometryId!);
   await expect
     .poll(async () =>
@@ -484,7 +483,7 @@ test('keeps drag active until the final active pointer ends and clears on mode e
     clientY: 100,
   });
   await expect(globe).toHaveAttribute('data-antipode-drag-state', 'active');
-  await switchMode(page, '发展的不同侧面');
+  await switchMode(page, '姓氏观察');
   await switchMode(page, '地球另一端');
   await expectAntipodeDragInactive(page);
 
@@ -879,7 +878,7 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     '31.2304,121.4737',
   );
 
-  await switchMode(page, '发展的不同侧面');
+  await switchMode(page, '姓氏观察');
   await expect(globe).not.toHaveAttribute('data-antipode-relation-arc-count');
   await expect(globe).not.toHaveAttribute(
     'data-marker-origin-city-actual-css-diameter',

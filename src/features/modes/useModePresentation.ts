@@ -6,14 +6,6 @@ import {
   createAntipodeRelation,
   type AntipodeRelation,
 } from '../antipodes/relation';
-import {
-  developmentColor,
-  valuesByCountryId,
-} from '../development/developmentData';
-import {
-  useDevelopmentDataset,
-  type DevelopmentLoadState,
-} from '../development/useDevelopmentDataset';
 import { observeSun, solarEventsUtc, solarPosition } from '../sunline/solar';
 import type { SunlineRenderState } from '../globe/GlobeScene';
 import {
@@ -32,7 +24,6 @@ import type { SurnameDisplayMode } from '../../state/urlState';
 import { DEFAULT_SURNAME_DISPLAY_MODE } from '../../state/urlState';
 
 export interface GlobePresentation {
-  countryFills: ReadonlyMap<string, string> | null;
   showAntipodes: boolean;
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
@@ -50,11 +41,6 @@ export type ModePresentation =
       relation: AntipodeRelation;
       relationStatus: AntipodeRelationLoadState;
       cityIndex: GeoNamesCityLoadState;
-    }
-  | {
-      id: 'development';
-      selectedCountry: CountryRef | null;
-      developmentData: DevelopmentLoadState;
     }
   | {
       id: 'sunline';
@@ -87,7 +73,6 @@ export function useModePresentation(): ModePresentation | null {
   const surnameDisplayMode =
     useAppStore((state) => state.surnameDisplayMode) ??
     DEFAULT_SURNAME_DISPLAY_MODE;
-  const developmentData = useDevelopmentDataset(activeMode === 'development');
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
   const surnameData = useSurnameDataset(activeMode === 'surnames');
 
@@ -123,12 +108,6 @@ export function useModePresentation(): ModePresentation | null {
         relationStatus: cityIndex.status,
         cityIndex,
       };
-    case 'development':
-      return {
-        id: activeMode,
-        selectedCountry,
-        developmentData,
-      };
     case 'sunline':
       return {
         id: activeMode,
@@ -157,30 +136,12 @@ export function useModePresentation(): ModePresentation | null {
 export function useGlobePresentation(): GlobePresentation {
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
-  const indicator = useAppStore((state) => state.developmentIndicator);
-  const year = useAppStore((state) => state.developmentYear);
   const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
-  const developmentData = useDevelopmentDataset(activeMode === 'development');
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
   const surnameData = useSurnameDataset(activeMode === 'surnames');
   const surnameDisplayMode =
     useAppStore((state) => state.surnameDisplayMode) ??
     DEFAULT_SURNAME_DISPLAY_MODE;
-
-  const countryFills = useMemo(() => {
-    if (activeMode !== 'development' || developmentData.status !== 'ready') {
-      return null;
-    }
-    try {
-      return new Map(
-        [...valuesByCountryId(developmentData.data, indicator, year)].map(
-          ([countryId, value]) => [countryId, developmentColor(value)],
-        ),
-      );
-    } catch {
-      return null;
-    }
-  }, [activeMode, developmentData, indicator, year]);
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
@@ -222,7 +183,6 @@ export function useGlobePresentation(): GlobePresentation {
   }, [activeMode, cityIndex, point]);
 
   return {
-    countryFills,
     showAntipodes: activeMode === 'antipodes',
     sunline,
     antipodeRelation,

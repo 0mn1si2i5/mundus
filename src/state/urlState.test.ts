@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_DEVELOPMENT_INDICATOR,
-  DEFAULT_DEVELOPMENT_YEAR,
   DEFAULT_POINT,
   DEFAULT_SURNAME_DISPLAY_MODE,
   parseNavigationNotice,
@@ -20,8 +18,6 @@ describe('URL state codec', () => {
   const lobby: ShareableState = {
     activeMode: null,
     point: DEFAULT_POINT,
-    developmentIndicator: DEFAULT_DEVELOPMENT_INDICATOR,
-    developmentYear: DEFAULT_DEVELOPMENT_YEAR,
     ...sunlineDefaults,
     surnameDisplayMode: DEFAULT_SURNAME_DISPLAY_MODE,
   };
@@ -48,8 +44,8 @@ describe('URL state codec', () => {
       expect(parseUrlState('?v=1', nowMs)).toMatchObject({
         activeMode: 'antipodes',
       });
-      expect(parseUrlState('?v=1&mode=development', nowMs)).toMatchObject({
-        activeMode: 'development',
+      expect(parseUrlState('?v=1&mode=sunline', nowMs)).toMatchObject({
+        activeMode: 'sunline',
       });
     });
 
@@ -85,6 +81,20 @@ describe('URL state codec', () => {
       expect(parseNavigationNotice('?v=1&mode=bogus')).toBeNull();
     });
 
+    it('opens the lobby with a retirement notice for retired Development links', () => {
+      for (const search of [
+        '?v=2&mode=development&indicator=education&year=2005&point=12.3457%2C-98.7654',
+        '?v=1&mode=development&point=12.3457%2C-98.7654',
+        '?mode=development&point=12.3457%2C-98.7654',
+      ]) {
+        expect(parseUrlState(search, nowMs)).toMatchObject({
+          activeMode: null,
+          point: { latitude: 12.3457, longitude: -98.7654 },
+        });
+        expect(parseNavigationNotice(search)).toBe('retired-mode');
+      }
+    });
+
     it('keeps the legacy safe fallback for invalid V1 input', () => {
       expect(parseUrlState('?mode=nope&point=91,0', nowMs)).toMatchObject({
         activeMode: 'antipodes',
@@ -92,17 +102,17 @@ describe('URL state codec', () => {
       });
     });
 
-    it('still parses coordinates, development, and Sunline state in V2', () => {
+    it('still parses coordinates and Sunline state in V2', () => {
       expect(
         parseUrlState(
-          '?v=2&mode=development&indicator=education&year=2005&point=12.3457%2C-98.7654',
+          '?v=2&mode=sunline&time=2024-03-20T12%3A00Z&point=12.3457%2C-98.7654',
           nowMs,
         ),
       ).toMatchObject({
-        activeMode: 'development',
+        activeMode: 'sunline',
         point: { latitude: 12.3457, longitude: -98.7654 },
-        developmentIndicator: 'education',
-        developmentYear: 2005,
+        sunlineTimeMs: Date.parse('2024-03-20T12:00:00Z'),
+        sunlineClockMode: 'fixed',
       });
     });
   });
@@ -135,17 +145,6 @@ describe('URL state codec', () => {
           point: { latitude: 12.345678, longitude: -98.765432 },
         }),
       ).toBe('?mode=sunline&point=12.3457%2C-98.7654&v=2');
-    });
-
-    it('serializes non-default development state only in that mode', () => {
-      expect(
-        serializeUrlState({
-          ...lobby,
-          activeMode: 'development',
-          developmentIndicator: 'education',
-          developmentYear: 2005,
-        }),
-      ).toBe('?mode=development&indicator=education&year=2005&v=2');
     });
 
     it('serializes fixed Sunline time in V2', () => {
@@ -197,8 +196,6 @@ describe('URL state codec', () => {
       expect(parseUrlState(link, nowMs)).toEqual({
         activeMode: 'sunline',
         point: { latitude: 12.3457, longitude: -98.7654 },
-        developmentIndicator: DEFAULT_DEVELOPMENT_INDICATOR,
-        developmentYear: DEFAULT_DEVELOPMENT_YEAR,
         ...sunlineDefaults,
         surnameDisplayMode: 'local',
       });

@@ -35,11 +35,6 @@ const assets = [
     budgets: true,
   },
   {
-    manifest: 'src/data/manifests/undp-hdr-2025-development.json',
-    asset: 'src/data/generated/undp-hdr-2025-development.json',
-    hashField: 'derivedAssetSha256',
-  },
-  {
     manifest: 'src/data/manifests/surnames-by-country.json',
     asset: 'src/data/generated/surnames-by-country.json',
     hashField: 'derivedAssetSha256',

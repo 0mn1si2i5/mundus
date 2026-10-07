@@ -128,30 +128,27 @@ describe('vector globe runtime resources', () => {
     },
   );
 
-  it('updates base, Development, hover, and selection colors without rebuilding geometry', () => {
+  it('updates base, hover, and selection colors without rebuilding geometry', () => {
     const resources = createVectorGlobeResources(decodedFixture());
     const surface = resources.surface;
     const startingVersion = resources.palette.version;
-    updateVectorPalette(
-      resources,
-      new Map([['ne-156', '#b8b1a3']]),
-      null,
-      null,
-    );
     const offset = 156 * 4;
     const paletteData = resources.palette.image.data;
     expect(paletteData).not.toBeNull();
-    expect([...paletteData!.slice(offset, offset + 3)]).toEqual([
-      184, 177, 163,
-    ]);
-    updateVectorPalette(
-      resources,
-      new Map([['ne-156', '#286c73']]),
-      'ne-156',
-      'ne-156',
-    );
+    const colorAt = () => [...paletteData!.slice(offset, offset + 3)];
+
+    updateVectorPalette(resources, null, null);
+    const base = colorAt();
+    updateVectorPalette(resources, 'ne-156', null);
+    const hovered = colorAt();
+    updateVectorPalette(resources, 'ne-156', 'ne-156');
+    const selected = colorAt();
+
+    expect(hovered).not.toEqual(base);
+    expect(selected).not.toEqual(base);
+    expect(selected).not.toEqual(hovered);
     expect(resources.surface).toBe(surface);
-    expect(resources.palette.version).toBe(startingVersion + 2);
+    expect(resources.palette.version).toBe(startingVersion + 3);
     resources.dispose();
   });
 });

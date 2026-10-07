@@ -110,7 +110,6 @@ interface GlobeSceneProps {
   benchmarkActive: boolean;
   recordBenchmarkFrame: (timestamp: number) => void;
   keyboardController: Ref<GlobeKeyboardController>;
-  countryFills: ReadonlyMap<string, string> | null;
   showAntipodes: boolean;
   antipodeDragActive: boolean;
   dragDiagnosticsEnabled: boolean;
@@ -147,7 +146,6 @@ export function GlobeScene({
   benchmarkActive,
   recordBenchmarkFrame,
   keyboardController,
-  countryFills,
   showAntipodes,
   antipodeDragActive,
   dragDiagnosticsEnabled,
@@ -586,16 +584,9 @@ export function GlobeScene({
     surnameAnchor,
     surnameDisplayMode,
   ]);
-  const rasterCountryFills = vectorReady ? null : countryFills;
   const texture = useMemo(
-    () =>
-      createCountryTexture(
-        countries,
-        profile.textureWidth,
-        rasterCountryFills,
-        maxAnisotropy,
-      ),
-    [countries, profile.textureWidth, rasterCountryFills, maxAnisotropy],
+    () => createCountryTexture(countries, profile.textureWidth, maxAnisotropy),
+    [countries, profile.textureWidth, maxAnisotropy],
   );
   const highlights = useMemo(
     () =>
@@ -1085,7 +1076,6 @@ export function GlobeScene({
         </mesh>
         <VectorGlobeLayer
           profile={profile}
-          countryFills={countryFills}
           hoveredCountryId={hoveredCountry?.countryId ?? null}
           selectedCountryId={selectedCountry?.countryId ?? null}
           dragActive={antipodeDragActive}
