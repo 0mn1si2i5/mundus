@@ -14,8 +14,6 @@ export function useUrlState() {
         applyingHistory ||
         (state.activeMode === previous.activeMode &&
           state.point === previous.point &&
-          state.developmentIndicator === previous.developmentIndicator &&
-          state.developmentYear === previous.developmentYear &&
           state.sunlineTimeMs === previous.sunlineTimeMs &&
           state.sunlineClockMode === previous.sunlineClockMode &&
           state.surnameDisplayMode === previous.surnameDisplayMode)
@@ -23,22 +21,14 @@ export function useUrlState() {
         return;
       }
       const query = serializeUrlState(state);
-      const onlyDevelopmentYearChanged =
-        state.activeMode === previous.activeMode &&
-        state.point === previous.point &&
-        state.developmentIndicator === previous.developmentIndicator &&
-        state.developmentYear !== previous.developmentYear;
       const onlySunlineTimeChanged =
         state.activeMode === previous.activeMode &&
         state.point === previous.point &&
-        state.developmentIndicator === previous.developmentIndicator &&
-        state.developmentYear === previous.developmentYear &&
         state.sunlineClockMode === previous.sunlineClockMode &&
         state.sunlineTimeMs !== previous.sunlineTimeMs;
-      const updateHistory =
-        onlyDevelopmentYearChanged || onlySunlineTimeChanged
-          ? window.history.replaceState
-          : window.history.pushState;
+      const updateHistory = onlySunlineTimeChanged
+        ? window.history.replaceState
+        : window.history.pushState;
       updateHistory.call(
         window.history,
         null,

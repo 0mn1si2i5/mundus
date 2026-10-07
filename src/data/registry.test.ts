@@ -9,7 +9,6 @@ describe('data registry', () => {
     expect(ids).toEqual([
       'natural-earth-countries-110m',
       'natural-earth-vector-globe',
-      'undp-hdr-2025-development',
       'geonames-major-cities',
       'surnames-by-country',
       'country-label-anchors',
@@ -80,13 +79,6 @@ describe('data registry', () => {
     expect(dataManifestSchema.safeParse(withoutFormat).success).toBe(false);
     expect(dataManifestSchema.safeParse(versionOne).success).toBe(false);
     expect(dataManifestSchema.safeParse(geoNames).success).toBe(true);
-    expect(
-      dataManifestSchema.safeParse(
-        DATA_MANIFESTS.find(
-          (candidate) => candidate.id === 'undp-hdr-2025-development',
-        ),
-      ).success,
-    ).toBe(true);
   });
 
   it('pins the licensed GeoNames major-city snapshot and derived budgets', () => {

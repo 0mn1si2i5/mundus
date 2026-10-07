@@ -12,6 +12,10 @@ Natural Earth 矢量球、GeoNames 双语搜索、双侧城市关系、拖拽剖
 2026-10 起仓库更名为小写 `0mn1si2i5/mundus`，线上地址为
 <https://0mn1si2i5.github.io/mundus/>；下文历史证据中的 `/Mundus/` 地址保持原样。
 
+2026-10 起“发展的不同侧面（Development, Unpacked）”已下线：模式代码、UNDP
+快照、构建脚本与署名全部移除，`mode=development` 旧链接回到展厅并显示“已下线”
+提示。下文涉及 Development 的条目只作为历史记录。
+
 ## Exhibit Shell V2：中立展厅壳层
 
 已通过 PR #9 与 PR #11 合并到受保护 `main` 并公开部署。
@@ -135,7 +139,7 @@ Natural Earth 矢量球、GeoNames 双语搜索、双侧城市关系、拖拽剖
 - [x] 同步排序表格、来源和方法界面
 - [x] 阶段 3 性能回归与发布级视觉验收
 
-数据方法见 [UNDP HDR 2025](data/undp-hdr-2025.md)。
+数据方法说明随该模式下线一并移除，可在 Git 历史中查阅。
 
 ## 阶段 4 · Sunline 与整体收口：完成
 

@@ -122,7 +122,7 @@ export async function switchMode(page: Page, modeTitle: string) {
   if ((await tab.count()) > 0 && !(await tab.getAttribute('aria-expanded'))) {
     await tab.click();
   } else {
-    // Development and Sunline live behind the "More" disclosure.
+    // Sunline lives behind the "More" disclosure.
     await nav.locator('button[aria-expanded]').click();
     await nav
       .getByRole('list')

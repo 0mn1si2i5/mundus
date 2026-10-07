@@ -15,8 +15,6 @@ import { ShareDialog } from './ShareDialog';
 const initialShareState = {
   activeMode: 'antipodes' as const,
   point: { latitude: 31.2304, longitude: 121.4737 },
-  developmentIndicator: 'hdi' as const,
-  developmentYear: 2023,
   sunlineTimeMs: Date.parse('2026-07-14T09:37:00Z'),
   sunlineClockMode: 'live' as const,
   surnameDisplayMode: 'local' as const,
@@ -128,19 +126,6 @@ describe('ShareDialog', () => {
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(snapshot));
     expect(field).toHaveValue(snapshot);
-  });
-
-  it('preserves the frozen Development indicator and year', () => {
-    useAppStore.setState({
-      activeMode: 'development',
-      developmentIndicator: 'income',
-      developmentYear: 2010,
-    });
-    render(<ShareDialog locale="en" onClose={vi.fn()} />);
-
-    expect(screen.getByRole('textbox', { name: 'Share link' })).toHaveValue(
-      'http://localhost:3000/exhibit?mode=development&indicator=income&year=2010&v=2',
-    );
   });
 
   it('selects the read-only field on focus', () => {

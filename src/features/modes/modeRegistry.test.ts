@@ -17,7 +17,7 @@ describe('mode registry', () => {
   });
 
   it('provides one explicit product order with unique identifiers', () => {
-    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3]);
+    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2]);
     expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
@@ -26,10 +26,6 @@ describe('mode registry', () => {
       '地球',
       '另一端',
     ]);
-    expect(MODE_DEFINITIONS.development.titlePhrases.zh).toEqual([
-      '发展的',
-      '不同侧面',
-    ]);
     expect(MODE_DEFINITIONS.sunline.titlePhrases.zh).toEqual(['日照线']);
     expect(MODE_DEFINITIONS.surnames.titlePhrases.zh).toEqual(['姓氏观察']);
     for (const mode of Object.values(MODE_DEFINITIONS)) {
@@ -37,24 +33,12 @@ describe('mode registry', () => {
     }
   });
 
-  it('uses non-causal wording for the prominent English Development question', () => {
-    const question = MODE_DEFINITIONS.development.question.en;
-
-    expect(question).toBe(
-      'What different structures can underlie similar levels of development?',
-    );
-    expect(question).not.toMatch(/produce|cause/iu);
-  });
-
   it('offers Other Side and the Surname Atlas first, the rest under More', () => {
     expect(modesInTier('primary').map((mode) => mode.id)).toEqual([
       'antipodes',
       'surnames',
     ]);
-    expect(modesInTier('more').map((mode) => mode.id)).toEqual([
-      'development',
-      'sunline',
-    ]);
+    expect(modesInTier('more').map((mode) => mode.id)).toEqual(['sunline']);
   });
 
   it('gives every mode a bilingual question and summary', () => {

@@ -4,7 +4,6 @@ import {
   type GeoPoint,
 } from '../features/antipodes/geography';
 import { type ModeId } from '../features/modes/modeRegistry';
-import type { DevelopmentIndicator } from '../features/development/developmentData';
 import {
   clampSunlineTime,
   formatSunlineTime,
@@ -21,8 +20,6 @@ export const DEFAULT_POINT: GeoPoint = {
  * resolves to Other Side; this constant is not the V2 lobby default.
  */
 export const DEFAULT_MODE: ModeId = 'antipodes';
-export const DEFAULT_DEVELOPMENT_INDICATOR: DevelopmentIndicator = 'hdi';
-export const DEFAULT_DEVELOPMENT_YEAR = 2023;
 export type SurnameDisplayMode = 'local' | 'latin' | 'chinese';
 export const DEFAULT_SURNAME_DISPLAY_MODE: SurnameDisplayMode = 'local';
 export type SunlineClockMode = 'live' | 'fixed';
@@ -31,23 +28,16 @@ export interface ShareableState {
   /** `null` represents the neutral exhibit lobby. */
   activeMode: ModeId | null;
   point: GeoPoint;
-  developmentIndicator: DevelopmentIndicator;
-  developmentYear: number;
   sunlineTimeMs: number;
   sunlineClockMode: SunlineClockMode;
   surnameDisplayMode: SurnameDisplayMode;
 }
 
-export type NavigationNotice = 'unknown-mode';
+export type NavigationNotice = 'unknown-mode' | 'retired-mode';
 
-const modeSchema = z.enum(['antipodes', 'development', 'sunline', 'surnames']);
-const developmentIndicatorSchema = z.enum([
-  'hdi',
-  'health',
-  'education',
-  'income',
-]);
-const developmentYearSchema = z.coerce.number().int().min(1990).max(2023);
+const modeSchema = z.enum(['antipodes', 'sunline', 'surnames']);
+/** Observations that once shipped; their links open the lobby with a notice. */
+const RETIRED_MODES: ReadonlySet<string> = new Set(['development']);
 const surnameDisplayModeSchema = z.enum(['local', 'latin', 'chinese']);
 const coordinateSchema = z
   .string()
@@ -79,7 +69,9 @@ export function parseUrlState(
   const hasLegacyState = LEGACY_STATE_KEYS.some((key) => params.has(key));
 
   let activeMode: ModeId | null;
-  if (isV2) {
+  if (modeRaw !== null && RETIRED_MODES.has(modeRaw)) {
+    activeMode = null;
+  } else if (isV2) {
     activeMode = mode.success ? mode.data : null;
   } else if (isV1 || hasLegacyState) {
     activeMode = mode.success ? mode.data : DEFAULT_MODE;
@@ -88,10 +80,6 @@ export function parseUrlState(
   }
 
   const coordinate = coordinateSchema.safeParse(params.get('point'));
-  const developmentIndicator = developmentIndicatorSchema.safeParse(
-    params.get('indicator'),
-  );
-  const developmentYear = developmentYearSchema.safeParse(params.get('year'));
   const parsedSunlineTime = params.get('time');
   const surnameDisplayMode = surnameDisplayModeSchema.safeParse(
     params.get('surname'),
@@ -109,12 +97,6 @@ export function parseUrlState(
           longitude: normalizeLongitude(coordinate.data[1]),
         }
       : DEFAULT_POINT,
-    developmentIndicator: developmentIndicator.success
-      ? developmentIndicator.data
-      : DEFAULT_DEVELOPMENT_INDICATOR,
-    developmentYear: developmentYear.success
-      ? developmentYear.data
-      : DEFAULT_DEVELOPMENT_YEAR,
     sunlineTimeMs: sunlineTimeMs ?? clampSunlineTime(nowMs),
     sunlineClockMode: sunlineTimeMs === null ? 'live' : 'fixed',
     surnameDisplayMode: surnameDisplayMode.success
@@ -125,9 +107,10 @@ export function parseUrlState(
 
 export function parseNavigationNotice(search: string): NavigationNotice | null {
   const params = new URLSearchParams(search);
-  if (params.get('v') !== '2') return null;
   const modeRaw = params.get('mode');
   if (modeRaw === null) return null;
+  if (RETIRED_MODES.has(modeRaw)) return 'retired-mode';
+  if (params.get('v') !== '2') return null;
   if (modeSchema.safeParse(modeRaw).success) return null;
   return 'unknown-mode';
 }
@@ -146,14 +129,6 @@ export function serializeUrlState(state: ShareableState): string {
   } else {
     params.set('mode', state.activeMode);
     if (hasPoint) params.set('point', formatPoint(state.point));
-    if (state.activeMode === 'development') {
-      if (state.developmentIndicator !== DEFAULT_DEVELOPMENT_INDICATOR) {
-        params.set('indicator', state.developmentIndicator);
-      }
-      if (state.developmentYear !== DEFAULT_DEVELOPMENT_YEAR) {
-        params.set('year', String(state.developmentYear));
-      }
-    }
     if (state.activeMode === 'sunline' && state.sunlineClockMode === 'fixed') {
       params.set('time', formatSunlineTime(state.sunlineTimeMs));
     }

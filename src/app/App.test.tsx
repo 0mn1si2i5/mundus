@@ -22,11 +22,6 @@ vi.mock('../features/globe/GlobeViewport', () => ({
   ),
 }));
 
-vi.mock('../features/development/useDevelopmentDataset', () => ({
-  useDevelopmentDataset: (enabled: boolean) =>
-    enabled ? { status: 'ready', data: {} } : { status: 'idle', data: null },
-}));
-
 vi.mock('../features/antipodes/useGeoNamesCityIndex', () => ({
   useGeoNamesCityIndex: (enabled: boolean) =>
     enabled
@@ -34,17 +29,15 @@ vi.mock('../features/antipodes/useGeoNamesCityIndex', () => ({
       : { status: 'idle', data: null, load: () => {} },
 }));
 
-vi.mock('../features/development/developmentData', async (importOriginal) => {
+vi.mock('../features/sunline/solar', async (importOriginal) => {
   const actual =
-    await importOriginal<
-      typeof import('../features/development/developmentData')
-    >();
+    await importOriginal<typeof import('../features/sunline/solar')>();
   return {
     ...actual,
-    valuesByCountryId: () => {
+    observeSun: (...args: Parameters<typeof actual.observeSun>) => {
       if (failure.dataCalc)
         throw new Error('injected data calculation failure');
-      return new Map();
+      return actual.observeSun(...args);
     },
   };
 });
@@ -90,7 +83,7 @@ function resetStore() {
   });
 }
 
-function enterMode(mode: 'development' | 'sunline') {
+function enterMode(mode: 'antipodes' | 'sunline') {
   act(() => {
     useAppStore.getState().selectMode(mode);
   });
@@ -121,14 +114,14 @@ describe('App mode failure isolation', () => {
   it('contains a data-calculation failure while keeping the shell, canvas, and healthy modes', async () => {
     failure.dataCalc = true;
     render(<App />);
-    enterMode('development');
+    enterMode('sunline');
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(headerReturnButton()).toBeInTheDocument();
     expect(
       within(screen.getByRole('navigation', { name: '观察模式' })).getByRole(
         'button',
-        { name: '地球另一端' },
+        { name: '姓氏观察' },
       ),
     ).toBeEnabled();
     expect(screen.getByRole('button', { name: '分享' })).toBeEnabled();
@@ -141,22 +134,24 @@ describe('App mode failure isolation', () => {
     ).toBeInTheDocument();
 
     failure.dataCalc = false;
-    enterMode('sunline');
-    expect(screen.getByRole('heading', { name: '日照线' })).toBeInTheDocument();
+    enterMode('antipodes');
+    expect(
+      screen.getByRole('heading', { name: '地球另一端' }),
+    ).toBeInTheDocument();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
   });
 
   it('contains a ModeResult render failure while keeping the shell, canvas, and healthy modes', async () => {
-    failure.modeResultMode = 'development';
+    failure.modeResultMode = 'sunline';
     render(<App />);
-    enterMode('development');
+    enterMode('sunline');
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(headerReturnButton()).toBeInTheDocument();
     expect(
       within(screen.getByRole('navigation', { name: '观察模式' })).getByRole(
         'button',
-        { name: '地球另一端' },
+        { name: '姓氏观察' },
       ),
     ).toBeEnabled();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
@@ -167,22 +162,24 @@ describe('App mode failure isolation', () => {
     ).toBeInTheDocument();
 
     failure.modeResultMode = null;
-    enterMode('sunline');
-    expect(screen.getByRole('heading', { name: '日照线' })).toBeInTheDocument();
+    enterMode('antipodes');
+    expect(
+      screen.getByRole('heading', { name: '地球另一端' }),
+    ).toBeInTheDocument();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
   });
 
   it('contains a ModeControls render failure while keeping the shell, canvas, and healthy modes', async () => {
-    failure.modeControlsMode = 'development';
+    failure.modeControlsMode = 'sunline';
     render(<App />);
-    enterMode('development');
+    enterMode('sunline');
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(headerReturnButton()).toBeInTheDocument();
     expect(
       within(screen.getByRole('navigation', { name: '观察模式' })).getByRole(
         'button',
-        { name: '地球另一端' },
+        { name: '姓氏观察' },
       ),
     ).toBeEnabled();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
@@ -193,8 +190,10 @@ describe('App mode failure isolation', () => {
     ).toBeInTheDocument();
 
     failure.modeControlsMode = null;
-    enterMode('sunline');
-    expect(screen.getByRole('heading', { name: '日照线' })).toBeInTheDocument();
+    enterMode('antipodes');
+    expect(
+      screen.getByRole('heading', { name: '地球另一端' }),
+    ).toBeInTheDocument();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
   });
 

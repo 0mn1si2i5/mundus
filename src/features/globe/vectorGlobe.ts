@@ -92,20 +92,19 @@ export function createVectorGlobeResources(
       palette.dispose();
     },
   };
-  updateVectorPalette(resources, null, null, null);
+  updateVectorPalette(resources, null, null);
   return resources;
 }
 
 export function updateVectorPalette(
   resources: VectorGlobeResources,
-  countryFills: ReadonlyMap<string, string> | null,
   hoveredCountryId: string | null,
   selectedCountryId: string | null,
 ) {
   const bytes = resources.palette.image.data as Uint8Array;
   bytes.fill(0);
   for (const country of resources.countries) {
-    const color = new Color(countryFills?.get(country.countryId) ?? BASE_LAND);
+    const color = new Color(BASE_LAND);
     if (country.countryId === selectedCountryId) color.copy(SELECTED);
     else if (country.countryId === hoveredCountryId) color.copy(HOVER);
     color.convertLinearToSRGB();

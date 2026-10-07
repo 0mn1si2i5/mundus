@@ -33,10 +33,6 @@ const COPY = {
         '社区整理的常见姓氏快照，不是统一的官方排名；有数字排名时显示第一位，部分国家为人工整理、未逐条核实。中文译名、本国文字写法和两处拼写更正由 Mundus 审校。',
       ],
       [
-        '发展的不同侧面',
-        '使用 UNDP《2025 人类发展报告》1990–2023 年数据。结构对照由算法在 HDI 相差 0.020 以内挑选，不表示相似、排名或因果。缺失值保持未知。',
-      ],
-      [
         '日照线',
         '太阳位置与晨昏线采用 NOAA/Meeus 近似算法，仅供教育参考，不能用于导航、航空或法定时间。',
       ],
@@ -61,22 +57,6 @@ const COPY = {
         links: [
           { label: '来源', href: 'https://www.geonames.org/' },
           { label: 'CC BY 4.0', href: CC_BY_4 },
-        ],
-      },
-      {
-        name: 'UNDP 人类发展报告 2025',
-        use: '发展的不同侧面',
-        notice:
-          '来源：联合国开发计划署《2025 人类发展报告》；由 Mundus 转换并标注派生指标。',
-        links: [
-          {
-            label: '来源',
-            href: 'https://hdr.undp.org/data-center/documentation-and-downloads',
-          },
-          {
-            label: 'CC BY 3.0 IGO',
-            href: 'https://creativecommons.org/licenses/by/3.0/igo/',
-          },
         ],
       },
       {
@@ -126,10 +106,6 @@ const COPY = {
         'A community snapshot of common surnames, not a unified official ranking. Rank one is shown where a numeric rank exists; some countries are manually compiled and not individually verified. Chinese forms, native-script spellings and two spelling corrections are reviewed by Mundus.',
       ],
       [
-        'Development, Unpacked',
-        'Uses UNDP Human Development Report 2025 data for 1990–2023. The structural contrast is chosen algorithmically within ±0.020 HDI and implies no similarity, ranking or cause. Missing values stay unknown.',
-      ],
-      [
         'Sunline',
         'Solar position and the terminator use NOAA/Meeus-style approximations, for education only — not for navigation, aviation or legal time.',
       ],
@@ -155,22 +131,6 @@ const COPY = {
         links: [
           { label: 'Source', href: 'https://www.geonames.org/' },
           { label: 'CC BY 4.0', href: CC_BY_4 },
-        ],
-      },
-      {
-        name: 'UNDP Human Development Report 2025',
-        use: 'Development, Unpacked',
-        notice:
-          'Source: United Nations Development Programme, Human Development Report 2025; transformed by Mundus with derived indicators labelled.',
-        links: [
-          {
-            label: 'Source',
-            href: 'https://hdr.undp.org/data-center/documentation-and-downloads',
-          },
-          {
-            label: 'CC BY 3.0 IGO',
-            href: 'https://creativecommons.org/licenses/by/3.0/igo/',
-          },
         ],
       },
       {

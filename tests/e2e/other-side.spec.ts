@@ -62,7 +62,7 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expect(page.getByRole('button', { name: '返回起点' })).toBeVisible();
   await expectCameraCenter(page, -31.2304, -58.5263);
 
-  await switchMode(page, '发展的不同侧面');
+  await switchMode(page, '日照线');
   await expectCameraDiagnosticCleared(page);
   await switchMode(page, '地球另一端');
 
@@ -78,7 +78,7 @@ test('resets bilateral focus for new points and mode round trips', async ({
   await expect(page.getByRole('button', { name: '翻到对跖点' })).toBeVisible();
 
   await page.getByRole('button', { name: '翻到对跖点' }).click();
-  await switchMode(page, '发展的不同侧面');
+  await switchMode(page, '日照线');
   await switchMode(page, '地球另一端');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
@@ -258,10 +258,8 @@ test('loads GeoNames only for Other Side and reuses one lazy asset', async ({
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
 
-  await page.goto('./?mode=development&v=1');
-  await expect(
-    page.getByRole('heading', { name: '发展的不同侧面' }),
-  ).toBeVisible();
+  await page.goto('./?mode=surnames&v=2');
+  await expect(page.getByRole('heading', { name: '姓氏观察' })).toBeVisible();
   expect(
     requests.filter((url) => url.includes('geonames-major-cities')),
   ).toHaveLength(0);

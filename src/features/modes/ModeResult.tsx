@@ -96,8 +96,6 @@ export function ModeResult({
         </aside>
       );
     }
-    case 'development':
-      return null;
     case 'sunline': {
       const { observation, events, position } = presentation.sun;
       return (

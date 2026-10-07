@@ -2,12 +2,7 @@ import type { Locale } from '../../i18n/messages';
 import { z } from 'zod';
 import { SUNLINE_MAX_TIME_MS, SUNLINE_MIN_TIME_MS } from '../sunline/solar';
 
-export const MODE_ORDER = [
-  'antipodes',
-  'surnames',
-  'development',
-  'sunline',
-] as const;
+export const MODE_ORDER = ['antipodes', 'surnames', 'sunline'] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
 
 /**
@@ -79,27 +74,6 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         latitude: z.number().min(-90).max(90),
         longitude: z.number().min(-180).max(180),
       }),
-    }),
-  },
-  development: {
-    id: 'development',
-    version: 1,
-    tier: 'more',
-    title: { zh: '发展的不同侧面', en: 'Development, Unpacked' },
-    titlePhrases: { zh: ['发展的', '不同侧面'] },
-    question: {
-      zh: '相近的发展水平，由哪些不同的结构组成？',
-      en: 'What different structures can underlie similar levels of development?',
-    },
-    summary: {
-      zh: '拆开健康、教育与收入，观察相近结果背后的不同结构。',
-      en: 'Unpack health, education, and income behind similar outcomes.',
-    },
-    cameraPolicy: 'preserve',
-    resources: ['natural-earth-countries-110m', 'undp-hdr-2025-development'],
-    stateSchema: z.object({
-      indicator: z.enum(['hdi', 'health', 'education', 'income']),
-      year: z.number().int().min(1990).max(2023),
     }),
   },
   sunline: {
