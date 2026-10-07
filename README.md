@@ -29,7 +29,7 @@ ships:
   remain explicit; each country links its source, and dataset licenses are in
   the About dialog.
 
-The verified public site is <https://0mn1si2i5.github.io/Mundus/>. The V1.1
+The verified public site is <https://0mn1si2i5.github.io/mundus/>. The V1.1
 product implementation entered protected `main` at
 `1a9c44700e2154186708772a7773fd8972a7aaf2` and passed CI, Pages deployment,
 live smoke, and desktop/mobile manual verification on 2026-08-02. It uses a
