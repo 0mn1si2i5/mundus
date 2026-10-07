@@ -190,19 +190,31 @@ part of the packet.
 
 ## Implementation packet
 
-The bounded implementation uses `src/data/generated/surnames-by-country.json`
-and `src/features/surnames/`. It contains 77 country entries, 74 rank-one
-records, and 93 unranked source records, is 42,822 bytes before compression,
-and is loaded only when the mode is active. The manifest pins both source CSVs,
-the Statistics Sweden supplement, the Wikipedia raw page used to review it,
-and the ISO mapping hash. Five Chinese
-presentations are manually reviewed (`CN`, `TW`, `KR`, `JP`, and `VN`); all
-other countries show an explicit missing state. The app preserves alternate
-local and romanized forms within a source group, does not infer a statistical
-year from the 2023 collection snapshot, and renders the compact
-local/Chinese/Latin label for every country with an explicit numeric rank.
-Labels use a conservative spherical footprint, hide on the back or outside
-the canvas, and resolve screen-space collisions through a pure layout
-function with the selected country and visible UI panel given priority.
-Countries with only unranked source lists remain visible in the side result
-but do not receive a map label.
+The implementation uses `src/data/generated/surnames-by-country.json` and
+`src/features/surnames/`. The asset has 241 country entries; 198 carry 288
+records (74 rank-one, 144 source-listed and 70 manual observations), and all
+195 sovereign countries have a record. It is 93,515 bytes before compression
+and loads only when the mode is active. The manifest pins the primary CSV,
+the Statistics Sweden, Iran and African supplements, the Wikipedia raw page
+used to review Sweden, and the ISO mapping hash.
+
+The 70 manual observations cite only the general Wikipedia index without
+pinned per-record evidence. On 2026-10-07 the product owner accepted shipping
+them as they are, with each labelled in the result panel as manually compiled
+and not individually verified; pinning per-record evidence remains a possible
+later improvement.
+
+Chinese presentations are limited to five manually reviewed forms (`CN`,
+`TW`, `KR`, `JP`, `VN`), Han-script source forms, and a small curated table of
+established transliterations. Every other record shows an explicit missing
+state; Chinese map mode then falls back to the source spelling and says so.
+The app preserves alternate local and romanized forms within a source group
+and does not infer a statistical year from the 2023 collection snapshot.
+
+Every country with a record receives one straight wordmark from the slot
+table `src/data/generated/surname-label-slots.json` (schema 7). Wordmarks
+stay inside their own country, follow the local parallel by default, and
+rotate along the principal axis only for elongated countries when that makes
+the word materially larger. The slot table and the 50m geometry it is built
+on load only with the Surname Atlas. Countries without a usable slot keep
+their record in the side result but have no map wordmark.

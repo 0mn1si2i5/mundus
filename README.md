@@ -19,13 +19,14 @@ ships:
   Report 2025 dataset.
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
-- **Surname Atlas** shows source-listed rank-one surname records when a numeric
-  rank exists, and keeps unranked source lists visible when a country has no
-  numeric rank. It presents local forms, Latin transliterations, and a small
-  manually reviewed Chinese presentation set. It uses a community snapshot,
-  not a unified official global ranking; missing fields remain explicit. Ranked
-  records are labelled on the globe with conservative boundary and collision
-  handling.
+- **Surname Atlas** places one surname wordmark on every country that has a
+  country-specific source record: the rank-one surname where a numeric rank
+  exists, otherwise a source-listed or manually compiled common surname, each
+  labelled as such. Wordmarks can be shown in the local script, a Latin
+  transliteration, or Chinese (reviewed and established forms only). Wordmarks
+  stay inside their own country and rotate along narrow countries. It uses
+  community snapshots, not a unified official global ranking; missing fields
+  remain explicit and sources are listed in the result panel.
 
 The verified public site is <https://0mn1si2i5.github.io/Mundus/>. The V1.1
 product implementation entered protected `main` at

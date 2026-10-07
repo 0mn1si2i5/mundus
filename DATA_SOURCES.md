@@ -119,24 +119,49 @@ painted on the globe at this scale.
 
 ## Community surname observation
 
-- Source: [Popular Names by Country dataset v1.2](https://github.com/sigpwned/popular-names-by-country-dataset/tree/v1.2), with source-list provenance from [Wikipedia surname lists](https://en.wikipedia.org/wiki/Lists_of_most_common_surnames)
+- Primary source: [Popular Names by Country dataset v1.2](https://github.com/sigpwned/popular-names-by-country-dataset/tree/v1.2), with source-list provenance from [Wikipedia surname lists](https://en.wikipedia.org/wiki/Lists_of_most_common_surnames)
 - Snapshot: CSV released 2023-07-16; the repository records lists collected during the week of 2023-07-08
-- Terms: the dataset repository declares [CC0](https://creativecommons.org/publicdomain/zero/1.0/); upstream Wikipedia list pages retain [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) provenance; the Sweden supplement reproduces a Statistics Sweden table through an immutable Wayback capture
-- Use: source-listed rank-one surname records, plus unranked source lists where no numeric rank exists, for 77 country entries in Surname Atlas
-- Transformation: group local and romanized variants by `Name Group`, join ISO2 codes to the globe's Natural Earth numeric ids with a pinned GeoNames `countryInfo.txt` mapping, and keep source-listed unranked records without presenting an inferred rank
-- Sweden supplement: Statistics Sweden's 2012 `Namnstatistik` table lists `Andersson` at rank 1 with 251,621 individuals. The immutable capture is <https://web.archive.org/web/20130921054130id_/http://www.scb.se/Pages/TableAndChart____31063.aspx> with SHA-256 `8e5d469eabd46e67174b45bfccc73d2097a93af1e88b199694e78a5a196e4ad9`; the Wikipedia review page is pinned separately in the manifest.
-- Missing-value policy: count, share, year, transliteration, and Chinese presentation remain null or empty when the source does not provide them; only a small manually reviewed Chinese presentation set is included
+- Terms: the dataset repository declares [CC0](https://creativecommons.org/publicdomain/zero/1.0/); upstream Wikipedia list pages retain [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) provenance
+- Supplements, each pinned by URL and SHA-256 in the manifest and never compared numerically with the primary lists:
+  - Sweden: Statistics Sweden's 2012 `Namnstatistik` table lists `Andersson` at rank 1 with 251,621 individuals, through the immutable capture <https://web.archive.org/web/20130921054130id_/http://www.scb.se/Pages/TableAndChart____31063.aspx> (SHA-256 `8e5d469eabd46e67174b45bfccc73d2097a93af1e88b199694e78a5a196e4ad9`); the Wikipedia review page is pinned separately.
+  - Iran: the [Iranian Surname Frequencies](https://github.com/farbodbj/iranian-surname-frequencies/tree/9fb2fdccb62445b52e933d4d7929a52e01bd6011) community sample at commit `9fb2fdcc`, [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0).
+  - Africa: one source-listed surname per listed country from a [Pulse Nigeria article](https://www.pulse.ng/story/these-are-the-most-common-surnames-in-every-african-country-2024121210174957832) retrieved 2026-09-23. Only the factual country/surname pairs are used; no rank is asserted.
+  - Manual observations: 70 sovereign countries carry one fixed, country-specific surname that cites only the general [Lists of most common surnames](https://en.wikipedia.org/wiki/Lists_of_most_common_surnames) index, without pinned per-record evidence. The product owner accepted shipping them on 2026-10-07 on the condition that each is labelled in the result panel as manually compiled and not individually verified.
+- Transformation: group local and romanized variants by `Name Group`, join ISO2 codes to the globe's Natural Earth numeric ids with a pinned GeoNames `countryInfo.txt` mapping, and keep source-listed and manual records unranked
+- Missing-value policy: count, share, year, transliteration, and Chinese presentation remain null when the source does not provide them. Chinese presentations are limited to five manually reviewed forms (`CN`, `TW`, `KR`, `JP`, `VN`), Han-script source forms, and a small curated table of established transliterations; all other records show an explicit missing state and are never synthesized.
 - Scope: this is a community-compiled cultural observation, not a unified official global ranking or census comparison
 
-The derived asset contains 77 country entries, 167 records, 74 rank-one
-records, and 93 unranked source records. It includes a separately pinned
-Statistics Sweden 2012 table for Sweden (`Andersson`, rank 1, 251,621) in
-addition to the Iran community supplement; neither supplement is numerically
-compared with the primary country lists. Its source hashes, 42,822-byte size,
-and transformation contract are recorded in
-`src/data/manifests/surnames-by-country.json`. Raw CSV and country-info files
-are not committed. The runtime loads the 42.7 KB derived asset only when the
-Surname Atlas mode is active.
+The derived asset has 241 country entries. 198 carry 288 records (74
+rank-one, 144 source-listed and 70 manual observations); the other 43 are
+non-sovereign entries without a country-specific source and stay empty. All 195
+sovereign countries have a record (71 rank-one, 54 source-listed and 70 manual
+observations). The asset is 93,515 bytes (7,226 bytes gzip), and its source
+hashes and transformation contract are in
+`src/data/manifests/surnames-by-country.json`. Raw CSV, article and
+country-info files are not committed. The result panel exposes the source
+snapshot, coverage note, license and per-country source links in a "Sources
+and license" disclosure.
+
+### Surname coverage audit
+
+`src/data/generated/surname-coverage.json` classifies each of the 240 Natural
+Earth country anchors as rank-one (74), source-listed (54), manual
+observation (69) or no-source (43), plus a separate 195-country sovereign
+audit. It is derived from the surname asset and the
+Natural Earth anchors; see `src/data/manifests/surname-coverage.json`.
+
+### Surname wordmark slots
+
+`src/data/generated/surname-label-slots.json` (slot schema 7, 752 candidates,
+466,239 bytes, 55,856 bytes gzip) stores precomputed wordmark centres, sizes
+and rotations derived from the pinned Natural Earth 50m country geometry
+(public domain) by `scripts/build-surname-label-slots.mjs`. Wordmarks stay
+inside their own country (isolated islands may overflow into open ocean
+within an area-scaled cap). They follow the local parallel by default; only
+countries whose interior is at least twice as long as it is wide are offered a
+straight wordmark rotated along that axis. Output numbers are rounded to nine
+significant digits so rebuilds with the pinned Node.js release are byte-stable.
+The 50m geometry and this table load only when the Surname Atlas opens.
 
 ## Solar calculations
 

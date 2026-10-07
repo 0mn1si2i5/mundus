@@ -45,10 +45,11 @@ failure containment remain release contracts.
 
 ## Current Direction
 
-The Surname Atlas is the active bounded observation packet. Its source and data
-semantics are recorded in `docs/NAMING_OBSERVATION_RESEARCH.md`. Work on it is
-currently frozen at the present branch and working-tree state; preserve every
-local change until the product owner resumes or redirects that packet.
+The Surname Atlas packet shipped through PR #22. Its source and data semantics
+are recorded in `docs/NAMING_OBSERVATION_RESEARCH.md`, including the owner's
+2026-10-07 decision to ship 70 manually compiled observations with an explicit
+"not individually verified" label. Pinning per-record evidence for those
+records is an open, optional follow-up.
 
 Any later observation begins with one focused question and a design covering:
 

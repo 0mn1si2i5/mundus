@@ -34,7 +34,7 @@ packets receive product-owner approval.
 
 ## Current Direction
 
-The Surname Atlas is the current bounded observation packet. Its data contract
+The Surname Atlas is the most recently shipped observation (PR #22). Its data contract
 and source decisions are recorded in
 [`docs/NAMING_OBSERVATION_RESEARCH.md`](NAMING_OBSERVATION_RESEARCH.md).
 The implementation uses a static community snapshot, explicit provenance and
