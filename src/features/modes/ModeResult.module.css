@@ -1,547 +1,337 @@
+/* One floating card on the right of the globe; a stacked card on phones. */
 .result {
-  --result-inline: 2.5rem;
-
   position: absolute;
   z-index: 4;
-  top: 29%;
-  right: calc(var(--result-inline) + env(safe-area-inset-right));
+  top: calc(6.2rem + env(safe-area-inset-top));
+  right: calc(var(--space-gutter) + env(safe-area-inset-right));
   display: grid;
-  width: 15rem;
-  gap: 0.45rem;
-  padding: 1.2rem 0;
-  border-block: 1px solid var(--color-line);
+  width: 17.5rem;
+  max-height: calc(100svh - 9rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: 0.9rem;
+  padding: 1.05rem 1.15rem 1.15rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
   color: var(--color-text);
-  background: var(--color-panel);
-  box-shadow:
-    0.8rem 0 0 var(--color-panel),
-    -0.8rem 0 0 var(--color-panel);
-  pointer-events: none;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
   animation: modeEnter 240ms ease-out both;
 }
 
-/* Grid items default to min-width: auto; long hashes and URLs in source
-   notes must wrap inside the panel instead of widening it off-screen. */
 .result > *,
-.result small {
+.result small,
+.result dd {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.result span {
+.label,
+.facts dt,
+.passage dt {
   color: var(--color-muted);
-  font-size: 0.67rem;
-  letter-spacing: 0.14em;
+  font-size: var(--text-label);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.result strong {
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 400;
+.endpoint {
+  display: grid;
+  gap: 0.2rem;
 }
 
-.result em {
-  color: var(--color-accent);
+.place {
+  color: var(--color-text);
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-style: normal;
+  line-height: 1.2;
 }
 
-.rule {
-  height: 1px;
-  margin: 0.6rem 0;
-  background: var(--color-line);
+:global(html:lang(zh-CN)) .place {
+  font-family: var(--font-cjk-display);
+  font-weight: 500;
 }
 
-.distanceRow {
+.coords {
+  color: var(--color-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
+.city {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.35rem 0.7rem;
-  margin-top: 0.6rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-line);
+  gap: 0.15rem;
+  margin-top: 0.45rem;
 }
 
-.relationSides {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.relationSide {
-  display: grid;
-  align-content: start;
-  gap: 0.3rem;
-  min-width: 0;
-  text-align: left;
-}
-
-.relationSide + .relationSide {
-  padding-left: 0.75rem;
-  border-left: 1px solid var(--color-line);
-}
-
-.relationScope {
-  display: grid;
-  gap: 0.35rem;
-  margin-top: 0.65rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-line);
-}
-
-.nearestPlaceButton {
+.cityButton {
   display: flex;
+  width: 100%;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0;
-  border: 0;
-  color: inherit;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: var(--color-control);
+  font: inherit;
   text-align: left;
-  background: transparent;
   cursor: pointer;
-  pointer-events: auto;
 }
 
-.nearestPlaceButton span {
+.cityButton:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.cityButton:active {
+  background: rgb(40 108 115 / 18%);
+}
+
+.cityName {
+  font-size: 0.92rem;
+}
+
+.cityFocus {
+  color: var(--color-accent);
+  font-size: 0.72rem;
   white-space: nowrap;
 }
 
-.nearestPlaceButton:hover,
-.nearestPlaceButton:focus-visible {
-  background: var(--color-control);
-}
-
-.nearestPlaceButton:active {
-  background: #e5ddd0;
-}
-
-.cityRelation {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.cityRelation em {
-  font-size: 0.95rem;
-}
-
-.relationScope small {
-  color: var(--color-muted);
-  font-size: 0.58rem;
+.city small {
+  color: var(--color-subtle);
+  font-size: 0.72rem;
   line-height: 1.45;
 }
 
-.sunlineResult {
-  top: 24%;
+/* The line through the core between the two endpoints. */
+.passage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.7rem 0;
+  border-block: 1px dashed var(--color-hairline);
 }
 
-.sunlineResult > em,
-.polarState {
+.passage div,
+.facts div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.passage dd,
+.facts dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+}
+
+.status {
+  margin: 0;
+  color: var(--color-subtle);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.status p {
+  margin: 0 0 0.5rem;
+}
+
+.retry {
+  min-block-size: 2.5rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: var(--color-control);
+  font: inherit;
+  cursor: pointer;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem 0.8rem;
+  margin: 0;
+}
+
+.facts .wide {
+  grid-column: 1 / -1;
+}
+
+.daylight {
   color: var(--color-brass);
+  font-family: var(--font-display) !important;
+  font-size: 1rem !important;
 }
 
-.polarState,
-.subsolar {
-  margin-top: 0.55rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--color-line);
-}
-
-.subsolar {
-  display: grid;
-  gap: 0.3rem;
-}
-
+/* Surname Atlas */
 .surnameResult {
-  top: 22%;
   width: 19rem;
-  max-height: calc(78svh - 2rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  pointer-events: auto;
 }
 
-.surnameWordmark {
+.wordmark {
   display: grid;
-  gap: 0.25rem;
-  margin-top: 0.35rem;
-  padding: 0.65rem 0;
-  border-block: 1px solid var(--color-line);
+  gap: 0.2rem;
+  padding: 0.9rem 0.6rem;
+  border-radius: var(--radius-control);
+  background: var(--color-accent-soft);
+  text-align: center;
 }
 
-.surnameWordmark strong {
-  color: var(--color-accent);
+.wordmark strong {
+  color: #183f40;
   font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 400;
+  font-size: clamp(1.6rem, 2.6vw, 2.3rem);
+  font-weight: 600;
   line-height: 1.15;
 }
 
-.surnameWordmark small {
-  color: var(--color-muted);
-  font-size: 0.62rem;
-  line-height: 1.4;
+:global(html:lang(zh-CN)) .wordmark strong {
+  font-family: var(--font-display), var(--font-cjk-display);
 }
 
-.surnameRecords {
+.wordmark small {
+  color: var(--color-subtle);
+  font-size: 0.72rem;
+}
+
+.surnameFacts {
   display: grid;
   gap: 0.75rem;
-  margin-top: 0.35rem;
 }
 
-.surnameRecord {
-  display: grid;
-  gap: 0.25rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--color-line);
+.badge {
+  justify-self: start;
+  margin: 0;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  font-size: 0.72rem;
 }
 
-.surnameRecord > small {
+.badge[data-kind='manual-observation'] {
+  color: var(--color-brass);
+  background: rgb(128 98 31 / 10%);
+}
+
+.surnameFacts .facts dd {
+  font-family: inherit;
+  font-size: 0.92rem;
+}
+
+.note {
+  margin: 0;
   color: var(--color-muted);
-  font-size: 0.62rem;
-  line-height: 1.4;
+  font-size: 0.72rem;
 }
 
-.surnameRetry {
-  width: fit-content;
-  padding: 0.25rem 0.45rem;
-  border: 1px solid var(--color-line);
-  color: var(--color-text);
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.68rem;
-  pointer-events: auto;
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.8rem;
+  margin: 0;
+  font-size: 0.74rem;
 }
 
-.surnameRetry:hover,
-.surnameRetry:focus-visible {
-  background: var(--color-control);
+.sources a {
+  color: var(--color-accent);
+  text-decoration: none;
 }
 
-.surnameRecord > small::first-letter {
-  color: var(--color-text);
-}
-
-.surnameScope {
-  display: grid;
-  gap: 0.35rem;
-  margin-top: 0.65rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--color-line);
-  pointer-events: auto;
-}
-
-.surnameScope summary {
-  color: var(--color-muted);
-  font-size: 0.67rem;
-  letter-spacing: 0.14em;
-  cursor: pointer;
-}
-
-.surnameScope[open] summary {
-  margin-bottom: 0.25rem;
-}
-
-.surnameScope small,
-.surnameScope a {
-  display: block;
-  margin-top: 0.3rem;
-  color: var(--color-muted);
-  font-size: 0.62rem;
-  line-height: 1.4;
-}
-
-.surnameScope a {
+.sources a:hover {
   text-decoration: underline;
 }
 
-@media (min-width: 761px) and (max-width: 900px) {
+.otherRecords summary {
+  color: var(--color-subtle);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.otherRecords ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.otherRecords li {
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-control);
+  font-size: 0.78rem;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
   .result {
-    width: 11rem;
+    width: 15.5rem;
+  }
+
+  .surnameResult {
+    width: 16.5rem;
   }
 }
 
-@media (min-width: 761px) and (max-height: 568px) {
+@media (min-width: 761px) and (max-height: 640px) {
   .result {
-    top: 10%;
-    width: 15rem;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.25rem 1rem;
-    padding-block: 0.8rem;
-    text-align: right;
-  }
-
-  .result > :nth-child(-n + 3) {
-    text-align: left;
-  }
-
-  .result > .rule {
-    display: none;
-  }
-
-  .result > span:nth-of-type(1),
-  .result > span:nth-of-type(2) {
-    grid-row: 1;
-  }
-
-  .result > em:nth-of-type(1),
-  .result > em:nth-of-type(2) {
-    grid-row: 2;
-  }
-
-  .result > strong:nth-of-type(1),
-  .result > strong:nth-of-type(2) {
-    grid-row: 3;
-  }
-
-  .relationSides,
-  .relationScope,
-  .distanceRow {
-    grid-column: 1 / -1;
-  }
-
-  .relationScope,
-  .distanceRow {
-    margin-top: 0.25rem;
-    padding-top: 0.5rem;
+    top: calc(4.6rem + env(safe-area-inset-top));
+    max-height: calc(100svh - 6rem);
+    gap: 0.6rem;
+    padding: 0.8rem 0.95rem;
   }
 }
 
 @media (max-width: 760px) {
   .result {
-    --result-inline: 1.25rem;
-
     position: relative;
     top: auto;
     right: auto;
-    bottom: auto;
     width: auto;
-    margin-inline: calc(var(--result-inline) + env(safe-area-inset-left))
-      calc(var(--result-inline) + env(safe-area-inset-right));
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.25rem 1rem;
-    padding: 0.8rem 0;
-    text-align: right;
-  }
-
-  .sunlineResult {
-    top: auto;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    text-align: left;
-  }
-
-  /* Long record lists and the open source disclosure scroll inside the
-     panel so the globe and the controls drawer stay reachable. */
-  .surnameResult {
-    top: auto;
     max-height: 38svh;
-    overflow-y: auto;
-    display: grid;
-    grid-template-columns: 1fr auto;
-    text-align: left;
-  }
-
-  .surnameResult > :nth-child(n) {
-    grid-column: auto;
-    text-align: inherit;
-  }
-
-  .surnameResult > .surnameWordmark {
-    grid-column: 1 / -1;
-  }
-
-  .surnameResult > strong,
-  .surnameResult > .surnameRecords,
-  .surnameResult > .surnameScope {
-    grid-column: 1 / -1;
-  }
-
-  .sunlineResult > :nth-child(n) {
-    grid-row: auto;
-    grid-column: auto;
-    text-align: inherit;
-  }
-
-  .sunlineResult > .rule {
-    display: block;
-    grid-column: 1 / -1;
-  }
-
-  .sunlineResult > .distanceRow,
-  .sunlineResult > .subsolar,
-  .sunlineResult > .polarState {
-    grid-column: 1 / -1;
-  }
-
-  .result > :nth-child(-n + 3) {
-    text-align: left;
-  }
-
-  .result > .rule {
-    display: none;
-  }
-
-  .result > span:nth-of-type(1),
-  .result > span:nth-of-type(2) {
-    grid-row: 1;
-  }
-
-  .result > em:nth-of-type(1),
-  .result > em:nth-of-type(2) {
-    grid-row: 2;
-  }
-
-  .result > strong:nth-of-type(1),
-  .result > strong:nth-of-type(2) {
-    grid-row: 3;
-  }
-
-  .relationSides,
-  .relationScope,
-  .distanceRow {
-    grid-column: 1 / -1;
-  }
-
-  .relationScope {
-    margin-top: 0.35rem;
-    padding-top: 0.5rem;
-  }
-
-  .nearestPlaceButton {
-    box-sizing: border-box;
-    min-block-size: 45px;
-    padding: 0.55rem 0.25rem;
-  }
-
-  .distanceRow {
-    margin-top: 0.25rem;
-    padding-top: 0.5rem;
-  }
-}
-
-@media (max-width: 760px) and (max-height: 568px) {
-  .result {
-    gap: 0.1rem 0.75rem;
-    padding-block: 0;
+    margin: 0.5rem calc(var(--space-gutter) + env(safe-area-inset-right)) 0
+      calc(var(--space-gutter) + env(safe-area-inset-left));
+    padding: 0.8rem 0.9rem;
+    gap: 0.65rem;
+    box-shadow: none;
     animation: none;
   }
 
-  .result strong {
-    font-size: 0.68rem;
+  .surnameResult {
+    width: auto;
   }
 
-  .relationSide > em {
-    font-size: 0.92rem;
+  .place {
+    font-size: 1.1rem;
   }
 
-  .relationSide,
-  .cityRelation {
-    gap: 0.05rem;
+  .wordmark {
+    padding: 0.55rem;
   }
 
-  .relationScope,
-  .distanceRow {
-    margin-top: 0.1rem;
-    padding-top: 0.2rem;
+  .cityButton {
+    min-block-size: 2.75rem;
+    align-items: center;
   }
 
-  .relationScope {
-    display: block;
-  }
-
-  .relationScope small + small::before {
-    content: ' · ';
-  }
-
-  .distanceRow {
-    grid-template-columns: auto auto auto auto;
-    gap: 0.25rem;
-    align-items: baseline;
-  }
-
-  .nearestPlaceButton span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .cityRelation {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.1rem 0.5rem;
-    text-align: left;
-  }
-
-  .cityRelation > span {
-    grid-column: 1 / -1;
-  }
-
-  .cityRelation > button {
-    grid-row: 2 / span 2;
-  }
-
-  .relationScope small {
-    font-size: 0.52rem;
-    line-height: 1.2;
-  }
-
-  .nearestPlaceButton {
-    padding-block: 0.25rem;
-  }
-}
-
-@media (min-width: 761px) and (max-height: 420px) {
-  .result {
-    top: 0;
-    gap: 0.1rem 1rem;
-    padding-block: 0.35rem;
-    animation: none;
-  }
-
-  .relationScope,
-  .distanceRow {
-    margin-top: 0.1rem;
-    padding-top: 0.2rem;
-  }
-
-  .cityRelation {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.1rem 0.4rem;
-  }
-
-  .cityRelation > span {
-    grid-column: 1 / -1;
-  }
-
-  .cityRelation > button {
-    grid-row: 2 / span 2;
-  }
-
-  .relationScope small {
-    font-size: 0.52rem;
-    line-height: 1.2;
-  }
-
-  .relationScope {
-    display: block;
-  }
-
-  .relationScope small + small::before {
-    content: ' · ';
-  }
-
-  .nearestPlaceButton span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+  .wordmark strong {
+    font-size: 1.6rem;
   }
 }
 
@@ -555,10 +345,5 @@
   from {
     opacity: 0;
     transform: translateY(0.4rem);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }

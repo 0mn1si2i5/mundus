@@ -17,12 +17,6 @@ const SunlineControls = lazy(() =>
     default: module.SunlineControls,
   })),
 );
-const SurnameControls = lazy(() =>
-  import('../surnames/SurnameControls').then((module) => ({
-    default: module.SurnameControls,
-  })),
-);
-
 export function ModeControls({
   locale,
   presentation,
@@ -50,8 +44,8 @@ export function ModeControls({
       controls = <SunlineControls locale={locale} />;
       break;
     case 'surnames':
-      controls = <SurnameControls locale={locale} />;
-      break;
+      // The script toggle lives in the surname result card.
+      return null;
     default:
       return assertNever(presentation);
   }

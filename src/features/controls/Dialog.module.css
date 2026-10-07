@@ -1,0 +1,101 @@
+.backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(41 36 30 / 32%);
+  backdrop-filter: blur(2px);
+  overscroll-behavior: contain;
+  animation: fadeIn 160ms ease-out both;
+}
+
+.dialog {
+  position: relative;
+  width: min(30rem, 100%);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.6rem 1.6rem 1.4rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-float);
+  animation: rise 200ms ease-out both;
+}
+
+.dialog[data-wide='true'] {
+  width: min(40rem, 100%);
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  color: var(--color-accent);
+  font-size: var(--text-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.dialog h2 {
+  margin: 0;
+  padding-right: 2.5rem;
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+:global(html:lang(zh-CN)) .dialog h2 {
+  font-family: var(--font-cjk-display);
+  font-weight: 500;
+}
+
+.description {
+  margin: 0.6rem 0 0;
+  color: var(--color-subtle);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.close {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--color-subtle);
+  background: transparent;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--color-text);
+  background: var(--color-control);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .dialog {
+    animation: none;
+  }
+}

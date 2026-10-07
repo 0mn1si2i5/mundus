@@ -23,52 +23,34 @@ const coordinateSchema = z.object({
 
 const COPY = {
   zh: {
-    title: '选择一个起点',
-    coordinates: '坐标',
+    title: '选择起点',
+    coordinates: '输入经纬度',
     latitude: '纬度',
     longitude: '经度',
     apply: '前往',
-    locate: '使用我的位置',
-    locating: '正在定位…',
+    locate: '我的位置',
+    locating: '定位中…',
     locationError: '无法读取位置，请检查浏览器权限。',
     invalid: '纬度需在 ±90°、经度需在 ±180° 内。',
     viewAntipode: '翻到对跖点',
     returnOrigin: '返回起点',
-    examples: '精选起点',
-    method: '数据与方法',
-    methodText:
-      '对跖点通过纬度取反并将经度旋转 180° 计算。端点附近的实线贴合地表，虚线表示穿过不透明地球内部的剖面，并不表示地球透明。双侧最近主要城市与搜索共用 GeoNames 固定快照；城市结果仅限符合条件的收录项，并非最近聚居地、行政边界或建成区。国家或海洋判断使用 Natural Earth 110m；边界是制图表达，不是领土法律权威。',
-    attribution: 'Made with Natural Earth · 公共领域数据',
-    source: 'Natural Earth 来源',
-    terms: '使用条款',
-    geoNamesAttribution: '包含 GeoNames 数据 · CC BY 4.0 · 不提供任何保证',
-    geoNamesSource: 'GeoNames 来源',
-    geoNamesLicense: 'GeoNames CC BY 4.0 许可',
+    examples: '快速选择',
     show: '展开地点控件',
     hide: '收起地点控件',
   },
   en: {
-    title: 'Choose a starting point',
-    coordinates: 'Coordinates',
+    title: 'Starting point',
+    coordinates: 'Enter coordinates',
     latitude: 'Latitude',
     longitude: 'Longitude',
     apply: 'Go',
-    locate: 'Use my location',
+    locate: 'My location',
     locating: 'Locating…',
     locationError: 'Location is unavailable. Check browser permission.',
     invalid: 'Latitude must be within ±90° and longitude within ±180°.',
     viewAntipode: 'View antipode',
     returnOrigin: 'Return to origin',
-    examples: 'Featured starts',
-    method: 'Data and method',
-    methodText:
-      'The antipode negates latitude and rotates longitude by 180°. Solid endpoint pieces hug the surface; the dashed line denotes a section through the opaque Earth, not a transparent globe. Bilateral nearest-major-city results and search share one fixed GeoNames snapshot; city results are limited to eligible indexed entries, not nearest settlements, administrative boundaries, or built areas. Country or ocean lookup uses Natural Earth 110m; boundaries are a cartographic view, not a legal authority on territorial status.',
-    attribution: 'Made with Natural Earth · public domain data',
-    source: 'Natural Earth source',
-    terms: 'Terms of use',
-    geoNamesAttribution: 'Contains GeoNames data · CC BY 4.0 · no warranty',
-    geoNamesSource: 'GeoNames source',
-    geoNamesLicense: 'GeoNames CC BY 4.0 license',
+    examples: 'Quick picks',
     show: 'Expand place controls',
     hide: 'Collapse place controls',
   },
@@ -135,7 +117,6 @@ export function OtherSideControls({
     <ModePanel
       ref={panel}
       id="place-controls"
-      className={styles.panel}
       title={copy.title}
       expandLabel={copy.show}
       collapseLabel={copy.hide}
@@ -157,86 +138,62 @@ export function OtherSideControls({
           onSelect={(city) => choosePoint(city.point)}
         />
 
-        <form
-          key={`${point.latitude},${point.longitude}`}
-          className={styles.coordinates}
-          onSubmit={submitCoordinates}
+        <div
+          className={styles.examples}
+          role="group"
+          aria-label={copy.examples}
         >
-          <span>{copy.coordinates}</span>
-          <label>
-            <span>{copy.latitude}</span>
-            <input
-              name="latitude"
-              inputMode="decimal"
-              defaultValue={point.latitude.toFixed(4)}
-            />
-          </label>
-          <label>
-            <span>{copy.longitude}</span>
-            <input
-              name="longitude"
-              inputMode="decimal"
-              defaultValue={point.longitude.toFixed(4)}
-            />
-          </label>
-          <button type="submit">{copy.apply}</button>
-        </form>
-
-        <div className={styles.secondary}>
-          <button type="button" onClick={locate} disabled={locating}>
+          {FEATURED_CITIES.map((city) => (
+            <button
+              key={city.id}
+              type="button"
+              onClick={() => choosePoint(city.point)}
+            >
+              {city.name[locale]}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={styles.locate}
+            onClick={locate}
+            disabled={locating}
+          >
+            <span aria-hidden="true">◎</span>
             {locating ? copy.locating : copy.locate}
           </button>
-          <div className={styles.examples} aria-label={copy.examples}>
-            <span>{copy.examples}</span>
-            {FEATURED_CITIES.map((city) => (
-              <button
-                key={city.id}
-                type="button"
-                onClick={() => choosePoint(city.point)}
-              >
-                {city.name[locale]}
-              </button>
-            ))}
-          </div>
         </div>
+
+        <details className={styles.coordinatesDisclosure}>
+          <summary>{copy.coordinates}</summary>
+          <form
+            key={`${point.latitude},${point.longitude}`}
+            className={styles.coordinates}
+            onSubmit={submitCoordinates}
+          >
+            <label>
+              <span>{copy.latitude}</span>
+              <input
+                name="latitude"
+                inputMode="decimal"
+                defaultValue={point.latitude.toFixed(4)}
+              />
+            </label>
+            <label>
+              <span>{copy.longitude}</span>
+              <input
+                name="longitude"
+                inputMode="decimal"
+                defaultValue={point.longitude.toFixed(4)}
+              />
+            </label>
+            <button type="submit">{copy.apply}</button>
+          </form>
+        </details>
         {error ? (
           <p className={styles.error} role="alert">
             {error}
           </p>
         ) : null}
-        <details className={styles.method}>
-          <summary>{copy.method}</summary>
-          <p>{copy.methodText}</p>
-          <p>{copy.attribution}</p>
-          <p>{copy.geoNamesAttribution}</p>
-          <a
-            href="https://www.naturalearthdata.com/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {copy.source} ↗
-          </a>
-          {' · '}
-          <a href="https://www.geonames.org/" target="_blank" rel="noreferrer">
-            {copy.geoNamesSource} ↗
-          </a>
-          {' · '}
-          <a
-            href="https://creativecommons.org/licenses/by/4.0/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {copy.geoNamesLicense} ↗
-          </a>
-          {' · '}
-          <a
-            href="https://www.naturalearthdata.com/about/terms-of-use/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {copy.terms} ↗
-          </a>
-        </details>
       </>
     </ModePanel>
   );

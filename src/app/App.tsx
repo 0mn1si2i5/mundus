@@ -8,17 +8,12 @@ import {
   useRef,
   useState,
 } from 'react';
-import {
-  MODE_DEFINITIONS,
-  MODE_ORDER,
-  modeIndex,
-  type ModeId,
-} from '../features/modes/modeRegistry';
-import { ModeAtlas } from '../features/modes/ModeAtlas';
+import { MODE_DEFINITIONS, type ModeId } from '../features/modes/modeRegistry';
 import { ModeExperience } from '../features/modes/ModeExperience';
+import { ModeSwitcher } from '../features/modes/ModeSwitcher';
 import { useGlobePresentation } from '../features/modes/useModePresentation';
 import { ExhibitLobby } from '../features/modes/ExhibitLobby';
-import { ModePreview } from '../features/modes/ModePreview';
+import { AboutDialog } from '../features/about/AboutDialog';
 import { FirstInteractionHint } from '../features/discovery/FirstInteractionHint';
 import { ShareDialog } from '../features/share/ShareDialog';
 import { useAppStore } from '../state/appStore';
@@ -68,15 +63,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
 export function App() {
   const [shareOpen, setShareOpen] = useState(false);
-  const [atlasOpen, setAtlasOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const locale = useAppStore((state) => state.locale);
   const activeMode = useAppStore((state) => state.activeMode);
-  const previewMode = useAppStore((state) => state.previewMode);
   const point = useAppStore((state) => state.point);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
-  const openModePreview = useAppStore((state) => state.openModePreview);
-  const closeModePreview = useAppStore((state) => state.closeModePreview);
-  const enterPreviewMode = useAppStore((state) => state.enterPreviewMode);
+  const selectMode = useAppStore((state) => state.selectMode);
   const exitMode = useAppStore((state) => state.exitMode);
   const navigationNotice = useAppStore((state) => state.navigationNotice);
   const dismissNavigationNotice = useAppStore(
@@ -86,28 +78,15 @@ export function App() {
   const setLocale = useAppStore((state) => state.setLocale);
   const t = messages[locale];
   const globe = useGlobePresentation();
-  const atlasButtonRef = useRef<HTMLButtonElement>(null);
-  const previewRestoreRef = useRef<HTMLElement | null>(null);
-  // The mode the user entered through an explicit preview. A direct V2 URL
-  // entry leaves this null so exiting falls back to the stable lobby heading.
+  // The lobby card a mode was entered from, so returning restores focus to
+  // it; a direct URL entry falls back to the lobby heading.
   const lobbyEntryModeRef = useRef<ModeId | null>(null);
   useUrlState();
   useCountrySelection();
 
-  function previewFromLobby(selectedMode: ModeId) {
-    previewRestoreRef.current = null;
-    openModePreview(selectedMode);
-  }
-
-  function previewFromAtlas(selectedMode: ModeId) {
-    previewRestoreRef.current = atlasButtonRef.current;
-    openModePreview(selectedMode);
-    setAtlasOpen(false);
-  }
-
-  function enterFromPreview() {
-    lobbyEntryModeRef.current = previewMode;
-    enterPreviewMode();
+  function enterMode(mode: ModeId) {
+    lobbyEntryModeRef.current = activeMode === null ? mode : null;
+    if (mode !== activeMode) selectMode(mode);
     window.requestAnimationFrame(() => {
       document.getElementById('mode-title')?.focus();
     });
@@ -118,16 +97,12 @@ export function App() {
     lobbyEntryModeRef.current = null;
     exitMode();
     window.requestAnimationFrame(() => {
-      if (entryMode) {
-        const label = document.querySelector<HTMLElement>(
-          `[data-lobby-mode="${entryMode}"]`,
-        );
-        if (label?.isConnected) {
-          label.focus();
-          return;
-        }
-      }
-      document.getElementById('lobby-heading')?.focus();
+      const card = entryMode
+        ? document.querySelector<HTMLElement>(
+            `[data-lobby-mode="${entryMode}"]`,
+          )
+        : null;
+      (card ?? document.getElementById('lobby-heading'))?.focus();
     });
   }
 
@@ -163,11 +138,11 @@ export function App() {
       ) : null}
       <div className={styles.stage} data-testid="app-stage">
         <header className={styles.header} data-surname-label-obstacle>
-          <div>
+          <div className={styles.brandBlock}>
             <a
               className={styles.brand}
               href="./"
-              aria-label="Mundus home"
+              aria-label={t.home}
               onClick={(event) => {
                 if (activeMode !== null) {
                   event.preventDefault();
@@ -179,36 +154,25 @@ export function App() {
             </a>
             <p className={styles.eyebrow}>{t.laboratory}</p>
           </div>
+          <ModeSwitcher
+            locale={locale}
+            activeMode={activeMode}
+            onSelect={enterMode}
+          />
           <div className={styles.actions}>
-            {activeMode !== null ? (
-              <button
-                className={styles.textButton}
-                type="button"
-                onClick={returnToLobby}
-              >
-                {t.returnToLobby}
-              </button>
-            ) : null}
             <button
-              ref={atlasButtonRef}
               className={styles.textButton}
               type="button"
-              onClick={() => {
-                setShareOpen(false);
-                setAtlasOpen(true);
-              }}
+              onClick={() => setShareOpen(true)}
             >
-              {t.modeAtlas}
+              {t.share}
             </button>
             <button
               className={styles.textButton}
               type="button"
-              onClick={() => {
-                setAtlasOpen(false);
-                setShareOpen(true);
-              }}
+              onClick={() => setAboutOpen(true)}
             >
-              {t.share}
+              {t.about}
             </button>
             <button
               className={styles.languageButton}
@@ -222,7 +186,7 @@ export function App() {
         </header>
 
         {activeMode === null ? (
-          <ExhibitLobby locale={locale} onSelectPreview={previewFromLobby} />
+          <ExhibitLobby locale={locale} onEnter={enterMode} />
         ) : (
           <section
             key={activeMode}
@@ -231,9 +195,6 @@ export function App() {
             data-surname-label-obstacle
             aria-labelledby="mode-title"
           >
-            <p className={styles.index}>
-              0{modeIndex(activeMode) + 1} / 0{MODE_ORDER.length}
-            </p>
             <h1 id="mode-title" tabIndex={-1}>
               {locale === 'zh'
                 ? MODE_DEFINITIONS[activeMode].titlePhrases.zh.map(
@@ -285,13 +246,6 @@ export function App() {
         <FirstInteractionHint locale={locale} inLobby={activeMode === null} />
       </div>
 
-      {activeMode !== null &&
-      MODE_DEFINITIONS[activeMode].curation === 'archived' ? (
-        <div className={styles.notice} role="status">
-          <p>{t.archiveNotice}</p>
-        </div>
-      ) : null}
-
       {activeMode !== null ? (
         <ModeBoundary
           mode={activeMode}
@@ -308,25 +262,18 @@ export function App() {
         <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
       ) : null}
 
+      <p className={styles.credit}>
+        <span>{t.creditLine}</span>
+        <button type="button" onClick={() => setAboutOpen(true)}>
+          {t.creditMore}
+        </button>
+      </p>
+
       {shareOpen ? (
         <ShareDialog locale={locale} onClose={() => setShareOpen(false)} />
       ) : null}
-      {atlasOpen ? (
-        <ModeAtlas
-          locale={locale}
-          activeMode={activeMode}
-          onSelectMode={previewFromAtlas}
-          onClose={() => setAtlasOpen(false)}
-        />
-      ) : null}
-      {previewMode ? (
-        <ModePreview
-          locale={locale}
-          modeId={previewMode}
-          restoreFocusRef={previewRestoreRef}
-          onClose={closeModePreview}
-          onEnter={enterFromPreview}
-        />
+      {aboutOpen ? (
+        <AboutDialog locale={locale} onClose={() => setAboutOpen(false)} />
       ) : null}
     </main>
   );

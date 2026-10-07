@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { SunlineControls } from './SunlineControls';
 
@@ -18,26 +18,23 @@ describe('SunlineControls copy', () => {
   it.each([
     {
       locale: 'zh' as const,
-      method: '“曙暮光”表示太阳高度低于 0° 至 -6°（含 -6°）的民用曙暮光范围。',
+      note: '曙暮光指太阳高度在 0° 至 -6° 之间',
     },
     {
       locale: 'en' as const,
-      method:
-        '“Twilight” denotes the civil-twilight range from below 0° through -6° (inclusive).',
+      note: 'twilight means the Sun is between 0° and -6°',
     },
-  ])('shows the Twilight definition in $locale', ({ locale, method }) => {
-    render(<SunlineControls locale={locale} />);
-
-    fireEvent.click(
-      screen.getByText(locale === 'zh' ? '计算说明' : 'Calculation note'),
-    );
-
-    expect(
-      screen.getByText(
-        (_, element) =>
-          element?.tagName === 'P' &&
-          element.textContent?.includes(method) === true,
-      ),
-    ).toBeVisible();
-  });
+  ])(
+    'states the twilight definition and educational caveat in $locale',
+    ({ locale, note }) => {
+      render(<SunlineControls locale={locale} />);
+      expect(
+        screen.getByText((_, element) =>
+          Boolean(
+            element?.tagName === 'P' && element.textContent?.includes(note),
+          ),
+        ),
+      ).toBeVisible();
+    },
+  );
 });

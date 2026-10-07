@@ -73,7 +73,8 @@ V1.1.0 Parchment Atlas 是当前公开产品。后续文化方向必须先完成
 - 左上：Mundus 品牌、当前模式名和一句问题式说明。
 - 右侧：地点、国家或时间结果卡，默认保持轻量。
 - 底部：当前模式的主控件、时间轴和图例。
-- 右上：模式图鉴、分享、语言和设置。
+- 顶部居中：观察切换（地球另一端、姓氏观察为主模式，其余收在“更多观察”）。
+- 右上：分享、关于（方法、数据来源与许可）和语言。
 
 移动端：
 
@@ -206,7 +207,7 @@ Kernel 返回稳定的地理对象 ID，不向模式暴露具体 Mesh 结构。
 - Natural Earth 110m 用作首屏国家轮廓与国家/海洋判断。
 - GeoNames 固定快照提供双语主要城市搜索，以及精确起点和对跖点两侧的最近符合条件主要城市关系。
 - 构建阶段生成轻量城市搜索索引和边界元数据。
-- Natural Earth 数据属于公共领域；仍在来源页显示 “Made with Natural Earth”。[使用条款](https://www.naturalearthdata.com/about/terms-of-use/)
+- Natural Earth 数据属于公共领域；仍在“关于”对话框显示 “Made with Natural Earth”。[使用条款](https://www.naturalearthdata.com/about/terms-of-use/)
 - 边界显示采用 Natural Earth 的制图视角，并明确声明它不是法律上的领土权威。
 
 ### 6.2 人类发展数据

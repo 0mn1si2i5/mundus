@@ -1,15 +1,9 @@
 .primaryControls,
-.actions,
-.timeline {
+.actions {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 0.8rem;
-}
-
-.panel button {
-  min-block-size: 2.75rem;
-  padding: 0.45rem 0.65rem;
+  gap: 0.6rem;
 }
 
 .primaryControls label {
@@ -20,32 +14,41 @@
 .primaryControls span,
 .timeline span {
   color: var(--color-muted);
-  font-size: 0.58rem;
+  font-size: var(--text-label);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .primaryControls input {
-  min-block-size: 2.75rem;
-  padding: 0 0.5rem;
+  min-block-size: 2.5rem;
+  padding: 0 0.6rem;
   color-scheme: light;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.78rem;
 }
 
 .actions button {
-  font-size: 0.65rem;
+  min-block-size: 2.5rem;
+  padding: 0 0.85rem;
+  font-size: 0.8rem;
+}
+
+.actions button:first-child {
+  border-color: var(--color-brass) !important;
+  color: var(--color-brass);
 }
 
 .timeline {
   display: grid;
   grid-template-columns: 1fr auto;
-  margin-top: 0.8rem;
+  align-items: center;
+  gap: 0.35rem 0.8rem;
+  margin-top: 0.85rem;
 }
 
 .timeline strong {
   font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-size: 0.85rem;
   font-weight: 400;
 }
 
@@ -55,32 +58,21 @@
   accent-color: var(--color-brass);
 }
 
-.method {
-  margin-top: 0.65rem;
+.note {
+  margin: 0.7rem 0 0;
   color: var(--color-muted);
-  font-size: 0.62rem;
-}
-
-.method summary {
-  cursor: pointer;
-}
-
-.method p {
-  max-width: 28rem;
-  line-height: 1.55;
-}
-
-.method a {
-  color: var(--color-accent);
+  font-size: 0.72rem;
+  line-height: 1.5;
 }
 
 @media (max-width: 760px) {
-  .primaryControls {
-    align-items: flex-end;
-  }
-
   .actions {
     flex-wrap: wrap;
     justify-content: flex-end;
+  }
+
+  .primaryControls input,
+  .actions button {
+    min-block-size: 2.75rem;
   }
 }

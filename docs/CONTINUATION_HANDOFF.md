@@ -35,7 +35,8 @@ precedence over older snapshots and status text.
 ## Current Product
 
 The public product is Mundus V1.1.0 Parchment Atlas. It includes the Exhibit
-Lobby, Mode Atlas, Other Side, Development, Sunline, Surname Atlas, bilingual
+Lobby, header observation switcher, About dialog, Other Side, Development,
+Sunline, Surname Atlas, bilingual
 GeoNames search, bilateral city relations, and the Natural Earth vector globe.
 
 The repository keeps observation metadata static, loads active-mode code and

@@ -16,10 +16,7 @@ const COPY = {
     live: '实时',
     fixed: '固定时间',
     speed: '1440× · 约 60 秒 / 天',
-    method: '计算说明',
-    methodText:
-      '太阳位置与日出日落采用 NOAA / Meeus 近似公式。“曙暮光”表示太阳高度低于 0° 至 -6°（含 -6°）的民用曙暮光范围。结果用于教育展示，不用于法律、航海或工程时间服务；高纬与实际大气条件会带来额外误差。',
-    source: 'NOAA 计算说明',
+    note: 'NOAA/Meeus 近似值，仅供教育参考；曙暮光指太阳高度在 0° 至 -6° 之间。',
     expand: '展开日照线控件',
     collapse: '收起日照线控件',
   },
@@ -33,10 +30,7 @@ const COPY = {
     live: 'Live',
     fixed: 'Fixed time',
     speed: '1440× · about 60 seconds / day',
-    method: 'Calculation note',
-    methodText:
-      'Solar position and sunrise/sunset use NOAA / Meeus approximations. “Twilight” denotes the civil-twilight range from below 0° through -6° (inclusive). Results are educational, not legal, navigational, or engineering time services; high latitudes and real atmospheric conditions add uncertainty.',
-    source: 'NOAA calculation details',
+    note: 'NOAA/Meeus approximations, for education only; twilight means the Sun is between 0° and -6°.',
     expand: 'Expand Sunline controls',
     collapse: 'Collapse Sunline controls',
   },
@@ -112,7 +106,6 @@ export function SunlineControls({ locale }: { locale: Locale }) {
   return (
     <ModePanel
       id="sunline-controls"
-      className={styles.panel}
       title={copy.title}
       subtitle={`${clockMode === 'live' ? copy.live : copy.fixed} · ${copy.speed}`}
       expandLabel={copy.expand}
@@ -153,17 +146,7 @@ export function SunlineControls({ locale }: { locale: Locale }) {
           />
         </label>
 
-        <details className={styles.method}>
-          <summary>{copy.method}</summary>
-          <p>{copy.methodText}</p>
-          <a
-            href="https://www.gml.noaa.gov/grad/solcalc/calcdetails.html"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {copy.source} ↗
-          </a>
-        </details>
+        <p className={styles.note}>{copy.note}</p>
       </>
     </ModePanel>
   );

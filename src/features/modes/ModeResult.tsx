@@ -8,6 +8,8 @@ import {
   getSurnameDisplayForms,
   resolveSurnameWordmark,
 } from '../surnames/surnameWordmark';
+import { SurnameScriptToggle } from '../surnames/SurnameScriptToggle';
+import type { SurnameRecord } from '../surnames/surnameData';
 
 export function ModeResult({
   locale,
@@ -26,133 +28,139 @@ export function ModeResult({
         { maximumFractionDigits: 0 },
       );
       const relation = presentation.relation;
+      const citiesReady =
+        relation.origin.nearestMajorCity && relation.antipode.nearestMajorCity;
       return (
         <aside
           className={styles.result}
           aria-live="polite"
           aria-label={t.result}
         >
-          <div className={styles.relationSides}>
-            <RelationSide
-              exactLabel={t.selectedPoint}
-              country={presentation.selectedCountry?.name ?? t.openOcean}
-              point={relation.origin.exactPoint}
-              cityLabel={t.originMajorCity}
-              cityDisplayLabel={t.nearestRepresentedMajorCity}
-              side={relation.origin}
-              locale={locale}
-              distanceLabel={t.distanceFromExactPoint}
-              focusLabel={t.focusMajorCity}
-              numberFormatter={numberFormatter}
-              onCameraFocus={onCameraFocus}
-            />
-            <RelationSide
-              exactLabel={t.antipode}
-              country={presentation.antipodeCountry?.name ?? t.openOcean}
-              point={relation.antipode.exactPoint}
-              cityLabel={t.antipodeMajorCity}
-              cityDisplayLabel={t.nearestRepresentedMajorCity}
-              side={relation.antipode}
-              locale={locale}
-              distanceLabel={t.distanceFromExactPoint}
-              focusLabel={t.focusMajorCity}
-              numberFormatter={numberFormatter}
-              onCameraFocus={onCameraFocus}
-            />
-          </div>
-          {relation.origin.nearestMajorCity &&
-          relation.antipode.nearestMajorCity ? (
-            <div className={styles.relationScope}>
-              <small>{t.majorCityScope}</small>
-              <small>{t.geoNamesAttribution}</small>
+          <RelationSide
+            exactLabel={t.selectedPoint}
+            country={presentation.selectedCountry?.name ?? t.openOcean}
+            point={relation.origin.exactPoint}
+            cityLabel={t.originMajorCity}
+            side={relation.origin}
+            locale={locale}
+            distanceLabel={t.distanceFromExactPoint}
+            focusLabel={t.focusMajorCity}
+            numberFormatter={numberFormatter}
+            onCameraFocus={onCameraFocus}
+          />
+          <dl className={styles.passage}>
+            <div>
+              <dt>{t.coreDistance}</dt>
+              <dd>
+                {numberFormatter.format(
+                  chordDistanceKm(
+                    relation.origin.exactPoint,
+                    relation.antipode.exactPoint,
+                  ),
+                )}{' '}
+                km
+              </dd>
             </div>
-          ) : (
-            <strong data-testid="antipode-relation-status">
+            <div>
+              <dt>{t.surfaceDistance}</dt>
+              <dd>
+                {numberFormatter.format(
+                  surfaceDistanceKm(
+                    relation.origin.exactPoint,
+                    relation.antipode.exactPoint,
+                  ),
+                )}{' '}
+                km
+              </dd>
+            </div>
+          </dl>
+          <RelationSide
+            exactLabel={t.antipode}
+            country={presentation.antipodeCountry?.name ?? t.openOcean}
+            point={relation.antipode.exactPoint}
+            cityLabel={t.antipodeMajorCity}
+            side={relation.antipode}
+            locale={locale}
+            distanceLabel={t.distanceFromExactPoint}
+            focusLabel={t.focusMajorCity}
+            numberFormatter={numberFormatter}
+            onCameraFocus={onCameraFocus}
+          />
+          {citiesReady ? null : (
+            <p className={styles.status} data-testid="antipode-relation-status">
               {presentation.relationStatus === 'error'
                 ? t.majorCitiesUnavailable
                 : t.majorCitiesLoading}
-            </strong>
+            </p>
           )}
-          <div className={styles.distanceRow}>
-            <span>{t.coreDistance}</span>
-            <strong>
-              {numberFormatter.format(
-                chordDistanceKm(
-                  relation.origin.exactPoint,
-                  relation.antipode.exactPoint,
-                ),
-              )}{' '}
-              km
-            </strong>
-            <span>{t.surfaceDistance}</span>
-            <strong>
-              {numberFormatter.format(
-                surfaceDistanceKm(
-                  relation.origin.exactPoint,
-                  relation.antipode.exactPoint,
-                ),
-              )}{' '}
-              km
-            </strong>
-          </div>
         </aside>
       );
     }
     case 'development':
       return null;
-    case 'sunline':
+    case 'sunline': {
+      const { observation, events, position } = presentation.sun;
       return (
         <aside
           className={`${styles.result} ${styles.sunlineResult}`}
           aria-live="polite"
           aria-label={t.sunlineResult}
         >
-          <span>{t.selectedPoint}</span>
-          <em>{presentation.selectedCountry?.name ?? t.openOcean}</em>
-          <strong>
-            {presentation.point.latitude.toFixed(2)}°,{' '}
-            {presentation.point.longitude.toFixed(2)}°
-          </strong>
-          <div className={styles.rule} />
-          <span>{t.solarAltitude}</span>
-          <strong>
-            {presentation.sun.observation.altitudeDegrees.toFixed(1)}°
-          </strong>
-          <span>{t.daylightState}</span>
-          <em>
-            {presentation.sun.observation.daylight === 'day'
-              ? t.daylightDay
-              : presentation.sun.observation.daylight === 'civil-twilight'
-                ? t.daylightTwilight
-                : t.daylightNight}
-          </em>
-          {presentation.sun.events.status === 'normal' ? (
-            <div className={styles.distanceRow}>
-              <span>{t.sunrise}</span>
-              <strong>
-                {formatUtcEvent(presentation.sun.events.sunriseMs)}
-              </strong>
-              <span>{t.sunset}</span>
-              <strong>
-                {formatUtcEvent(presentation.sun.events.sunsetMs)}
-              </strong>
-            </div>
-          ) : (
-            <strong className={styles.polarState}>
-              {presentation.sun.events.status === 'polar-day'
-                ? t.polarDay
-                : t.polarNight}
-            </strong>
-          )}
-          <div className={styles.subsolar}>
-            <span>{t.subsolarPoint}</span>
-            <strong>
-              {presentation.sun.position.subsolarPoint.latitude.toFixed(2)}°,{' '}
-              {presentation.sun.position.subsolarPoint.longitude.toFixed(2)}°
-            </strong>
+          <div className={styles.endpoint}>
+            <span className={styles.label}>{t.selectedPoint}</span>
+            <em className={styles.place}>
+              {presentation.selectedCountry?.name ?? t.openOcean}
+            </em>
+            <span className={styles.coords}>
+              {presentation.point.latitude.toFixed(2)}°,{' '}
+              {presentation.point.longitude.toFixed(2)}°
+            </span>
           </div>
+          <dl className={styles.facts}>
+            <div>
+              <dt>{t.solarAltitude}</dt>
+              <dd>{observation.altitudeDegrees.toFixed(1)}°</dd>
+            </div>
+            <div>
+              <dt>{t.daylightState}</dt>
+              <dd className={styles.daylight}>
+                {observation.daylight === 'day'
+                  ? t.daylightDay
+                  : observation.daylight === 'civil-twilight'
+                    ? t.daylightTwilight
+                    : t.daylightNight}
+              </dd>
+            </div>
+            {events.status === 'normal' ? (
+              <>
+                <div>
+                  <dt>{t.sunrise}</dt>
+                  <dd>{formatUtcEvent(events.sunriseMs)}</dd>
+                </div>
+                <div>
+                  <dt>{t.sunset}</dt>
+                  <dd>{formatUtcEvent(events.sunsetMs)}</dd>
+                </div>
+              </>
+            ) : (
+              <div className={styles.wide}>
+                <dt>{t.sunrise}</dt>
+                <dd className={styles.daylight}>
+                  {events.status === 'polar-day' ? t.polarDay : t.polarNight}
+                </dd>
+              </div>
+            )}
+            <div className={styles.wide}>
+              <dt>{t.subsolarPoint}</dt>
+              <dd>
+                {position.subsolarPoint.latitude.toFixed(2)}°,{' '}
+                {position.subsolarPoint.longitude.toFixed(2)}°
+              </dd>
+            </div>
+          </dl>
         </aside>
       );
+    }
     case 'surnames': {
       const country = presentation.selectedCountry;
       const loadState = presentation.surnameData;
@@ -160,14 +168,10 @@ export function ModeResult({
         country && loadState.status === 'ready'
           ? loadState.data.countriesById.get(country.countryId)
           : null;
-      const numberFormatter = new Intl.NumberFormat(
-        locale === 'zh' ? 'zh-CN' : 'en-US',
-      );
-      const displayRecord = countryData
-        ? (countryData.records.find((record) => record.rank === 1) ??
-          countryData.records[0] ??
-          null)
-        : null;
+      const records = countryData?.records ?? [];
+      const displayRecord =
+        records.find((record) => record.rank === 1) ?? records[0] ?? null;
+      const otherRecords = records.filter((record) => record !== displayRecord);
       const wordmark = displayRecord
         ? resolveSurnameWordmark(displayRecord, presentation.surnameDisplayMode)
         : null;
@@ -179,11 +183,16 @@ export function ModeResult({
           data-testid="surname-result"
           data-surname-label-obstacle
         >
-          <span>{t.selectedCountryLabel}</span>
-          <em>{country?.name ?? t.surnameChooseCountry}</em>
+          <SurnameScriptToggle locale={locale} />
+          <div className={styles.endpoint}>
+            <span className={styles.label}>{t.selectedCountryLabel}</span>
+            <em className={styles.place}>
+              {country?.name ?? t.surnameChooseCountry}
+            </em>
+          </div>
           {wordmark ? (
-            <div className={styles.surnameWordmark}>
-              <span>{t.surnameWordmark}</span>
+            <div className={styles.wordmark}>
+              <span className={styles.visuallyHidden}>{t.surnameWordmark}</span>
               <strong>{wordmark.value}</strong>
               {wordmark.fellBack ? (
                 <small>
@@ -200,106 +209,50 @@ export function ModeResult({
             </div>
           ) : null}
           {!country ? (
-            <strong>{t.surnameSelectOnGlobe}</strong>
+            <p className={styles.status}>{t.surnameSelectOnGlobe}</p>
           ) : loadState.status === 'loading' ? (
-            <strong>{t.surnameLoading}</strong>
+            <p className={styles.status}>{t.surnameLoading}</p>
           ) : loadState.status === 'error' ? (
-            <>
-              <strong>{t.surnameUnavailable}</strong>
+            <div className={styles.status}>
+              <p>{t.surnameUnavailable}</p>
               <button
-                className={styles.surnameRetry}
+                className={styles.retry}
                 type="button"
                 onClick={loadState.retry}
               >
                 {t.surnameRetry}
               </button>
-            </>
-          ) : countryData?.records.length ? (
-            <div className={styles.surnameRecords}>
-              {countryData.records.map((record, index) => (
-                <section
-                  className={styles.surnameRecord}
-                  key={`${record.rank}-${index}`}
-                >
-                  {(() => {
-                    const forms = getSurnameDisplayForms(record);
-                    return (
-                      <>
-                        <span>
-                          {record.rank !== null
-                            ? `${t.surnameRank} ${record.rank}`
-                            : record.observationKind === 'manual-observation'
-                              ? t.surnameManualObservation
-                              : t.surnameListed}
-                        </span>
-                        <strong>{forms.local ?? t.surnameMissing}</strong>
-                        <small>
-                          {t.surnameLocalForm}
-                          {record.localForms
-                            .map((form) => form.script)
-                            .filter(Boolean)
-                            .join(', ') || t.surnameMissing}
-                        </small>
-                        <small>
-                          {t.surnameRomanized}
-                          {forms.latin ?? t.surnameMissing}
-                          {forms.latin &&
-                          !record.romanizedForms.includes(forms.latin)
-                            ? t.surnameGeneratedSuffix
-                            : null}
-                        </small>
-                        <small>
-                          {t.surnameChinese}
-                          {forms.chinese ?? t.surnameMissing}
-                        </small>
-                        <small>
-                          {t.surnameCount} ·{' '}
-                          {record.count !== null
-                            ? numberFormatter.format(record.count)
-                            : t.surnameMissing}
-                        </small>
-                        <small>
-                          {t.surnameShare} ·{' '}
-                          {record.share !== null
-                            ? `${(record.share * 100).toFixed(2)}%`
-                            : t.surnameMissing}
-                        </small>
-                        <small>
-                          {t.surnameYear} ·{' '}
-                          {record.statYear ?? t.surnameMissing}
-                        </small>
-                      </>
-                    );
-                  })()}
-                </section>
-              ))}
             </div>
+          ) : displayRecord ? (
+            <>
+              <SurnameRecordFacts
+                record={displayRecord}
+                locale={locale}
+                sourceUrls={countryData?.sourceUrls ?? []}
+              />
+              {otherRecords.length > 0 ? (
+                <details className={styles.otherRecords}>
+                  <summary>
+                    {t.surnameOtherRecords} · {otherRecords.length}
+                  </summary>
+                  <ul>
+                    {otherRecords.map((record, index) => {
+                      const forms = getSurnameDisplayForms(record);
+                      const value =
+                        presentation.surnameDisplayMode === 'chinese'
+                          ? (forms.chinese ?? forms.local)
+                          : presentation.surnameDisplayMode === 'latin'
+                            ? (forms.latin ?? forms.local)
+                            : (forms.local ?? forms.latin);
+                      return <li key={`${value}-${index}`}>{value}</li>;
+                    })}
+                  </ul>
+                </details>
+              ) : null}
+            </>
           ) : (
-            <strong>{t.surnameNoRecord}</strong>
+            <p className={styles.status}>{t.surnameNoRecord}</p>
           )}
-          {loadState.status === 'ready' ? (
-            <details className={styles.surnameScope}>
-              <summary>{t.surnameProvenance}</summary>
-              <small>
-                {t.surnameSourceSnapshot}
-                {loadState.data.sourceSnapshot}
-              </small>
-              <small>
-                {t.surnameCoverage}
-                {loadState.data.coverageNote}
-              </small>
-              <small>
-                {t.surnameLicense}
-                {loadState.data.license}
-              </small>
-              <small>{t.surnameScope}</small>
-              {countryData?.sourceUrls.map((url) => (
-                <a href={url} key={url} rel="noreferrer" target="_blank">
-                  {t.surnameSourceLink}
-                </a>
-              ))}
-            </details>
-          ) : null}
         </aside>
       );
     }
@@ -313,7 +266,6 @@ function RelationSide({
   country,
   point,
   cityLabel,
-  cityDisplayLabel,
   side,
   locale,
   distanceLabel,
@@ -325,7 +277,6 @@ function RelationSide({
   country: string;
   point: GeoPoint;
   cityLabel: string;
-  cityDisplayLabel: string;
   side: import('../antipodes/relation').AntipodeRelationSide | null;
   locale: Locale;
   distanceLabel: string;
@@ -333,43 +284,110 @@ function RelationSide({
   numberFormatter: Intl.NumberFormat;
   onCameraFocus: (point: GeoPoint) => void;
 }) {
+  const city = side?.nearestMajorCity;
   return (
-    <section className={styles.relationSide}>
-      <span>{exactLabel}</span>
-      <em>{country}</em>
-      <strong>
+    <section className={styles.endpoint}>
+      <span className={styles.label}>{exactLabel}</span>
+      <em className={styles.place}>{country}</em>
+      <span className={styles.coords}>
         {point.latitude.toFixed(4)}°, {point.longitude.toFixed(4)}°
-      </strong>
-      {side?.nearestMajorCity ? (
-        <div
-          className={styles.cityRelation}
-          role="region"
-          aria-label={cityLabel}
-        >
-          <span>{cityDisplayLabel}</span>
+      </span>
+      {city ? (
+        <div className={styles.city} role="region" aria-label={cityLabel}>
           <button
             type="button"
-            className={styles.nearestPlaceButton}
-            onClick={() => onCameraFocus(side.nearestMajorCity!.city.point)}
+            className={styles.cityButton}
+            onClick={() => onCameraFocus(city.city.point)}
           >
-            <em>{side.nearestMajorCity.city.name[locale]}</em>
-            <span>{focusLabel}</span>
+            <span className={styles.cityName}>{city.city.name[locale]}</span>
+            <span className={styles.cityFocus}>{focusLabel}</span>
           </button>
-          <strong>
-            {[
-              side.nearestMajorCity.city.admin1?.[locale],
-              side.nearestMajorCity.city.country[locale],
-            ]
+          <small>
+            {[city.city.admin1?.[locale], city.city.country[locale]]
               .filter(Boolean)
               .join(', ')}
-          </strong>
-          <strong>
-            {distanceLabel}{' '}
-            {numberFormatter.format(side.nearestMajorCity.distanceKm)} km
-          </strong>
+            {' · '}
+            {distanceLabel} {numberFormatter.format(city.distanceKm)} km
+          </small>
         </div>
       ) : null}
     </section>
+  );
+}
+
+function SurnameRecordFacts({
+  record,
+  locale,
+  sourceUrls,
+}: {
+  record: SurnameRecord;
+  locale: Locale;
+  sourceUrls: readonly string[];
+}) {
+  const t = messages[locale];
+  const forms = getSurnameDisplayForms(record);
+  const numberFormatter = new Intl.NumberFormat(
+    locale === 'zh' ? 'zh-CN' : 'en-US',
+  );
+  const scripts = record.localForms
+    .map((form) => form.script)
+    .filter(Boolean)
+    .join(', ');
+  const statistics = [
+    record.count !== null
+      ? [t.surnameCount, numberFormatter.format(record.count)]
+      : null,
+    record.share !== null
+      ? [t.surnameShare, `${(record.share * 100).toFixed(2)}%`]
+      : null,
+    record.statYear !== null ? [t.surnameYear, String(record.statYear)] : null,
+  ].filter((entry): entry is [string, string] => entry !== null);
+  return (
+    <div className={styles.surnameFacts}>
+      <p className={styles.badge} data-kind={record.observationKind}>
+        {record.rank !== null
+          ? `${t.surnameRank} ${record.rank}`
+          : record.observationKind === 'manual-observation'
+            ? t.surnameManualObservation
+            : t.surnameListed}
+      </p>
+      <dl className={styles.facts}>
+        <div>
+          <dt>
+            {t.surnameDisplayLocal}
+            {scripts ? ` · ${scripts}` : ''}
+          </dt>
+          <dd>{forms.local ?? t.surnameMissing}</dd>
+        </div>
+        <div>
+          <dt>{t.surnameDisplayLatin}</dt>
+          <dd>{forms.latin ?? t.surnameMissing}</dd>
+        </div>
+        <div>
+          <dt>{t.surnameDisplayChinese}</dt>
+          <dd>{forms.chinese ?? t.surnameMissing}</dd>
+        </div>
+        {statistics.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {statistics.length === 0 ? (
+        <p className={styles.note}>{t.surnameNoStatistics}</p>
+      ) : null}
+      {sourceUrls.length > 0 ? (
+        <p className={styles.sources}>
+          {sourceUrls.map((url, index) => (
+            <a href={url} key={url} rel="noreferrer" target="_blank">
+              {t.surnameSourceLink}
+              {sourceUrls.length > 1 ? ` ${index + 1}` : ''} ↗
+            </a>
+          ))}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

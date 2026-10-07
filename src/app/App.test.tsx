@@ -79,7 +79,6 @@ function resetStore() {
   useAppStore.setState({
     locale: 'zh',
     activeMode: null,
-    previewMode: null,
     navigationNotice: null,
     point: { latitude: 31.2304, longitude: 121.4737 },
     selectedCountry: null,
@@ -98,8 +97,8 @@ function enterMode(mode: 'development' | 'sunline') {
 }
 
 function headerReturnButton() {
-  return within(screen.getByRole('banner')).getByRole('button', {
-    name: '返回展厅',
+  return within(screen.getByRole('banner')).getByRole('link', {
+    name: '回到 Mundus 展厅',
   });
 }
 
@@ -125,8 +124,13 @@ describe('App mode failure isolation', () => {
     enterMode('development');
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(headerReturnButton()).toBeEnabled();
-    expect(screen.getByRole('button', { name: '模式图鉴' })).toBeEnabled();
+    expect(headerReturnButton()).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('navigation', { name: '观察模式' })).getByRole(
+        'button',
+        { name: '地球另一端' },
+      ),
+    ).toBeEnabled();
     expect(screen.getByRole('button', { name: '分享' })).toBeEnabled();
     expect(screen.getByRole('button', { name: '切换为英文' })).toBeEnabled();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
@@ -148,8 +152,13 @@ describe('App mode failure isolation', () => {
     enterMode('development');
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(headerReturnButton()).toBeEnabled();
-    expect(screen.getByRole('button', { name: '模式图鉴' })).toBeEnabled();
+    expect(headerReturnButton()).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('navigation', { name: '观察模式' })).getByRole(
+        'button',
+        { name: '地球另一端' },
+      ),
+    ).toBeEnabled();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
 
     fireEvent.click(headerReturnButton());
@@ -169,8 +178,13 @@ describe('App mode failure isolation', () => {
     enterMode('development');
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(headerReturnButton()).toBeEnabled();
-    expect(screen.getByRole('button', { name: '模式图鉴' })).toBeEnabled();
+    expect(headerReturnButton()).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('navigation', { name: '观察模式' })).getByRole(
+        'button',
+        { name: '地球另一端' },
+      ),
+    ).toBeEnabled();
     expect(await screen.findByTestId('globe-canvas')).toBeInTheDocument();
 
     fireEvent.click(headerReturnButton());

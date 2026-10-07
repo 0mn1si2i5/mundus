@@ -2,9 +2,9 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAppStore } from '../../state/appStore';
-import { SurnameControls } from './SurnameControls';
+import { SurnameScriptToggle } from './SurnameScriptToggle';
 
-describe('SurnameControls', () => {
+describe('SurnameScriptToggle', () => {
   afterEach(() => cleanup());
 
   beforeEach(() => {
@@ -20,12 +20,12 @@ describe('SurnameControls', () => {
   });
 
   it.each([
-    ['zh', ['当地语言', '拉丁转写', '中文']],
-    ['en', ['Local script', 'Latin transliteration', 'Chinese']],
+    ['zh', ['当地文字', '拉丁字母', '中文']],
+    ['en', ['Local script', 'Latin', 'Chinese']],
   ] as const)(
     'offers one mutually exclusive wordmark mode in %s',
     (locale, labels) => {
-      render(<SurnameControls locale={locale} />);
+      render(<SurnameScriptToggle locale={locale} />);
 
       const group = screen.getByRole('radiogroup');
       expect(group).toBeVisible();
