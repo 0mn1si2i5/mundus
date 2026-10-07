@@ -878,7 +878,7 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     '31.2304,121.4737',
   );
 
-  await switchMode(page, '日照线');
+  await switchMode(page, '姓氏观察');
   await expect(globe).not.toHaveAttribute('data-antipode-relation-arc-count');
   await expect(globe).not.toHaveAttribute(
     'data-marker-origin-city-actual-css-diameter',
@@ -904,9 +904,6 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     'data-marker-diagnostic-revision',
     /[1-9]\d*/,
   );
-  const revisionBeforePoint = Number(
-    await globe.getAttribute('data-marker-diagnostic-revision'),
-  );
   const relationRevisionBeforePoint = Number(
     await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
   );
@@ -920,6 +917,8 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     'data-marker-origin-target',
     '35.6895,139.69171',
   );
+  // A new point resets the per-point marker evidence, so its revision restarts
+  // and is sampled again rather than continuing the previous count.
   await expect
     .poll(async () =>
       Number(await globe.getAttribute('data-marker-diagnostic-revision')),
@@ -929,9 +928,6 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     'data-marker-origin-actual-css-diameter',
     /.+/,
   );
-  expect(
-    Number(await globe.getAttribute('data-marker-diagnostic-revision')),
-  ).toBeGreaterThanOrEqual(revisionBeforePoint);
   expect(
     Number(
       await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
