@@ -10,7 +10,7 @@ import { chromium, devices } from '@playwright/test';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dist = join(root, 'dist');
-const mountPath = '/Mundus/';
+const mountPath = '/mundus/';
 const scenarioIdentity = 'mundus-v1.1-publication-candidate-v3';
 const developmentResourcePattern = /undp-hdr|DevelopmentControls/u;
 

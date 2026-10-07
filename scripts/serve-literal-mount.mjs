@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const mountPath = '/Mundus/';
+const mountPath = '/mundus/';
 const defaultDistDir = resolve(
   fileURLToPath(new URL('../dist', import.meta.url)),
 );
