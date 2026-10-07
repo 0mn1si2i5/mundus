@@ -782,6 +782,11 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
 
   await page.getByRole('button', { name: '分享', exact: true }).click();
   const share = page.getByRole('dialog', { name: '分享这一视角' });
+  // Measure after the entrance slide; a mid-animation box sits on a fractional pixel.
+  await expect(share).toHaveCSS(
+    'transform',
+    /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/u,
+  );
   await expectMinimumHeight(
     share.getByRole('textbox', { name: '分享链接' }),
     44,
@@ -798,6 +803,11 @@ test('keeps frequent mobile controls at least 44px tall', async ({ page }) => {
   );
   await page.getByRole('button', { name: '分享', exact: true }).click();
   const compactShare = page.getByRole('dialog', { name: '分享这一视角' });
+  // Measure after the entrance slide; a mid-animation box sits on a fractional pixel.
+  await expect(compactShare).toHaveCSS(
+    'transform',
+    /^(none|matrix\(1, 0, 0, 1, 0, 0\))$/u,
+  );
   await expectMinimumHeight(
     compactShare.getByRole('textbox', { name: '分享链接' }),
     44,
