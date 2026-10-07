@@ -278,9 +278,11 @@ export function App() {
               sunline={globe.sunline}
               antipodeRelation={globe.antipodeRelation}
               surnameMapLabels={globe.surnameMapLabels}
+              surnameDisplayMode={globe.surnameDisplayMode}
             />
           </Suspense>
         </ErrorBoundary>
+        <FirstInteractionHint locale={locale} inLobby={activeMode === null} />
       </div>
 
       {activeMode !== null &&
@@ -306,7 +308,6 @@ export function App() {
         <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
       ) : null}
 
-      <FirstInteractionHint locale={locale} />
       {shareOpen ? (
         <ShareDialog locale={locale} onClose={() => setShareOpen(false)} />
       ) : null}

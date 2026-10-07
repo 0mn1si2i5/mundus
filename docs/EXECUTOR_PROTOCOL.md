@@ -80,7 +80,7 @@ The executor must not, without separate authorization:
 - change repository visibility, Pages, protection, vulnerability reporting,
   secrets, permissions, or any other remote setting;
 - rewrite history, force-push, or delete material state;
-- restore the migration snapshot or resume GHSL builds;
+- restore retired project state or resume abandoned long-running jobs;
 - modify `src/`, `tests/`, `scripts/`, data, dependencies, the lockfile, or
   workflows unless the packet explicitly scopes them.
 

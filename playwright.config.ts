@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.MUNDUS_E2E_BASE_URL ?? 'http://127.0.0.1:4173';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // WebGL browser tests share a finite GPU context budget; run them serially so
@@ -8,7 +10,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL,
     locale: 'zh-CN',
     trace: 'on-first-retry',
   },
@@ -16,7 +18,7 @@ export default defineConfig({
     ? undefined
     : {
         command: 'pnpm build && pnpm preview --host 127.0.0.1',
-        url: 'http://127.0.0.1:4173',
+        url: baseURL,
         reuseExistingServer: !process.env.CI,
       },
   projects: [

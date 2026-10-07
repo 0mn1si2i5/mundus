@@ -64,10 +64,13 @@ const EXCEPTION_COUNTRY_IDS: Readonly<Record<string, string>> = {
   'N. Cyprus': 'ne-x-northern-cyprus',
   Somaliland: 'ne-x-somaliland',
   Kosovo: 'ne-x-kosovo',
+  'Indian Ocean Ter.': 'ne-x-indian-ocean-territories',
+  'Siachen Glacier': 'ne-x-siachen-glacier',
 };
 
 export function getCountryDataset(): CountryDataset {
-  if (cachedDataset) return cachedDataset;
+  const cached = cachedDataset;
+  if (cached) return cached;
 
   const topology = atlas as unknown as AtlasTopology;
   const raw = feature(
@@ -89,7 +92,7 @@ export function getCountryDataset(): CountryDataset {
     return { feature: country, south, north };
   });
 
-  cachedDataset = {
+  const dataset: CountryDataset = {
     countries,
     findCountry: ({ latitude, longitude }) => {
       const match = index.find(
@@ -107,7 +110,26 @@ export function getCountryDataset(): CountryDataset {
     },
   };
 
+  cachedDataset = dataset;
   return cachedDataset;
+}
+
+/** Converts a world-atlas topology into country features with stable ids. */
+export function countryFeaturesFromTopology(
+  atlasTopology: unknown,
+): readonly CountryFeature[] {
+  const topology = atlasTopology as AtlasTopology;
+  const raw = feature(
+    topology,
+    topology.objects.countries,
+  ) as unknown as FeatureCollection<Geometry, AtlasProperties>;
+  return raw.features.map((country) => ({
+    ...country,
+    properties: {
+      countryId: countryIdFor(country.id, country.properties.name),
+      name: country.properties.name,
+    },
+  }));
 }
 
 function countryIdFor(

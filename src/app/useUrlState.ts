@@ -17,7 +17,8 @@ export function useUrlState() {
           state.developmentIndicator === previous.developmentIndicator &&
           state.developmentYear === previous.developmentYear &&
           state.sunlineTimeMs === previous.sunlineTimeMs &&
-          state.sunlineClockMode === previous.sunlineClockMode)
+          state.sunlineClockMode === previous.sunlineClockMode &&
+          state.surnameDisplayMode === previous.surnameDisplayMode)
       ) {
         return;
       }

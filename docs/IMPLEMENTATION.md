@@ -15,8 +15,7 @@ V1.1 的候选期验收、测试、审阅与发布边界见
 
 ## Exhibit Shell V2：中立展厅壳层
 
-本地实现候选位于 `codex/exhibit-shell-v2` 分支。以下条目均为本地验证结果，
-尚未经过产品所有者独立验收，未发布、未合并到 `main`。
+已通过 PR #9 与 PR #11 合并到受保护 `main` 并公开部署。
 
 - [x] `activeMode: ModeId | null` 与 `previewMode` 状态；`null` 代表中立展厅
 - [x] 裸地址与硬刷新进入展厅；历史无版本与 `v=1` 链接保持 Other Side/V1 语义；`v=2` 活动模式始终显式携带 `mode`
@@ -26,6 +25,22 @@ V1.1 的候选期验收、测试、审阅与发布边界见
 - [x] Mode Atlas 支持 Featured/New/All/Archived、搜索、多标签过滤与 archive notice
 - [x] 返回展厅保留点位与同一 Canvas 相机上下文；unknown V2 mode 回退展厅并给出可关闭说明
 - [x] 三个现有模式（Other Side/Development/Sunline）科学、数据与交互语义保持不变
+
+## Surname Atlas：姓氏观察
+
+已通过 PR #22 合并到受保护 `main`。数据契约与来源决策见
+[NAMING_OBSERVATION_RESEARCH.md](NAMING_OBSERVATION_RESEARCH.md)，来源与许可见
+[DATA_SOURCES.md](../DATA_SOURCES.md)。
+
+- [x] 241 个国家条目、288 条记录；195 个主权国家均有记录（71 rank-one、54 来源列出、70 人工整理）
+- [x] 70 条人工整理记录经产品所有者 2026-10-07 批准按现状上线，结果面板逐条标注“人工整理记录 · 未逐条核实”
+- [x] 中文仅限 5 个人工审阅形式、汉字来源形式与通行译名表；其余显示缺失，不再逐字合成音译
+- [x] 结果面板以折叠的“来源与许可”展示来源快照、覆盖说明、许可证与逐国来源链接
+- [x] 字标槽位 schema 7：中心按密集长包络拟合排序并爬山优化；狭长国家（主轴伸长 ≥ 2）在主轴 ±35° 内提供直线旋转字标；数字统一保留 9 位有效数字以便字节级复现
+- [x] 字标遵循画质档：桌面 50m 可显示小岛国家；110m 仅在字标中心落在已渲染本国陆地时绘制
+- [x] 50m 几何与槽位表仅在进入姓氏观察时按需加载；常驻 `geo` chunk 由 891 kB 降至 135 kB
+- [x] `GlobeViewport` 拆分为 `GlobeScene`、`SurnameMapLabelLayer`、`SunlineLayer`、`Marker`、`AntipodeCrossSection` 与 `viewportDiagnostics`
+- [ ] 线上部署、线上冒烟与桌面/移动人工验收：合并后补记
 
 ## Natural Earth 完整矢量球面
 

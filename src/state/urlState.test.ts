@@ -3,6 +3,7 @@ import {
   DEFAULT_DEVELOPMENT_INDICATOR,
   DEFAULT_DEVELOPMENT_YEAR,
   DEFAULT_POINT,
+  DEFAULT_SURNAME_DISPLAY_MODE,
   parseNavigationNotice,
   parseUrlState,
   serializeUrlState,
@@ -22,6 +23,7 @@ describe('URL state codec', () => {
     developmentIndicator: DEFAULT_DEVELOPMENT_INDICATOR,
     developmentYear: DEFAULT_DEVELOPMENT_YEAR,
     ...sunlineDefaults,
+    surnameDisplayMode: DEFAULT_SURNAME_DISPLAY_MODE,
   };
 
   describe('parseUrlState', () => {
@@ -157,6 +159,23 @@ describe('URL state codec', () => {
       ).toBe('?mode=sunline&time=2026-07-14T09%3A37Z&v=2');
     });
 
+    it('serializes non-default surname display mode and omits the local default', () => {
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'surnames',
+          surnameDisplayMode: 'latin',
+        }),
+      ).toBe('?mode=surnames&surname=latin&v=2');
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'surnames',
+          surnameDisplayMode: 'local',
+        }),
+      ).toBe('?mode=surnames&v=2');
+    });
+
     it('upgrades a legacy V1 state to an equivalent V2 link', () => {
       const legacy = parseUrlState(
         '?mode=sunline&point=35.6762%2C139.6503&v=1',
@@ -181,6 +200,7 @@ describe('URL state codec', () => {
         developmentIndicator: DEFAULT_DEVELOPMENT_INDICATOR,
         developmentYear: DEFAULT_DEVELOPMENT_YEAR,
         ...sunlineDefaults,
+        surnameDisplayMode: 'local',
       });
     });
 

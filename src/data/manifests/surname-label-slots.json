@@ -1,0 +1,32 @@
+{
+  "id": "surname-label-slots",
+  "sourceName": "Natural Earth country label anchors",
+  "sourceUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
+  "licenseName": "Natural Earth public domain; derived metadata in Mundus",
+  "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
+  "version": "world-atlas 2.0.2 / slot schema 7 (parallel default, rotated narrow countries)",
+  "retrievedAt": "2026-10-06",
+  "sourceAssets": {
+    "50m": {
+      "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
+      "sha256": "04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394"
+    }
+  },
+  "derivedAssetSha256": "650958f8f30b9874b78298dbe0aae31a8dfbf6d80bb0aa9c139d85c9b519e225",
+  "recordCount": 752,
+  "rawBytes": 466239,
+  "gzipBytes": 55856,
+  "staticDecodedBytesEstimate": 1864956,
+  "runtimeDecodedBytesEstimate": 2797434,
+  "attribution": "Candidate wordmark slots derived from the pinned Natural Earth country geometry; parallel-latitude envelopes by default, axis-aligned straight envelopes for elongated countries, adjacent-land rejection, and bounded isolated-island overflow are applied before display.",
+  "redistribution": "allowed",
+  "transformations": [
+    "Rank every interior center of a fixed 5x5 grid by a dense long-envelope fit and hill-climb the best center toward the widest clear area",
+    "Offer straight rotated envelopes within 35 degrees of the principal axis only for countries with interior elongation >= 2, keeping them when at least 1.15x the best horizontal fit",
+    "Precompute strict own-country envelopes, foreign-land clearance, country-scale caps, and bounded isolated-island overflow from the pinned atlas",
+    "Round derived numbers to nine significant digits so rebuilds are byte-stable across runtimes",
+    "Store only compact candidate metadata; do not include raw country geometry"
+  ],
+  "missingValuePolicy": "Countries without a safe candidate remain visible in the surname side panel but have no map wordmark.",
+  "boundaryPolicy": "Ordinary candidates remain inside their own country. Isolated-country candidates may extend into ocean within an area-scaled cap, but are rejected when their aspect-specific spherical glyph envelope approaches another country's land geometry."
+}

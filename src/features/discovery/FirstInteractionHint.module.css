@@ -11,6 +11,8 @@
   border: 1px solid var(--color-line);
   background: var(--color-panel);
   box-shadow: var(--shadow-paper);
+  /* The hint describes the globe gesture, so it must never swallow it. */
+  pointer-events: none;
 }
 
 .hint p {
@@ -29,15 +31,23 @@
   color: var(--color-text);
   background: transparent;
   cursor: pointer;
+  pointer-events: auto;
 }
 
 @media (max-width: 760px) {
+  /* On compact screens the hint lives inside the globe stage, so it sits over
+     the globe instead of covering the result and control panels below it. */
   .hint {
     top: auto;
     right: 1.25rem;
-    bottom: 10.2rem;
+    bottom: 0.75rem;
     left: 1.25rem;
     max-width: none;
+    padding-block: 0.4rem;
+  }
+
+  .hint[data-context='lobby'] {
+    bottom: calc(6.25rem + env(safe-area-inset-bottom));
   }
 
   .hint button {

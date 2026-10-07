@@ -20,7 +20,9 @@ export default defineConfig({
           if (
             id.includes('/node_modules/d3-geo/') ||
             id.includes('/node_modules/topojson-client/') ||
-            id.includes('/node_modules/world-atlas/')
+            // Only the 110m picking atlas is shared; the 50m atlas belongs to
+            // the lazily loaded Surname Atlas runtime chunk.
+            id.includes('/node_modules/world-atlas/countries-110m')
           ) {
             return 'geo';
           }

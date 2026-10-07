@@ -23,6 +23,8 @@ export const DEFAULT_POINT: GeoPoint = {
 export const DEFAULT_MODE: ModeId = 'antipodes';
 export const DEFAULT_DEVELOPMENT_INDICATOR: DevelopmentIndicator = 'hdi';
 export const DEFAULT_DEVELOPMENT_YEAR = 2023;
+export type SurnameDisplayMode = 'local' | 'latin' | 'chinese';
+export const DEFAULT_SURNAME_DISPLAY_MODE: SurnameDisplayMode = 'local';
 export type SunlineClockMode = 'live' | 'fixed';
 
 export interface ShareableState {
@@ -33,6 +35,7 @@ export interface ShareableState {
   developmentYear: number;
   sunlineTimeMs: number;
   sunlineClockMode: SunlineClockMode;
+  surnameDisplayMode: SurnameDisplayMode;
 }
 
 export type NavigationNotice = 'unknown-mode';
@@ -45,6 +48,7 @@ const developmentIndicatorSchema = z.enum([
   'income',
 ]);
 const developmentYearSchema = z.coerce.number().int().min(1990).max(2023);
+const surnameDisplayModeSchema = z.enum(['local', 'latin', 'chinese']);
 const coordinateSchema = z
   .string()
   .regex(/^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/)
@@ -89,6 +93,9 @@ export function parseUrlState(
   );
   const developmentYear = developmentYearSchema.safeParse(params.get('year'));
   const parsedSunlineTime = params.get('time');
+  const surnameDisplayMode = surnameDisplayModeSchema.safeParse(
+    params.get('surname'),
+  );
   const sunlineTimeMs =
     activeMode === 'sunline' && parsedSunlineTime
       ? parseSunlineTime(parsedSunlineTime)
@@ -110,6 +117,9 @@ export function parseUrlState(
       : DEFAULT_DEVELOPMENT_YEAR,
     sunlineTimeMs: sunlineTimeMs ?? clampSunlineTime(nowMs),
     sunlineClockMode: sunlineTimeMs === null ? 'live' : 'fixed',
+    surnameDisplayMode: surnameDisplayMode.success
+      ? surnameDisplayMode.data
+      : DEFAULT_SURNAME_DISPLAY_MODE,
   };
 }
 
@@ -146,6 +156,16 @@ export function serializeUrlState(state: ShareableState): string {
     }
     if (state.activeMode === 'sunline' && state.sunlineClockMode === 'fixed') {
       params.set('time', formatSunlineTime(state.sunlineTimeMs));
+    }
+    if (
+      state.activeMode === 'surnames' &&
+      (state.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE) !==
+        DEFAULT_SURNAME_DISPLAY_MODE
+    ) {
+      params.set(
+        'surname',
+        state.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
+      );
     }
     params.set('v', '2');
   }

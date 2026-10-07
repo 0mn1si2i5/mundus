@@ -153,16 +153,16 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     title: { zh: '姓氏观察', en: 'Surname Atlas' },
     titlePhrases: { zh: ['姓氏观察'] },
     question: {
-      zh: '这个国家有哪些来源列出的常见姓氏？',
-      en: 'Which common surname records are listed for this country?',
+      zh: '这个国家地图上展示哪个常见姓氏？',
+      en: 'Which common surname appears on this country?',
     },
     summary: {
-      zh: '并列查看当地文字、拉丁字母转写与人工审阅的中文呈现。',
-      en: 'Compare local forms, Latin transliterations, and reviewed Chinese presentations.',
+      zh: '在地球表面切换当地文字、拉丁转写或中文字标。',
+      en: 'Switch the surface wordmark between local script, Latin transliteration, and Chinese.',
     },
     sourceScope: {
-      zh: '社区整理的 2023 快照；不是统一官方全球排名，缺失字段保持未知。',
-      en: 'A community-compiled 2023 snapshot, not a unified official global ranking; missing fields stay unknown.',
+      zh: '每个国家在地图上显示一个姓氏字标。',
+      en: 'One surname wordmark is shown for each country on the map.',
     },
     cameraPolicy: 'preserve',
     resources: ['natural-earth-countries-110m', 'surnames-by-country'],

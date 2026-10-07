@@ -13,6 +13,8 @@ describe('data registry', () => {
       'geonames-major-cities',
       'surnames-by-country',
       'country-label-anchors',
+      'surname-label-slots',
+      'surname-coverage',
     ]);
     expect(
       DATA_MANIFESTS.every(
@@ -153,11 +155,11 @@ describe('data registry', () => {
       version: expect.stringContaining('v1.2'),
       licenseName: expect.stringMatching(/CC0.*Apache-2\.0/u),
       derivedAssetSha256:
-        'f9c4a179d10a56996de2775554c98f82b8e102e5f394f701bb540daa302c5693',
-      recordCount: 167,
-      rawBytes: 42822,
-      gzipBytes: 4410,
-      staticDecodedBytesEstimate: 171288,
+        'd2ca10f3590387954ef832aeb28fe598e5dd70ce26de7fb5cfafaa22b039e246',
+      recordCount: 288,
+      rawBytes: 93515,
+      gzipBytes: 7226,
+      staticDecodedBytesEstimate: 374060,
     });
     expect(manifest?.auxiliarySources).toEqual(
       expect.arrayContaining([
@@ -170,6 +172,11 @@ describe('data registry', () => {
           sourceName: 'Wikipedia European surname list, Sweden section',
           sha256:
             'c5fbe91365197c28ab8b3c200ce69ef08ea0bf098b9dc81ba2c77e9cd0dff60b',
+        }),
+        expect.objectContaining({
+          sourceName: 'African source-listed surname observations',
+          sha256:
+            '118665614e9acb4df31ecdd540b0513d3371d6e0bd548b95918321dafe9a7d51',
         }),
       ]),
     );
@@ -199,5 +206,35 @@ describe('data registry', () => {
       },
     });
     expect(manifest?.rawBytes).toBeLessThan(64 * 1024);
+  });
+
+  it('pins the compact surname candidate asset', () => {
+    const manifest = DATA_MANIFESTS.find(
+      (candidate) => candidate.id === 'surname-label-slots',
+    );
+    expect(manifest).toMatchObject({
+      derivedAssetSha256:
+        '650958f8f30b9874b78298dbe0aae31a8dfbf6d80bb0aa9c139d85c9b519e225',
+      recordCount: 752,
+      rawBytes: 466239,
+      sourceAssets: {
+        '50m': {
+          sha256:
+            '04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394',
+        },
+      },
+    });
+  });
+
+  it('pins the complete surname coverage audit', () => {
+    const manifest = DATA_MANIFESTS.find(
+      (candidate) => candidate.id === 'surname-coverage',
+    );
+    expect(manifest).toMatchObject({
+      derivedAssetSha256:
+        '8466509b82b8812c1082297e05bea57661fc97a6408508e7450e7fabdd60eabf',
+      recordCount: 240,
+      rawBytes: 26006,
+    });
   });
 });

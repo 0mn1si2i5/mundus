@@ -17,6 +17,11 @@ const SunlineControls = lazy(() =>
     default: module.SunlineControls,
   })),
 );
+const SurnameControls = lazy(() =>
+  import('../surnames/SurnameControls').then((module) => ({
+    default: module.SurnameControls,
+  })),
+);
 
 export function ModeControls({
   locale,
@@ -45,7 +50,7 @@ export function ModeControls({
       controls = <SunlineControls locale={locale} />;
       break;
     case 'surnames':
-      controls = null;
+      controls = <SurnameControls locale={locale} />;
       break;
     default:
       return assertNever(presentation);

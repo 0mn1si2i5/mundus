@@ -19,6 +19,7 @@ const initialShareState = {
   developmentYear: 2023,
   sunlineTimeMs: Date.parse('2026-07-14T09:37:00Z'),
   sunlineClockMode: 'live' as const,
+  surnameDisplayMode: 'local' as const,
   sunlinePlaying: false,
 };
 

@@ -22,6 +22,7 @@ import {
 } from './vectorGlobe';
 import { loadVectorGlobe } from './vectorGlobeLoader';
 import { COUNTRY_TEXTURE_STYLE } from './countryData';
+import { ignoreRaycast } from './sceneUtils';
 
 export type VectorGlobeState = 'loading' | 'ready' | 'error';
 
@@ -347,5 +348,3 @@ export function VectorGlobeLayer({
     </>
   );
 }
-
-function ignoreRaycast() {}

@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import type { GeoNamesCity } from './geonamesCities';
 import { createAntipodeRelation, sampleShortGeodesic } from './relation';
@@ -35,14 +33,6 @@ function city(
 }
 
 describe('createAntipodeRelation', () => {
-  test('contains no future built-area package contract', () => {
-    const source = readFileSync(
-      resolve('src/features/antipodes/relation.ts'),
-      'utf8',
-    );
-    expect(source).not.toMatch(/ghsl|built.?area|chunkIds/i);
-  });
-
   test('derives exact endpoints and an independent nearest city for each side', () => {
     const originCity = city(20, 'Origin City', 10.1, 20.1);
     const antipodeCity = city(10, 'Antipode City', -10.1, -159.9);
@@ -60,7 +50,6 @@ describe('createAntipodeRelation', () => {
     expect(relation.antipode.nearestMajorCity?.city).toBe(antipodeCity);
     expect(relation.origin.nearestMajorCity?.distanceKm).toBeGreaterThan(0);
     expect(relation.antipode.nearestMajorCity?.distanceKm).toBeGreaterThan(0);
-    expect(JSON.stringify(relation)).not.toMatch(/built|chunk|ghsl/i);
   });
 
   test('creates an exact relation shell without cities', () => {

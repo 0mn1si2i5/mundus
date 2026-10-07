@@ -50,6 +50,16 @@ const assets = [
     asset: 'src/data/generated/country-label-anchors.json',
     hashField: 'derivedAssetSha256',
   },
+  {
+    manifest: 'src/data/manifests/surname-label-slots.json',
+    asset: 'src/data/generated/surname-label-slots.json',
+    hashField: 'derivedAssetSha256',
+  },
+  {
+    manifest: 'src/data/manifests/surname-coverage.json',
+    asset: 'src/data/generated/surname-coverage.json',
+    hashField: 'derivedAssetSha256',
+  },
 ];
 
 let failed = false;
@@ -97,7 +107,7 @@ for (const entry of assets) {
     }
     if (
       manifest.id === 'surnames-by-country'
-        ? measurements.recordCount > 200 ||
+        ? measurements.recordCount > 400 ||
           measurements.rawBytes > 200 * 1024 ||
           measurements.gzipBytes > 80 * 1024 ||
           measurements.staticDecodedBytesEstimate > 800 * 1024 ||

@@ -9,6 +9,7 @@ describe('createShareUrl', () => {
     developmentYear: 2023,
     sunlineTimeMs: nowMs,
     sunlineClockMode: 'live' as const,
+    surnameDisplayMode: 'local' as const,
   };
 
   it('serializes a default lobby to a bare URL', () => {

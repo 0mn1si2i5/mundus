@@ -48,6 +48,15 @@
   text-decoration: none;
 }
 
+.brand,
+.eyebrow,
+.index,
+.textButton,
+.intro h1,
+.intro > p:last-child {
+  text-shadow: var(--paper-halo);
+}
+
 .eyebrow,
 .index {
   color: var(--color-muted);

@@ -32,7 +32,13 @@ function persistDismissal() {
   }
 }
 
-export function FirstInteractionHint({ locale }: { locale: Locale }) {
+export function FirstInteractionHint({
+  locale,
+  inLobby,
+}: {
+  locale: Locale;
+  inLobby: boolean;
+}) {
   const completed = useAppStore((state) => state.hasMeaningfulInteraction);
   const [dismissed, setDismissed] = useState(wasDismissed);
   const copy = COPY[locale];
@@ -47,6 +53,7 @@ export function FirstInteractionHint({ locale }: { locale: Locale }) {
   return (
     <aside
       className={styles.hint}
+      data-context={inLobby ? 'lobby' : 'mode'}
       data-testid="first-interaction-hint"
       data-surname-label-obstacle
     >

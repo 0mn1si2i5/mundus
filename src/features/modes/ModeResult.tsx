@@ -4,6 +4,10 @@ import { chordDistanceKm, surfaceDistanceKm } from '../antipodes/distance';
 import type { ModePresentation } from './useModePresentation';
 import styles from './ModeResult.module.css';
 import type { GeoPoint } from '../globe/geo';
+import {
+  getSurnameDisplayForms,
+  resolveSurnameWordmark,
+} from '../surnames/surnameWordmark';
 
 export function ModeResult({
   locale,
@@ -159,6 +163,14 @@ export function ModeResult({
       const numberFormatter = new Intl.NumberFormat(
         locale === 'zh' ? 'zh-CN' : 'en-US',
       );
+      const displayRecord = countryData
+        ? (countryData.records.find((record) => record.rank === 1) ??
+          countryData.records[0] ??
+          null)
+        : null;
+      const wordmark = displayRecord
+        ? resolveSurnameWordmark(displayRecord, presentation.surnameDisplayMode)
+        : null;
       return (
         <aside
           className={`${styles.result} ${styles.surnameResult}`}
@@ -169,6 +181,24 @@ export function ModeResult({
         >
           <span>{t.selectedCountryLabel}</span>
           <em>{country?.name ?? t.surnameChooseCountry}</em>
+          {wordmark ? (
+            <div className={styles.surnameWordmark}>
+              <span>{t.surnameWordmark}</span>
+              <strong>{wordmark.value}</strong>
+              {wordmark.fellBack ? (
+                <small>
+                  {t.surnameWordmarkFallback}
+                  {
+                    {
+                      local: t.surnameDisplayLocal,
+                      latin: t.surnameDisplayLatin,
+                      chinese: t.surnameDisplayChinese,
+                    }[wordmark.source]
+                  }
+                </small>
+              ) : null}
+            </div>
+          ) : null}
           {!country ? (
             <strong>{t.surnameSelectOnGlobe}</strong>
           ) : loadState.status === 'loading' ? (
@@ -191,48 +221,56 @@ export function ModeResult({
                   className={styles.surnameRecord}
                   key={`${record.rank}-${index}`}
                 >
-                  <span>
-                    {record.rank !== null
-                      ? `${t.surnameRank} ${record.rank}`
-                      : t.surnameListed}
-                  </span>
-                  <strong>
-                    {record.localForms.length
-                      ? record.localForms.map((form) => form.value).join(' · ')
-                      : t.surnameMissing}
-                  </strong>
-                  <small>
-                    {t.surnameLocalForm}
-                    {record.localForms
-                      .map((form) => form.script)
-                      .filter(Boolean)
-                      .join(', ') || t.surnameMissing}
-                  </small>
-                  <small>
-                    {t.surnameRomanized}
-                    {record.romanizedForms.length
-                      ? record.romanizedForms.join(' · ')
-                      : t.surnameMissing}
-                  </small>
-                  <small>
-                    {t.surnameChinese}
-                    {record.zhDisplay ?? t.surnameMissing}
-                  </small>
-                  <small>
-                    {t.surnameCount} ·{' '}
-                    {record.count !== null
-                      ? numberFormatter.format(record.count)
-                      : t.surnameMissing}
-                  </small>
-                  <small>
-                    {t.surnameShare} ·{' '}
-                    {record.share !== null
-                      ? `${(record.share * 100).toFixed(2)}%`
-                      : t.surnameMissing}
-                  </small>
-                  <small>
-                    {t.surnameYear} · {record.statYear ?? t.surnameMissing}
-                  </small>
+                  {(() => {
+                    const forms = getSurnameDisplayForms(record);
+                    return (
+                      <>
+                        <span>
+                          {record.rank !== null
+                            ? `${t.surnameRank} ${record.rank}`
+                            : record.observationKind === 'manual-observation'
+                              ? t.surnameManualObservation
+                              : t.surnameListed}
+                        </span>
+                        <strong>{forms.local ?? t.surnameMissing}</strong>
+                        <small>
+                          {t.surnameLocalForm}
+                          {record.localForms
+                            .map((form) => form.script)
+                            .filter(Boolean)
+                            .join(', ') || t.surnameMissing}
+                        </small>
+                        <small>
+                          {t.surnameRomanized}
+                          {forms.latin ?? t.surnameMissing}
+                          {forms.latin &&
+                          !record.romanizedForms.includes(forms.latin)
+                            ? t.surnameGeneratedSuffix
+                            : null}
+                        </small>
+                        <small>
+                          {t.surnameChinese}
+                          {forms.chinese ?? t.surnameMissing}
+                        </small>
+                        <small>
+                          {t.surnameCount} ·{' '}
+                          {record.count !== null
+                            ? numberFormatter.format(record.count)
+                            : t.surnameMissing}
+                        </small>
+                        <small>
+                          {t.surnameShare} ·{' '}
+                          {record.share !== null
+                            ? `${(record.share * 100).toFixed(2)}%`
+                            : t.surnameMissing}
+                        </small>
+                        <small>
+                          {t.surnameYear} ·{' '}
+                          {record.statYear ?? t.surnameMissing}
+                        </small>
+                      </>
+                    );
+                  })()}
                 </section>
               ))}
             </div>
@@ -240,7 +278,8 @@ export function ModeResult({
             <strong>{t.surnameNoRecord}</strong>
           )}
           {loadState.status === 'ready' ? (
-            <div className={styles.surnameScope}>
+            <details className={styles.surnameScope}>
+              <summary>{t.surnameProvenance}</summary>
               <small>
                 {t.surnameSourceSnapshot}
                 {loadState.data.sourceSnapshot}
@@ -259,7 +298,7 @@ export function ModeResult({
                   {t.surnameSourceLink}
                 </a>
               ))}
-            </div>
+            </details>
           ) : null}
         </aside>
       );

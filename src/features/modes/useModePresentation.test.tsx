@@ -23,6 +23,7 @@ describe('useGlobePresentation', () => {
       sunline: null,
       antipodeRelation: null,
       surnameMapLabels: [],
+      surnameDisplayMode: 'local',
     });
   });
 
@@ -42,7 +43,7 @@ describe('useGlobePresentation', () => {
     expect(result.current.sunline?.subsolarPoint).toBeDefined();
   });
 
-  it('emits every ranked map record and excludes unranked source lists', async () => {
+  it('emits ranked and explicitly source-listed map records', async () => {
     useAppStore.setState({
       activeMode: 'surnames',
       selectedCountry: { countryId: 'ne-300', name: 'Greece' },
@@ -50,13 +51,13 @@ describe('useGlobePresentation', () => {
     const { result } = renderHook(() => useGlobePresentation());
 
     await waitFor(() =>
-      expect(result.current.surnameMapLabels).toHaveLength(74),
+      expect(result.current.surnameMapLabels).toHaveLength(198),
     );
     expect(
       result.current.surnameMapLabels.some(
         (label) => label.countryId === 'ne-300',
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       result.current.surnameMapLabels.find(
         (label) => label.countryId === 'ne-156',

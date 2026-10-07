@@ -13,6 +13,10 @@
   --color-indigo: #3f526d;
   --color-mint: #32786e;
   --shadow-paper: 0 0.7rem 2rem rgb(68 54 36 / 12%);
+  /* Parchment halo that keeps exhibit labels legible over the globe. */
+  --paper-halo:
+    0 0 2px var(--color-bg), 0 0 6px var(--color-bg),
+    0 0 14px rgb(243 237 223 / 85%);
   --fallback-globe-background:
     repeating-radial-gradient(
       circle,

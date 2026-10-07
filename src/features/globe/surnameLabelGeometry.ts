@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { Quaternion, Vector3 } from 'three';
 
 export const SURNAME_LABEL_BASE_RADIUS = 1.012;
 export const SURNAME_LABEL_MIN_CORNER_RADIUS = 1.006;
@@ -37,4 +37,36 @@ export function getSafeSurnameLabelRadius(
     }
   }
   return radius;
+}
+
+/**
+ * Solves label clearance when the globe is rendered inside a rotated group.
+ *
+ * Label anchors are stored in globe-local coordinates while the billboard
+ * axes come from the camera and therefore live in world coordinates. The
+ * radial solve must use the anchor direction after the group's world
+ * rotation; otherwise a rotated globe can place a corner inside the surface.
+ * The returned radius is still a scalar that can be applied to the original
+ * local direction before positioning the child sprite.
+ */
+export function getSafeSurnameLabelRadiusForGroup(
+  localDirection: Vector3,
+  width: number,
+  heightRatio: number,
+  cameraRightWorld: Vector3,
+  cameraUpWorld: Vector3,
+  groupWorldQuaternion: Quaternion,
+): number {
+  const worldDirection = localDirection
+    .clone()
+    .normalize()
+    .applyQuaternion(groupWorldQuaternion)
+    .normalize();
+  return getSafeSurnameLabelRadius(
+    worldDirection,
+    width,
+    heightRatio,
+    cameraRightWorld,
+    cameraUpWorld,
+  );
 }

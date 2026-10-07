@@ -5,6 +5,8 @@ import geoNamesMajorCitiesManifest from './manifests/geonames-major-cities.json'
 import naturalEarthVectorManifest from './manifests/natural-earth-vector-globe.json';
 import surnamesManifest from './manifests/surnames-by-country.json';
 import countryLabelAnchorsManifest from './manifests/country-label-anchors.json';
+import surnameLabelSlotsManifest from './manifests/surname-label-slots.json';
+import surnameCoverageManifest from './manifests/surname-coverage.json';
 
 const auxiliarySourceSchema = z.object({
   sourceName: z.string().min(1),
@@ -159,4 +161,6 @@ export const DATA_MANIFESTS: readonly DataManifest[] = [
   dataManifestSchema.parse(geoNamesMajorCitiesManifest),
   dataManifestSchema.parse(surnamesManifest),
   dataManifestSchema.parse(countryLabelAnchorsManifest),
+  dataManifestSchema.parse(surnameLabelSlotsManifest),
+  dataManifestSchema.parse(surnameCoverageManifest),
 ];
