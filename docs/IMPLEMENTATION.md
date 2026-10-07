@@ -8,10 +8,9 @@ Natural Earth 矢量球、GeoNames 双语搜索、双侧城市关系、拖拽剖
 属于当前公开产品。`v1.0.0` tag 与现有 GitHub Release 仍固定在
 `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`；尚未创建 V1.1 tag 或 Release。
 
-当前执行目标、批次门槛和审阅循环见 [EXECUTION_PLAN.md](EXECUTION_PLAN.md)。
-V1.1 的候选期验收、测试、审阅与发布边界见
-[2026-08-01 候选证据](2026-08-01-v1.1-parchment-atlas-candidate.md)和
-[publication packet](2026-08-01-v1.1-publication-packet.md)。
+当前工作约定、门槛与发布边界见仓库根目录的 [AGENTS.md](../AGENTS.md)。
+2026-10 起仓库更名为小写 `0mn1si2i5/mundus`，线上地址为
+<https://0mn1si2i5.github.io/mundus/>；下文历史证据中的 `/Mundus/` 地址保持原样。
 
 ## Exhibit Shell V2：中立展厅壳层
 
@@ -92,9 +91,8 @@ V1.1 的候选期验收、测试、审阅与发布边界见
 为 <https://0mn1si2i5.github.io/Mundus/>，HTTPS 请求返回 200 和预期文档
 标题。该首次部署随后由最终证据提交的同 SHA 部署、标签与 Release 闭环取代。
 
-零上下文执行线程必须先阅读仓库根目录的 [AGENTS.md](../AGENTS.md) 和
-[ROADMAP_HANDOFF.md](ROADMAP_HANDOFF.md)。V1 发布计划与 runbook 是已完成历史，
-不得据此重复创建 V1.0.0。
+零上下文执行线程必须先阅读仓库根目录的 [AGENTS.md](../AGENTS.md)。V1 发布
+已完成，不得重复创建 V1.0.0。
 
 基线检查点为私有 `main` 的 `1d627e6`：本地 57 个单元测试、31 个浏览器测试通过（1 个桌面专属生命周期用例在移动项目按设计跳过），远端 quality 与 browser-smoke 均通过。公开发布仍以执行计划中的产品、安全、许可和部署门槛为准。
 
@@ -115,7 +113,7 @@ V1.1 的候选期验收、测试、审阅与发布边界见
 
 当前构建基线：App Shell 约 18 kB gzip；完整首屏模块约 375 kB gzip。Three.js、R3F 和地理数据各自独立缓存。真实 FPS 不使用无头浏览器结果代替，需在目标设备上采样后关闭阶段门槛。
 
-采样证据见 [桌面报告](performance/2026-07-14-desktop.md)、[iPhone 17 报告](performance/2026-07-14-iphone-17.md) 与 [阶段 2 回归](performance/2026-07-14-stage-2.md)。
+采样证据见 [桌面报告](performance/2026-07-14-desktop.md)、[iPhone 17 报告](performance/2026-07-14-iphone-17.md)。
 
 ## 阶段 2 · Other Side：完成
 
@@ -137,7 +135,7 @@ V1.1 的候选期验收、测试、审阅与发布边界见
 - [x] 同步排序表格、来源和方法界面
 - [x] 阶段 3 性能回归与发布级视觉验收
 
-数据方法见 [UNDP HDR 2025](data/undp-hdr-2025.md)，发布回归见 [阶段 3 性能报告](performance/2026-07-14-stage-3.md)。
+数据方法见 [UNDP HDR 2025](data/undp-hdr-2025.md)。
 
 ## 阶段 4 · Sunline 与整体收口：完成
 
@@ -150,4 +148,4 @@ V1.1 的候选期验收、测试、审阅与发布边界见
 - [x] 双语方法说明、移动端折叠抽屉、减少动态效果与模式转场
 - [x] 固定时间视觉回归、连续模式切换和桌面/移动发布回归
 
-太阳计算只用于教育互动展示，不作为法律、航海或工程时间服务。阶段 4 构建与性能证据见 [Sunline 发布回归](performance/2026-07-14-stage-4.md)。中档手机真实硬件采样仍按阶段 1 的非阻塞验证计划保留。
+太阳计算只用于教育互动展示，不作为法律、航海或工程时间服务。中档手机真实硬件采样仍按阶段 1 的非阻塞验证计划保留。

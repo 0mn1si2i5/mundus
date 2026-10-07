@@ -20,7 +20,7 @@ function sample(detail) {
       requestCount: 1,
       decodedReadyMs: 120,
       asset: {
-        name: '/Mundus/geonames.json',
+        name: '/mundus/geonames.json',
         startTimeMs: 20,
         responseEndMs: 100,
         transferBytes: 10,
@@ -33,12 +33,12 @@ function sample(detail) {
       entryToReadyMs: 60,
       absentImmediatelyBeforeEntry: true,
       assets: [
-        { name: '/Mundus/DevelopmentControls-a.js', startTimeMs: 201 },
-        { name: '/Mundus/DevelopmentControls-a.css', startTimeMs: 202 },
-        { name: '/Mundus/undp-hdr-a.js', startTimeMs: 203 },
+        { name: '/mundus/DevelopmentControls-a.js', startTimeMs: 201 },
+        { name: '/mundus/DevelopmentControls-a.css', startTimeMs: 202 },
+        { name: '/mundus/undp-hdr-a.js', startTimeMs: 203 },
       ],
     },
-    vector: { detail, asset: `/Mundus/${detail}.mvg` },
+    vector: { detail, asset: `/mundus/${detail}.mvg` },
     failures: {
       consoleErrors: [],
       pageErrors: [],
@@ -58,7 +58,7 @@ function result() {
     environment: {
       playwrightChromium: '149.0.7827.55',
       networkEmulation: 'none',
-      mountPath: '/Mundus/',
+      mountPath: '/mundus/',
     },
     buildIdentity: { assets: [{ path: 'a.js', sha256: 'one' }] },
     scenarios: {

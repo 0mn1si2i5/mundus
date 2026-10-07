@@ -19,13 +19,13 @@ async function fixture() {
 }
 
 test('maps only decoded paths contained by the literal mount', () => {
-  assert.equal(mapRequestToFile('/Mundus/assets/app.js'), 'assets/app.js');
-  assert.equal(mapRequestToFile('/Mundus/atlas/place'), 'index.html');
-  assert.equal(mapRequestToFile('/Mundus/'), 'index.html');
+  assert.equal(mapRequestToFile('/mundus/assets/app.js'), 'assets/app.js');
+  assert.equal(mapRequestToFile('/mundus/atlas/place'), 'index.html');
+  assert.equal(mapRequestToFile('/mundus/'), 'index.html');
   assert.equal(mapRequestToFile('/other/assets/app.js'), null);
-  assert.equal(mapRequestToFile('/Mundus/%2e%2e/secret.txt'), null);
-  assert.equal(mapRequestToFile('/Mundus/assets%2f..%2f..%2fsecret.txt'), null);
-  assert.equal(mapRequestToFile('/Mundus/missing.js'), 'missing.js');
+  assert.equal(mapRequestToFile('/mundus/%2e%2e/secret.txt'), null);
+  assert.equal(mapRequestToFile('/mundus/assets%2f..%2f..%2fsecret.txt'), null);
+  assert.equal(mapRequestToFile('/mundus/missing.js'), 'missing.js');
 });
 
 test('serves unchanged content with content types and SPA fallback', async (t) => {
@@ -92,7 +92,7 @@ test('command prints its literal URL and shuts down on SIGTERM', async (t) => {
   });
   assert.match(
     output,
-    /^Serving unchanged dist at http:\/\/127\.0\.0\.1:\d+\/Mundus\/\n$/u,
+    /^Serving unchanged dist at http:\/\/127\.0\.0\.1:\d+\/mundus\/\n$/u,
   );
 
   child.kill('SIGTERM');

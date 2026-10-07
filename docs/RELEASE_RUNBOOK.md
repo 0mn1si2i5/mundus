@@ -1,12 +1,11 @@
 # V1 release runbook
 
-Status: V1.0.0 historical runbook. The procedure remains a rollback/reference
-baseline, but current release identity and authorization gates are recorded in
-`ROADMAP_HANDOFF.md`.
+Status: current Pages build, deploy and rollback procedure. Release identity
+and authorization gates are recorded in `AGENTS.md`.
 
-This runbook covers the reproducible GitHub Pages path for the V1 static site.
-It does not authorize changing repository visibility; that remains a separate
-product-owner gate in `MVP_RELEASE_PLAN.md`.
+This runbook covers the reproducible GitHub Pages path for the static site. It
+does not authorize changing repository settings, tags or Releases; those need
+product-owner approval.
 
 ## Build and deploy
 
@@ -41,7 +40,7 @@ inventory, and exact bundled dependency notices.
 The local `test:release-server` suite validates the optional literal-mount
 rehearsal server and is kept outside the routine source gate because Pages is
 served by GitHub's deployment action. Run it when exercising that local
-`/Mundus/` rehearsal; it does not substitute for artifact verification or live
+`/mundus/` rehearsal; it does not substitute for artifact verification or live
 smoke.
 
 ## Private rehearsal
