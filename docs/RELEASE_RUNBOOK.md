@@ -11,13 +11,18 @@ product-owner gate in `MVP_RELEASE_PLAN.md`.
 ## Build and deploy
 
 - Pull requests run the required CI source and full-vector checks in parallel.
-  The Pages `pages-artifact` job independently runs `pnpm build` and
-  `pnpm release:verify`, then runs the complete desktop/mobile Playwright
-  suite against that `dist` and uploads it; pull requests cannot deploy. The
-  required `source-quality` and `vector-data-full` checks cover source,
-  generated-data, unit, and full-vector validation, while Pages keeps the built
-  artifact and browser verification self-contained. Both checks are required
-  directly; no pass-through aggregate job is needed.
+  The Pages workflow builds once in `pages-build` (`pnpm build` and
+  `pnpm release:verify`), then runs the complete Playwright suite for the
+  desktop and mobile projects on separate runners against that same `dist`.
+  The required `pages-artifact` job runs only after the build and both browser
+  projects succeed (and fails, rather than skipping, when either does not),
+  re-verifies the transferred `dist`, and uploads it; pull requests cannot
+  deploy. The required `source-quality` and `vector-data-full` checks cover
+  source, generated-data, unit, and full-vector validation. Both checks are
+  required directly; no pass-through aggregate job is needed. Failed browser
+  jobs upload their Playwright report for seven days.
+- A newer push to a pull request cancels its superseded CI and Pages runs; runs
+  on `main` always complete.
 - The separate CI `browser-smoke` job runs three `@smoke` Chromium cases for a
   fast signal. It does not replace the complete desktop/mobile suite in the
   Pages artifact job.

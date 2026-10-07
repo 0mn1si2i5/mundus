@@ -40,7 +40,7 @@
     "test:watch": "vitest",
     "test:e2e": "node scripts/run-playwright-e2e.mjs",
     "test:e2e:smoke": "node scripts/run-playwright-e2e.mjs --project=chromium --grep @smoke",
-    "check:source": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-cities && pnpm test:toolchain && pnpm test && pnpm test:release",
+    "check:source": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-cities && pnpm test:toolchain && pnpm test:performance && pnpm test && pnpm test:release",
     "check": "pnpm check:source && pnpm test:data-vector-globe && pnpm build && pnpm release:verify"
   },
   "dependencies": {

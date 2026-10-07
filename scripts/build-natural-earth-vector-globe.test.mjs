@@ -18,6 +18,17 @@ import { geoContains } from 'd3-geo';
 import { geoArea } from 'd3-geo';
 import { feature } from 'topojson-client';
 
+// The production builds take minutes at 50m, so the read-only checks below
+// share one build per atlas and edge length instead of rebuilding it.
+const productionBuilds = new Map();
+function buildProductionGlobe(atlas, maxEdgeDegrees) {
+  const key = `${atlas === atlas50 ? '50m' : '110m'}@${maxEdgeDegrees}`;
+  if (!productionBuilds.has(key)) {
+    productionBuilds.set(key, buildVectorGlobe(atlas, { maxEdgeDegrees }));
+  }
+  return productionBuilds.get(key);
+}
+
 const edgeFixture = {
   type: 'FeatureCollection',
   features: [
@@ -108,7 +119,7 @@ test('emitted country areas match independent source feature areas', () => {
     ['110m', atlas110, 2],
     ['50m', atlas50, 1],
   ]) {
-    const result = buildVectorGlobe(atlas, { maxEdgeDegrees: edge });
+    const result = buildProductionGlobe(atlas, edge);
     const source = sourceAreaReport(atlas);
     const emitted = emittedAreaByCountry(result);
     const deficits = [...source.countryArea].map(([countryId, sourceArea]) => ({
@@ -197,7 +208,7 @@ test('triangulates the 50m Antarctic polar part regardless of source ring order'
 });
 
 test('bounds 110m Sudan repair error for its self-intersecting source ring', () => {
-  const result = buildVectorGlobe(atlas110, { maxEdgeDegrees: 2 });
+  const result = buildProductionGlobe(atlas110, 2);
   const source = sourceAreaReport(atlas110).countryArea.get('ne-729');
   const emitted = emittedAreaByCountry(result).get('ne-729');
   const sudan = topologyToCountries(atlas110).features.find(
@@ -267,7 +278,7 @@ test('centroid filtering drops negligible global and representative area', () =>
     ['110m', atlas110, 2],
     ['50m', atlas50, 1],
   ]) {
-    const result = buildVectorGlobe(atlas, { maxEdgeDegrees: edge });
+    const result = buildProductionGlobe(atlas, edge);
     assert.ok(
       result.metrics.droppedOutsideAreaFraction < 0.0001,
       `${detail} global dropped area ${result.metrics.droppedOutsideAreaFraction}`,
@@ -298,7 +309,7 @@ test('decoded quantized surface samples remain inside assigned source countries'
     [atlas110, 2],
     [atlas50, 1],
   ]) {
-    const result = buildVectorGlobe(atlas, { maxEdgeDegrees: edge });
+    const result = buildProductionGlobe(atlas, edge);
     const decoded = await decodeCompressedAsset(
       await encodeCompressedAsset(result),
     );
