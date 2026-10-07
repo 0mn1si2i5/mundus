@@ -375,7 +375,7 @@ export function chooseSurnameLabelSlot(
     wordmark,
     countries,
   );
-  return chooseLargestSurnameLabelSlot(candidatePool);
+  return chooseLargestSurnameLabelSlot(candidatePool, anchor.point);
 }
 
 /**
@@ -398,7 +398,7 @@ export function chooseAlternativeSurnameLabelSlot(
     wordmark,
     countries,
   ).filter((candidate) => surnameLabelSlotKey(candidate) !== currentKey);
-  return chooseLargestSurnameLabelSlot(candidatePool);
+  return chooseLargestSurnameLabelSlot(candidatePool, anchor.point);
 }
 
 function getSurnameLabelCandidatePool(
@@ -465,13 +465,43 @@ function allowsRotatedWordmark(wordmark: SurnameWordmark): boolean {
 // particular wordmark materially larger before it replaces the parallel.
 const ROTATED_WORDMARK_GAIN = 1.15;
 
+// A label belongs near its country's visual centre unless that costs a lot
+// of size. Must equal CENTRALITY_WEIGHT in scripts/build-surname-label-slots.mjs,
+// which generates centred candidates with the same score.
+const CENTRALITY_WEIGHT = 0.4;
+
+/**
+ * Wordmark radius discounted by distance from the country's label anchor, as
+ * a fraction of the country's scale. A slot at the anchor keeps its size; one
+ * a whole country-scale away counts 40% smaller.
+ */
+export function scoreSurnameLabelSlot(
+  slot: SurnameLabelSlot,
+  anchor: GeoPoint | null,
+): number {
+  if (!anchor || !slot.countryScaleCap) return slot.maxAngularDegrees;
+  const distanceDegrees =
+    (geoDistance(
+      [slot.center.longitude, slot.center.latitude],
+      [anchor.longitude, anchor.latitude],
+    ) *
+      180) /
+    Math.PI;
+  return (
+    slot.maxAngularDegrees *
+    (1 -
+      CENTRALITY_WEIGHT * Math.min(1, distanceDegrees / slot.countryScaleCap))
+  );
+}
+
 function chooseLargestSurnameLabelSlot(
   candidatePool: readonly SurnameLabelSlot[],
+  anchor: GeoPoint | null,
 ): SurnameLabelSlot | null {
   const largest = (slots: readonly SurnameLabelSlot[]) =>
     [...slots].sort(
       (a, b) =>
-        b.maxAngularDegrees - a.maxAngularDegrees ||
+        scoreSurnameLabelSlot(b, anchor) - scoreSurnameLabelSlot(a, anchor) ||
         a.oceanDirection.localeCompare(b.oceanDirection),
     )[0] ?? null;
   const horizontal = largest(
@@ -482,8 +512,8 @@ function chooseLargestSurnameLabelSlot(
   );
   if (!rotated) return horizontal;
   if (!horizontal) return rotated;
-  return rotated.maxAngularDegrees >=
-    ROTATED_WORDMARK_GAIN * horizontal.maxAngularDegrees
+  return scoreSurnameLabelSlot(rotated, anchor) >=
+    ROTATED_WORDMARK_GAIN * scoreSurnameLabelSlot(horizontal, anchor)
     ? rotated
     : horizontal;
 }

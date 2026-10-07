@@ -219,8 +219,9 @@ The app preserves alternate local and romanized forms within a source group
 and does not infer a statistical year from the 2023 collection snapshot.
 
 Every country with a record receives one straight wordmark from the slot
-table `src/data/generated/surname-label-slots.json` (schema 7). Wordmarks
-stay inside their own country, follow the local parallel by default, and
+table `src/data/generated/surname-label-slots.json` (schema 8). Wordmarks
+stay inside their own country, prefer its visual centre unless that costs
+much size, follow the local parallel by default, and
 rotate along the principal axis only for elongated countries when that makes
 the word materially larger. The slot table and the 50m geometry it is built
 on load only with the Surname Atlas. Countries without a usable slot keep

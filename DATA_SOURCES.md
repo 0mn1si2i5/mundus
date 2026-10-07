@@ -152,14 +152,18 @@ Natural Earth anchors; see `src/data/manifests/surname-coverage.json`.
 
 ### Surname wordmark slots
 
-`src/data/generated/surname-label-slots.json` (slot schema 7, 752 candidates,
-466,239 bytes, 55,856 bytes gzip) stores precomputed wordmark centres, sizes
+`src/data/generated/surname-label-slots.json` (slot schema 8, 1,111 candidates,
+690,885 bytes, 78,034 bytes gzip) stores precomputed wordmark centres, sizes
 and rotations derived from the pinned Natural Earth 50m country geometry
 (public domain) by `scripts/build-surname-label-slots.mjs`. Wordmarks stay
 inside their own country (isolated islands may overflow into open ocean
 within an area-scaled cap). They follow the local parallel by default; only
 countries whose interior is at least twice as long as it is wide are offered a
-straight wordmark rotated along that axis. Output numbers are rounded to nine
+straight wordmark rotated along that axis. Each wordmark shape (square, medium,
+long) also gets a centred candidate that trades size against distance from
+the country's label anchor; the runtime applies the same score, so a single
+CJK character such as 王 sits in east-central China rather than on the
+Tibetan plateau. Output numbers are rounded to nine
 significant digits so rebuilds with the pinned Node.js release are byte-stable.
 The 50m geometry and this table load only when the Surname Atlas opens.
 

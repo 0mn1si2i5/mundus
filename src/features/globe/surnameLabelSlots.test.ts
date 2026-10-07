@@ -432,4 +432,30 @@ describe('surname label slots on the rendered globe', () => {
       isSurnameLabelSlotOnRenderedLand(italySlot!, 'ne-250', '110m', lowDetail),
     ).toBe(false);
   });
+
+  it('keeps a single-character wordmark near the country centre', () => {
+    const wordmark = {
+      value: '王',
+      source: 'chinese' as const,
+      requestedMode: 'chinese' as const,
+      fellBack: false,
+      generated: false,
+      layout: 'straight' as const,
+      characterCount: 1,
+    };
+    const slot = chooseSurnameLabelSlot(
+      'ne-156',
+      {
+        point: { latitude: 31.34112, longitude: 109.462995 },
+        clearanceDegrees: 9.75,
+      },
+      wordmark,
+      [],
+    );
+    expect(slot).not.toBeNull();
+    // East-central China rather than the Tibetan plateau, and no smaller
+    // than the square slot that plateau offered (9.26°).
+    expect(slot!.center.longitude).toBeGreaterThan(104);
+    expect(slot!.maxAngularDegrees).toBeGreaterThan(9.26);
+  });
 });
