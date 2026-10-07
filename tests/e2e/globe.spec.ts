@@ -907,6 +907,21 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
   const relationRevisionBeforePoint = Number(
     await globe.getAttribute('data-antipode-relation-diagnostic-revision'),
   );
+  // A new point resets the per-point marker evidence and samples it again.
+  // Record revision mutations: the attribute exists now, so a later mutation
+  // whose old value is absent proves a reset followed by a fresh sample.
+  await globe.evaluate((element) => {
+    const records: (string | null)[] = [];
+    (
+      window as Window & { markerRevisionOldValues?: typeof records }
+    ).markerRevisionOldValues = records;
+    new MutationObserver((mutations) => {
+      for (const mutation of mutations) records.push(mutation.oldValue);
+    }).observe(element, {
+      attributeFilter: ['data-marker-diagnostic-revision'],
+      attributeOldValue: true,
+    });
+  });
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开地点控件' }).click();
   }
@@ -917,13 +932,19 @@ test('clears marker diagnostics by mode and refreshes them for point focus', asy
     'data-marker-origin-target',
     '35.6895,139.69171',
   );
-  // A new point resets the per-point marker evidence, so its revision restarts
-  // and is sampled again rather than continuing the previous count.
   await expect
-    .poll(async () =>
-      Number(await globe.getAttribute('data-marker-diagnostic-revision')),
+    .poll(() =>
+      page.evaluate(() =>
+        (
+          window as Window & { markerRevisionOldValues?: (string | null)[] }
+        ).markerRevisionOldValues?.includes(null),
+      ),
     )
-    .toBeGreaterThanOrEqual(1);
+    .toBe(true);
+  await expect(globe).toHaveAttribute(
+    'data-marker-diagnostic-revision',
+    /^[1-9]\d*$/,
+  );
   await expect(globe).toHaveAttribute(
     'data-marker-origin-actual-css-diameter',
     /.+/,
