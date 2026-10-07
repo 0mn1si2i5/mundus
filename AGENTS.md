@@ -3,13 +3,18 @@
 ## Current authority — V1.1.0 Parchment Atlas live on Pages
 
 Mundus **V1.1.0 Parchment Atlas** is deployed at
-<https://0mn1si2i5.github.io/Mundus/>. PR #5 and its stacked PR #6 are merged;
+<https://0mn1si2i5.github.io/mundus/>. PR #5 and its stacked PR #6 are merged;
 the product implementation entered protected `main` at
 `1a9c44700e2154186708772a7773fd8972a7aaf2` and passed same-SHA CI, Pages
 deployment, live smoke, and desktop/mobile manual verification on 2026-08-02.
 The public product includes the parchment presentation, draggable cross-section,
 bilingual GeoNames search, bilateral city relations, and Natural Earth vector
 globe.
+
+The repository is now `0mn1si2i5/mundus` (lowercase). GitHub Pages paths are
+case-sensitive, so the live site is `/mundus/`; the older `/Mundus/` address in
+historical evidence below no longer resolves. The deploy workflow's
+`page_url` is the authority for the live address.
 
 A later interaction-clarity correction changes the current Share UI to one
 canonical-precision location link with explicit privacy disclosure. Historical
@@ -470,7 +475,7 @@ pnpm release:verify /path/to/unpacked-pages-artifact
 Live release smoke requires an already deployed URL:
 
 ```bash
-MUNDUS_LIVE_URL='https://0mn1si2i5.github.io/Mundus/' \
+MUNDUS_LIVE_URL='https://0mn1si2i5.github.io/mundus/' \
   pnpm exec playwright test --config=playwright.live.config.ts
 ```
 
