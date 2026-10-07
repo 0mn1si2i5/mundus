@@ -571,7 +571,26 @@ async function expectAntipodeDragInactive(page: Page) {
   );
 }
 
+/** Waits until React Three Fiber has sized the canvas to its globe stage. */
+async function expectSizedGlobeCanvas(page: Page) {
+  await expect
+    .poll(() =>
+      page.locator('canvas').evaluate((element) => {
+        const canvas = element.getBoundingClientRect();
+        const stage = (
+          element.parentElement ?? element
+        ).getBoundingClientRect();
+        return (
+          Math.abs(canvas.width - stage.width) < 1 &&
+          Math.abs(canvas.height - stage.height) < 1
+        );
+      }),
+    )
+    .toBe(true);
+}
+
 async function globeCenter(page: Page) {
+  await expectSizedGlobeCanvas(page);
   const point = await page.locator('canvas').evaluate((element) => {
     const bounds = element.getBoundingClientRect();
     const offsets = [
@@ -1803,6 +1822,7 @@ test('dismisses the first-interaction hint after real globe use', async ({
   ).toBe(false);
 
   const canvas = page.locator('canvas');
+  await expectSizedGlobeCanvas(page);
   const box = await canvas.boundingBox();
   if (!box) throw new Error('Globe canvas has no bounding box.');
   const x = box.x + box.width / 2;
@@ -1824,6 +1844,7 @@ test('keeps the hint for incidental pointing and accepts wheel use', async ({
   const hint = page.getByTestId('first-interaction-hint');
   const canvas = page.locator('canvas');
   await expect(hint).toBeVisible();
+  await expectSizedGlobeCanvas(page);
   const box = await canvas.boundingBox();
   if (!box) throw new Error('Globe canvas has no bounding box.');
   const x = box.x + box.width / 2;
@@ -3964,6 +3985,8 @@ test('gives a major-city relation hover and active feedback without layout shift
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./?mode=antipodes&v=2');
   const place = page.getByRole('button', { name: /康科迪亚 查看城市/ });
+  // On phones the result card scrolls; measure where the pointer will be.
+  await place.scrollIntoViewIfNeeded();
   const before = await place.boundingBox();
   const resting = await place.evaluate(
     (element) => getComputedStyle(element).backgroundColor,

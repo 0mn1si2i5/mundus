@@ -167,7 +167,9 @@
   }
 
   .heading p {
-    display: none;
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    text-align: center;
   }
 
   .primary {
