@@ -11,7 +11,7 @@
   display: grid;
   max-height: 46svh;
   overflow: hidden;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .panelBody {
@@ -180,16 +180,19 @@
   border-top: 1px solid var(--color-line);
 }
 
-.continuation {
-  position: sticky;
-  z-index: 1;
-  bottom: 0;
+/* The signpost lives in the panel footer, outside the scrolling body. A
+   sticky button inside the body pinned itself over the evidence row. */
+.continuationSlot:empty {
+  display: none;
+}
+
+.continuationSlot > .continuation {
   display: flex;
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  margin-top: 0.6rem;
-  padding: 0.45rem 0.55rem;
+  margin-top: 0.4rem;
+  padding: 0.35rem 0.55rem;
   border: 1px solid var(--color-line);
   color: var(--color-accent);
   background: var(--color-panel);
@@ -199,7 +202,7 @@
   visibility: hidden;
 }
 
-.continuation[data-visible='true'] {
+.continuationSlot > .continuation[data-visible='true'] {
   visibility: visible;
 }
 
@@ -404,7 +407,7 @@
 
 @media (max-width: 760px) {
   .developmentPanel {
-    max-height: 48svh;
+    max-height: 50svh;
   }
 
   .tablePanel {

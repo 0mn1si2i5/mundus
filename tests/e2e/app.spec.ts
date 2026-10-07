@@ -3324,6 +3324,24 @@ test('signposts Development evidence that continues below the panel', async ({
     }
   }
 
+  // The continuation signpost must never paint over the evidence it follows.
+  for (const evidence of immediateEvidence) {
+    await evidence.scrollIntoViewIfNeeded();
+    const covered = await evidence.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        rect.left + rect.width / 2,
+        rect.top + rect.height / 2,
+      );
+      return !hit || !element.contains(hit);
+    });
+    expect(covered).toBe(false);
+  }
+  await panelBody.evaluate((element) => {
+    element.scrollTop = 0;
+    element.dispatchEvent(new Event('scroll'));
+  });
+
   const continuation = panel.getByRole('button', {
     name: '继续查看算法结构对照',
   });
