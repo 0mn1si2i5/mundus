@@ -567,7 +567,32 @@ export function escapeSvgText(value: string): string {
 }
 
 /** Creates a transparent, borderless SVG wordmark texture with one word only. */
-export function createSurnameWordmarkSvg(wordmark: SurnameWordmark): string {
+// Raster resolution per unit of globe radius. A wordmark one radius wide
+// spans roughly 1400 device pixels at the closest zoom on a high-DPI screen.
+const WORDMARK_PIXELS_PER_RADIUS = 1400;
+const WORDMARK_MIN_PIXEL_WIDTH = 96;
+const WORDMARK_MAX_PIXEL_WIDTH = 1024;
+
+/**
+ * Texture width for a wordmark of the given world width. Every country keeps
+ * its wordmark loaded, so small countries get small rasters.
+ */
+export function getSurnameWordmarkTexturePixelWidth(worldWidth: number) {
+  return Math.round(
+    Math.min(
+      WORDMARK_MAX_PIXEL_WIDTH,
+      Math.max(
+        WORDMARK_MIN_PIXEL_WIDTH,
+        worldWidth * WORDMARK_PIXELS_PER_RADIUS,
+      ),
+    ),
+  );
+}
+
+export function createSurnameWordmarkSvg(
+  wordmark: SurnameWordmark,
+  pixelWidth?: number,
+): string {
   const text = escapeSvgText(wordmark.value);
   const metrics = getSurnameWordmarkMetrics(wordmark);
   const fontFamily = metrics.cjk
@@ -577,5 +602,10 @@ export function createSurnameWordmarkSvg(wordmark: SurnameWordmark): string {
   const fontSize = metrics.fontSize;
   const y = metrics.baseline;
   const glyph = `<text x="${x}" y="${y}" text-anchor="middle">${text}</text>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${metrics.width}" height="${WORDMARK_CANVAS_HEIGHT}" viewBox="0 0 ${metrics.width} ${WORDMARK_CANVAS_HEIGHT}"><g fill="#183f40" font-family="${fontFamily}" font-size="${fontSize}" font-weight="600" letter-spacing="${WORDMARK_LETTER_SPACING}">${glyph}</g></svg>`;
+  const rasterWidth = pixelWidth ?? metrics.width;
+  const rasterHeight = Math.max(
+    1,
+    Math.round((rasterWidth * WORDMARK_CANVAS_HEIGHT) / metrics.width),
+  );
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${rasterWidth}" height="${rasterHeight}" viewBox="0 0 ${metrics.width} ${WORDMARK_CANVAS_HEIGHT}"><g fill="#183f40" font-family="${fontFamily}" font-size="${fontSize}" font-weight="600" letter-spacing="${WORDMARK_LETTER_SPACING}">${glyph}</g></svg>`;
 }
