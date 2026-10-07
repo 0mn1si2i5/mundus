@@ -23,7 +23,7 @@ ships:
   country-specific source record: the rank-one surname where a numeric rank
   exists, otherwise a source-listed or manually compiled common surname, each
   labelled as such. Wordmarks can be shown in the local script, a Latin
-  transliteration, or Chinese (reviewed and established forms only). Wordmarks
+  transliteration, or Chinese (forms reviewed by Mundus). Wordmarks
   stay inside their own country and rotate along narrow countries. It uses
   community snapshots, not a unified official global ranking; missing fields
   remain explicit and sources are listed in the result panel.

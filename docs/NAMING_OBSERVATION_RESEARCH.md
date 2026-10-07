@@ -204,10 +204,17 @@ them as they are, with each labelled in the result panel as manually compiled
 and not individually verified; pinning per-record evidence remains a possible
 later improvement.
 
-Chinese presentations are limited to five manually reviewed forms (`CN`,
-`TW`, `KR`, `JP`, `VN`), Han-script source forms, and a small curated table of
-established transliterations. Every other record shows an explicit missing
-state; Chinese map mode then falls back to the source spelling and says so.
+On 2026-10-07 the product owner asked Mundus to supply its own name forms.
+`src/features/surnames/surnameNameForms.ts` is that editorial table, applied
+when the dataset is decoded; the source snapshot is not modified. For every
+record it gives a Chinese form following Xinhua transliteration practice
+(established forms such as 史密斯 or 阿勒萨尼 are kept). Where a country's
+principal language is not written in Latin letters it also gives the
+native-script spelling (for example Батболд, Мельник, แซ่ตั้ง, احمدی),
+and it corrects two plainly wrong snapshot spellings: El Salvador's
+"Andersson" (the record's own second form, Hernández) and Burkina Faso's
+"Quedraogo" (Ouédraogo). Nothing is transliterated or synthesized at
+runtime; a record outside the table would show the missing state.
 The app preserves alternate local and romanized forms within a source group
 and does not infer a statistical year from the 2023 collection snapshot.
 
