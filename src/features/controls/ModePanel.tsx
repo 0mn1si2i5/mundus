@@ -25,6 +25,8 @@ interface ModePanelProps {
   bodyClassName?: string;
   bodyRef?: Ref<HTMLDivElement>;
   onCollapse?: () => void;
+  /** Rendered below the scrolling body, so it never covers body content. */
+  footer?: ReactNode;
   children: ReactNode;
 }
 
@@ -41,6 +43,7 @@ export const ModePanel = forwardRef<ModePanelHandle, ModePanelProps>(
       bodyClassName,
       bodyRef,
       onCollapse,
+      footer,
       children,
     },
     ref,
@@ -118,6 +121,7 @@ export const ModePanel = forwardRef<ModePanelHandle, ModePanelProps>(
             {children}
           </div>
         ) : null}
+        {expanded ? footer : null}
       </section>
     );
   },

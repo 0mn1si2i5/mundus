@@ -54,8 +54,6 @@ describe('surname observation data', () => {
     });
 
     const armenia = decoded.countriesById.get('ne-051')!;
-    expect(armenia.records[0]!.zhDisplay).toBeNull();
-    expect(armenia.records[0]!.zhMethod).toBe('missing');
     expect(armenia.records[0]!.share).toBeNull();
 
     const greece = decoded.countriesById.get('ne-300')!;
@@ -70,9 +68,38 @@ describe('surname observation data', () => {
       count: 251621,
       statYear: 2012,
       share: null,
-      zhDisplay: null,
-      zhMethod: 'missing',
     });
+  });
+
+  it('applies the reviewed local-script, Latin and Chinese forms', () => {
+    const decoded = decodeSurnameDataset(dataset);
+    const first = (countryId: string) =>
+      decoded.countriesById.get(countryId)!.records[0]!;
+    for (const country of decoded.countries) {
+      for (const record of country.records) {
+        expect(record.zhMethod, country.countryId).toBe('reviewed');
+        expect(record.zhDisplay, country.countryId).toMatch(/\p{Script=Han}/u);
+        expect(record.romanizedForms.length, country.countryId).toBeGreaterThan(
+          0,
+        );
+      }
+    }
+    expect(first('ne-496').localForms[0]).toEqual({
+      value: 'Батболд',
+      script: 'Cyrillic',
+    });
+    expect(first('ne-496').zhDisplay).toBe('巴特包勒德');
+    expect(first('ne-764').localForms[0]!.value).toBe('แซ่ตั้ง');
+    expect(first('ne-643').localForms[0]!.value).toBe('Смирнов');
+    expect(first('ne-112').localForms[0]!.value).toBe('Іваноў');
+    // Corrections of plainly wrong snapshot spellings.
+    expect(first('ne-222')).toMatchObject({
+      localForms: [{ value: 'Hernández' }],
+      romanizedForms: ['Hernández'],
+      zhDisplay: '埃尔南德斯',
+    });
+    expect(first('ne-854').romanizedForms[0]).toBe('Ouédraogo');
+    expect(first('ne-116').romanizedForms).toEqual(['Koy']);
   });
 
   it('keeps source-listed coverage separate from explicit rank-one coverage', () => {

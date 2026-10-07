@@ -214,9 +214,9 @@ describe('data registry', () => {
     );
     expect(manifest).toMatchObject({
       derivedAssetSha256:
-        '650958f8f30b9874b78298dbe0aae31a8dfbf6d80bb0aa9c139d85c9b519e225',
-      recordCount: 752,
-      rawBytes: 466239,
+        '97532ab4eab99ebd033be3f69ae2b557781d407a6c6bec6b3481c4f2306b96f9',
+      recordCount: 1111,
+      rawBytes: 690885,
       sourceAssets: {
         '50m': {
           sha256:

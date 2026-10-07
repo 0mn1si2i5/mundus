@@ -36,6 +36,7 @@ import {
   createSurnameWordmarkSvg,
   getSurnameWordmarkHeightRatio,
   getSurnameWordmarkAngularFootprintDegrees,
+  getSurnameWordmarkTexturePixelWidth,
   getSurnameWordmarkWorldWidth,
 } from '../surnames/surnameWordmark';
 import type { SurnameDisplayMode } from '../../state/urlState';
@@ -96,15 +97,7 @@ export function SurnameMapLabelLayer({
 }) {
   const layoutSamples = useRef(new Map<string, SurnameLayoutSample>());
   const [textureCache] = useState<SurnameTextureCache>(() => new Map());
-  const loadedLabelKey = useRef('');
-  const loadableLabelIdsRef = useRef(new Set<string>());
   const preferredLabelIdsRef = useRef<ReadonlySet<string>>(new Set());
-  const [visibleLabelIds, setVisibleLabelIds] = useState<ReadonlySet<string>>(
-    new Set(),
-  );
-  const [loadableLabelIds, setLoadableLabelIds] = useState<ReadonlySet<string>>(
-    new Set(),
-  );
   const previousBlockedEvidence = useRef('');
   const previousStructuralEvidence = useRef('');
   const layoutDirty = useRef(true);
@@ -353,25 +346,6 @@ export function SurnameMapLabelLayer({
       allowCollisions: true,
     });
     preferredLabelIdsRef.current = layout.visibleIds;
-    const nextLoadedLabelKey = [...layout.visibleIds].sort().join('|');
-    if (loadedLabelKey.current !== nextLoadedLabelKey) {
-      loadedLabelKey.current = nextLoadedLabelKey;
-      let loadableChanged = false;
-      for (const id of layout.visibleIds) {
-        if (!loadableLabelIdsRef.current.has(id)) {
-          loadableLabelIdsRef.current.add(id);
-          loadableChanged = true;
-        }
-      }
-      if (loadableChanged)
-        setLoadableLabelIds(new Set(loadableLabelIdsRef.current));
-      invalidate();
-    }
-    setVisibleLabelIds((current) =>
-      setsEqual(current, layout.visibleIds)
-        ? current
-        : new Set(layout.visibleIds),
-    );
     const selectedHiddenReason = selectedCountryId
       ? (layout.hiddenReasons.get(selectedCountryId) ?? null)
       : null;
@@ -427,36 +401,39 @@ export function SurnameMapLabelLayer({
     }
   });
 
+  // Every wordmark stays painted on the globe surface. The globe's own depth
+  // hides the far side, so rotating the globe never waits for a layout pass
+  // to reveal labels; the layout above only feeds selection and diagnostics.
   return (
     <>
-      {entries
-        .filter((entry) => visibleLabelIds.has(entry.label.countryId))
-        .map((entry) => (
-          <SurnameMapLabelSurface
-            key={`${entry.label.countryId}:${displayMode}`}
-            entry={entry}
-            loadTexture={loadableLabelIds.has(entry.label.countryId)}
-            textureCache={textureCache}
-            invalidate={invalidate}
-          />
-        ))}
+      {entries.map((entry) => (
+        <SurnameMapLabelSurface
+          key={`${entry.label.countryId}:${displayMode}`}
+          entry={entry}
+          textureCache={textureCache}
+          invalidate={invalidate}
+        />
+      ))}
     </>
   );
 }
 
 function SurnameMapLabelSurface({
   entry,
-  loadTexture,
   textureCache,
   invalidate,
 }: {
   entry: SurnameLabelEntry;
-  loadTexture: boolean;
   textureCache: SurnameTextureCache;
   invalidate: () => void;
 }) {
   const wordmark = entry.wordmark;
-  const cacheKey = `${entry.label.countryId}:${wordmark.requestedMode}:${wordmark.value}`;
+  const width = getSurnameWordmarkWorldWidth(
+    entry.slot.maxAngularDegrees,
+    wordmark,
+  );
+  const pixelWidth = getSurnameWordmarkTexturePixelWidth(width);
+  const cacheKey = `${entry.label.countryId}:${wordmark.requestedMode}:${wordmark.value}:${pixelWidth}`;
   const placeholder = useMemo(() => {
     const placeholder = new DataTexture(
       new Uint8Array([0, 0, 0, 0]),
@@ -471,11 +448,11 @@ function SurnameMapLabelSurface({
     () => textureCache.get(cacheKey)?.texture ?? placeholder,
   );
   useEffect(() => {
-    if (!wordmark || !loadTexture) return;
+    if (!wordmark) return;
     let textureEntry = textureCache.get(cacheKey);
     if (!textureEntry) {
       const loader = new TextureLoader();
-      const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(createSurnameWordmarkSvg(wordmark))}`;
+      const dataUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(createSurnameWordmarkSvg(wordmark, pixelWidth))}`;
       let resolveReady: (texture: Texture | null) => void = () => undefined;
       const ready = new Promise<Texture | null>((resolve) => {
         resolveReady = resolve;
@@ -510,11 +487,7 @@ function SurnameMapLabelSurface({
     return () => {
       disposed = true;
     };
-  }, [cacheKey, invalidate, loadTexture, textureCache, wordmark]);
-  const width = getSurnameWordmarkWorldWidth(
-    entry.slot.maxAngularDegrees,
-    wordmark,
-  );
+  }, [cacheKey, invalidate, pixelWidth, textureCache, wordmark]);
   const geometry = useMemo(
     () =>
       createSphericalSurnameLabelGeometry({
@@ -534,25 +507,14 @@ function SurnameMapLabelSurface({
 
   if (!wordmark) return null;
 
-  const materialTexture = loadTexture ? texture : placeholder;
-
   return (
     <mesh geometry={geometry} renderOrder={6} raycast={ignoreRaycast}>
       <meshBasicMaterial
-        map={materialTexture}
+        map={texture}
         transparent
         depthWrite={false}
         side={DoubleSide}
       />
     </mesh>
   );
-}
-
-function setsEqual(
-  first: ReadonlySet<string>,
-  second: ReadonlySet<string>,
-): boolean {
-  if (first.size !== second.size) return false;
-  for (const value of first) if (!second.has(value)) return false;
-  return true;
 }

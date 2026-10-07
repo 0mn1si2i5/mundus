@@ -179,6 +179,8 @@ export function DevelopmentControls({
   const [tableOpen, setTableOpen] = useState(false);
   const tableButton = useRef<HTMLButtonElement>(null);
   const panelBody = useRef<HTMLDivElement>(null);
+  const [continuationSlot, setContinuationSlot] =
+    useState<HTMLDivElement | null>(null);
   const copy = COPY[locale];
   const selectedCountryId = selectedCountry?.countryId ?? null;
   const evidence = useMemo(() => {
@@ -221,6 +223,9 @@ export function DevelopmentControls({
         expandLabel={copy.expand}
         collapseLabel={copy.collapse}
         onCollapse={() => setTableOpen(false)}
+        footer={
+          <div ref={setContinuationSlot} className={styles.continuationSlot} />
+        }
       >
         <>
           {loadState.status === 'loading' ? (
@@ -288,6 +293,7 @@ export function DevelopmentControls({
                 history={history}
                 contrast={contrast}
                 scrollBodyRef={panelBody}
+                continuationSlot={continuationSlot}
               />
 
               <div className={styles.legend} aria-label={copy.legend}>
@@ -390,6 +396,7 @@ function DevelopmentEvidenceView({
   history,
   contrast,
   scrollBodyRef,
+  continuationSlot,
 }: {
   locale: Locale;
   country: DevelopmentCountry | null;
@@ -401,6 +408,7 @@ function DevelopmentEvidenceView({
   history: HistoricalIndicatorChange | null;
   contrast: StructuralContrast | null;
   scrollBodyRef: RefObject<HTMLDivElement | null>;
+  continuationSlot: HTMLElement | null;
 }) {
   const copy = COPY[locale];
   const contrastElement = useRef<HTMLElement>(null);
@@ -456,6 +464,23 @@ function DevelopmentEvidenceView({
     };
   }, [contrast, scrollBodyRef]);
 
+  const continuationButton = (
+    <button
+      className={styles.continuation}
+      type="button"
+      data-visible={continuationVisible}
+      aria-hidden={!continuationVisible}
+      tabIndex={continuationVisible ? 0 : -1}
+      onClick={() => {
+        contrastHeading.current?.focus({ preventScroll: true });
+        contrastElement.current?.scrollIntoView({ block: 'start' });
+      }}
+    >
+      {copy.continueToContrast}
+      <span aria-hidden="true">↓</span>
+    </button>
+  );
+
   return (
     <section className={styles.evidence} aria-label={copy.evidence}>
       <output className={styles.visuallyHidden} aria-live="polite">
@@ -501,20 +526,9 @@ function DevelopmentEvidenceView({
         </div>
       </div>
 
-      <button
-        className={styles.continuation}
-        type="button"
-        data-visible={continuationVisible}
-        aria-hidden={!continuationVisible}
-        tabIndex={continuationVisible ? 0 : -1}
-        onClick={() => {
-          contrastHeading.current?.focus({ preventScroll: true });
-          contrastElement.current?.scrollIntoView({ block: 'start' });
-        }}
-      >
-        {copy.continueToContrast}
-        <span aria-hidden="true">↓</span>
-      </button>
+      {continuationSlot
+        ? createPortal(continuationButton, continuationSlot)
+        : null}
 
       {country && contrast ? (
         <article ref={contrastElement} className={styles.contrast}>

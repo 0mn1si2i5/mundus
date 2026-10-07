@@ -114,6 +114,15 @@ export function createViewportDiagnostics() {
       clearCameraDiagnostic(getElement());
     },
 
+    /** Counts user gestures that actually moved the camera. */
+    userCameraMove() {
+      const element = getElement();
+      if (!element) return;
+      element.dataset.cameraUserMoveRevision = incrementRevision(
+        element.dataset.cameraUserMoveRevision,
+      );
+    },
+
     cameraFocusAnimationStart(timestamp: number) {
       const element = getElement();
       clearCameraDiagnostic(element);

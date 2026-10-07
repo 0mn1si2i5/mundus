@@ -128,7 +128,7 @@ painted on the globe at this scale.
   - Africa: one source-listed surname per listed country from a [Pulse Nigeria article](https://www.pulse.ng/story/these-are-the-most-common-surnames-in-every-african-country-2024121210174957832) retrieved 2026-09-23. Only the factual country/surname pairs are used; no rank is asserted.
   - Manual observations: 70 sovereign countries carry one fixed, country-specific surname that cites only the general [Lists of most common surnames](https://en.wikipedia.org/wiki/Lists_of_most_common_surnames) index, without pinned per-record evidence. The product owner accepted shipping them on 2026-10-07 on the condition that each is labelled in the result panel as manually compiled and not individually verified.
 - Transformation: group local and romanized variants by `Name Group`, join ISO2 codes to the globe's Natural Earth numeric ids with a pinned GeoNames `countryInfo.txt` mapping, and keep source-listed and manual records unranked
-- Missing-value policy: count, share, year, transliteration, and Chinese presentation remain null when the source does not provide them. Chinese presentations are limited to five manually reviewed forms (`CN`, `TW`, `KR`, `JP`, `VN`), Han-script source forms, and a small curated table of established transliterations; all other records show an explicit missing state and are never synthesized.
+- Missing-value policy: count, share, year, transliteration, and Chinese presentation remain null when the source does not provide them. Chinese forms, native-script spellings where the principal language is not written in Latin letters, and two spelling corrections come from Mundus's reviewed editorial table (`src/features/surnames/surnameNameForms.ts`), applied on top of the unmodified snapshot; nothing is transliterated or synthesized at runtime.
 - Scope: this is a community-compiled cultural observation, not a unified official global ranking or census comparison
 
 The derived asset has 241 country entries. 198 carry 288 records (74
@@ -152,14 +152,18 @@ Natural Earth anchors; see `src/data/manifests/surname-coverage.json`.
 
 ### Surname wordmark slots
 
-`src/data/generated/surname-label-slots.json` (slot schema 7, 752 candidates,
-466,239 bytes, 55,856 bytes gzip) stores precomputed wordmark centres, sizes
+`src/data/generated/surname-label-slots.json` (slot schema 8, 1,111 candidates,
+690,885 bytes, 78,034 bytes gzip) stores precomputed wordmark centres, sizes
 and rotations derived from the pinned Natural Earth 50m country geometry
 (public domain) by `scripts/build-surname-label-slots.mjs`. Wordmarks stay
 inside their own country (isolated islands may overflow into open ocean
 within an area-scaled cap). They follow the local parallel by default; only
 countries whose interior is at least twice as long as it is wide are offered a
-straight wordmark rotated along that axis. Output numbers are rounded to nine
+straight wordmark rotated along that axis. Each wordmark shape (square, medium,
+long) also gets a centred candidate that trades size against distance from
+the country's label anchor; the runtime applies the same score, so a single
+CJK character such as 王 sits in east-central China rather than on the
+Tibetan plateau. Output numbers are rounded to nine
 significant digits so rebuilds with the pinned Node.js release are byte-stable.
 The 50m geometry and this table load only when the Surname Atlas opens.
 

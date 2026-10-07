@@ -36,6 +36,12 @@ const ROTATION_GAIN = 1.15;
 const SHAPE_GRID = 24;
 const RANK_STEPS = 7;
 const REFINE_ROUNDS = 4;
+// A label belongs near the country's visual centre (its label anchor) unless
+// that costs a lot of size. Centred candidates are scored by
+// fit * (1 - CENTRALITY_WEIGHT * min(1, distanceToAnchor / countryScaleCap)).
+// The runtime chooser in src/features/globe/surnameLabelSlots.ts applies the
+// same score, so keep the two weights equal.
+const CENTRALITY_WEIGHT = 0.4;
 // Rounding keeps the derived asset byte-stable across V8 builds whose libm
 // differs in the last floating-point digit.
 const OUTPUT_DECIMALS = 6;
@@ -117,6 +123,30 @@ for (const countryId of countriesToBuild) {
   const evaluated = horizontal
     .slice(0, countryScaleCap >= 4 ? MAX_EVALUATED_CENTERS : 3)
     .map((entry) => ({ ...entry, rotationDegrees: 0 }));
+  const evaluatedKeys = new Set(
+    evaluated.map(
+      ({ center }) =>
+        `${center.latitude.toFixed(1)}:${center.longitude.toFixed(1)}`,
+    ),
+  );
+  for (const heightRatio of [
+    HEIGHT_RATIOS.square,
+    HEIGHT_RATIOS.medium,
+    HEIGHT_RATIOS.long,
+  ]) {
+    const centred = centredCenter(
+      interiorCenters,
+      countryId,
+      countryScaleCap,
+      anchor.point,
+      heightRatio,
+    );
+    if (!centred) continue;
+    const key = `${centred.center.latitude.toFixed(1)}:${centred.center.longitude.toFixed(1)}`;
+    if (evaluatedKeys.has(key)) continue;
+    evaluatedKeys.add(key);
+    evaluated.push({ ...centred, rotationDegrees: 0 });
+  }
   const bestHorizontalFit = evaluated[0]?.fit ?? 0;
   const shape = principalAxis(country);
   if (shape.elongation >= ELONGATION_THRESHOLD) {
@@ -281,6 +311,7 @@ const output = {
     envelopeSamples: ENVELOPE_SAMPLES.length ** 2,
     countryScaleFormula: 'clamp(1.6 * equivalentRadiusDegrees, 0.35, 20)',
     centerRanking: `all interior grid centers ranked by a ${RANK_STEPS}-step dense long-envelope fit; best center hill-climbed for ${REFINE_ROUNDS} halving rounds`,
+    centredCandidates: `per wordmark shape (square, medium, long): the horizontal center maximizing fit * (1 - ${CENTRALITY_WEIGHT} * min(1, anchor distance / countryScaleCap)), hill-climbed the same way`,
     narrowRotations: NARROW_ROTATIONS,
     narrowRotationRule: `offered when interior-point principal-axis elongation >= ${ELONGATION_THRESHOLD}, within ${ROTATION_AXIS_TOLERANCE}deg of that axis; kept when >= ${ROTATION_GAIN} * the best horizontal fit`,
     numberPrecision: 'toPrecision(9)',
@@ -388,9 +419,17 @@ function rankCenters(
 
 // Moves a center across the country toward a larger long-envelope fit. The
 // search is a deterministic eight-direction hill climb with a halving step.
-function refineCenter(start, countryId, rotationDegrees, countryScaleCap) {
+function refineCenter(
+  start,
+  countryId,
+  rotationDegrees,
+  countryScaleCap,
+  heightRatio = HEIGHT_RATIOS.long,
+  score = (candidate) => candidate.fit,
+) {
   const country = countriesById.get(countryId);
   let best = start;
+  let bestScore = score(start);
   let step = Math.max(0.1, start.fit * 0.5);
   for (let round = 0; round < REFINE_ROUNDS;) {
     let improved = false;
@@ -419,9 +458,12 @@ function refineCenter(start, countryId, rotationDegrees, countryScaleCap) {
         countryId,
         rotationDegrees,
         countryScaleCap,
+        heightRatio,
       );
-      if (fit > best.fit + 1e-6) {
+      const candidateScore = score({ center, fit });
+      if (candidateScore > bestScore + 1e-6) {
         best = { center, fit };
+        bestScore = candidateScore;
         improved = true;
       }
     }
@@ -433,14 +475,65 @@ function refineCenter(start, countryId, rotationDegrees, countryScaleCap) {
   return best;
 }
 
-function coarseOwnFit(center, countryId, rotationDegrees, countryScaleCap) {
+function centralityScore(fit, center, anchor, countryScaleCap) {
+  const distance = (angularDistance(center, anchor) * 180) / Math.PI;
+  return (
+    fit *
+    (1 -
+      CENTRALITY_WEIGHT *
+        Math.min(1, distance / Math.max(countryScaleCap, 1e-6)))
+  );
+}
+
+// The best horizontal center for one wordmark shape, trading size against
+// distance from the label anchor. A single CJK character needs a square
+// slot, which the long-envelope ranking above does not optimize for.
+function centredCenter(
+  centers,
+  countryId,
+  countryScaleCap,
+  anchor,
+  heightRatio,
+) {
+  const score = (candidate) =>
+    centralityScore(candidate.fit, candidate.center, anchor, countryScaleCap);
+  const ranked = centers
+    .map((center) => ({
+      center,
+      fit: coarseOwnFit(center, countryId, 0, countryScaleCap, heightRatio),
+    }))
+    .filter((candidate) => candidate.fit > 0)
+    .sort(
+      (a, b) =>
+        score(b) - score(a) ||
+        a.center.latitude - b.center.latitude ||
+        a.center.longitude - b.center.longitude,
+    );
+  if (!ranked[0]) return null;
+  return refineCenter(
+    ranked[0],
+    countryId,
+    0,
+    countryScaleCap,
+    heightRatio,
+    score,
+  );
+}
+
+function coarseOwnFit(
+  center,
+  countryId,
+  rotationDegrees,
+  countryScaleCap,
+  heightRatio = HEIGHT_RATIOS.long,
+) {
   const base = { center, rotationDegrees };
   const isAllowed = (radius) =>
     isOwnCountrySafe(
       base,
       countryId,
       radius,
-      HEIGHT_RATIOS.long,
+      heightRatio,
       // Thin or ragged countries need the dense envelope: a 3x3 probe
       // overestimates rotated fits that cross narrow necks or bays.
       ENVELOPE_SAMPLES,

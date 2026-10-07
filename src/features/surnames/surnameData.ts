@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SURNAME_NAME_FORMS } from './surnameNameForms';
 
 const localFormSchema = z.object({
   value: z.string().min(1),
@@ -114,6 +115,53 @@ export function getDisplaySurnameRecord(
   return getRankOneSurnameRecord(country) ?? country?.records[0] ?? null;
 }
 
+/** Key of a record in SURNAME_NAME_FORMS. */
+export function surnameNameFormsKey(
+  countryId: string,
+  record: Pick<SurnameRecord, 'romanizedForms' | 'localForms'>,
+): string {
+  return `${countryId}|${record.romanizedForms[0] ?? record.localForms[0]?.value ?? ''}`;
+}
+
+/**
+ * Applies Mundus's reviewed Chinese, local-script and corrected Latin forms
+ * (see surnameNameForms.ts) on top of the community snapshot's record.
+ */
+export function applyReviewedNameForms(
+  countryId: string,
+  record: SurnameRecord,
+): SurnameRecord {
+  const forms = SURNAME_NAME_FORMS[surnameNameFormsKey(countryId, record)];
+  if (!forms) return record;
+  // A corrected Latin form replaces the snapshot's first spelling outright,
+  // including where the same wrong spelling was copied as a local form.
+  const replaced = forms.latin ? record.romanizedForms[0] : undefined;
+  const sourceLocalForms = record.localForms.filter(
+    (form) => form.value !== replaced,
+  );
+  const localForms = forms.local
+    ? [
+        { value: forms.local, script: forms.script ?? null },
+        ...sourceLocalForms.filter((form) => form.value !== forms.local),
+      ]
+    : sourceLocalForms;
+  const romanizedForms = forms.latin
+    ? [
+        forms.latin,
+        ...record.romanizedForms
+          .slice(1)
+          .filter((form) => form !== forms.latin),
+      ]
+    : record.romanizedForms;
+  return {
+    ...record,
+    localForms,
+    romanizedForms,
+    zhDisplay: forms.zh,
+    zhMethod: 'reviewed',
+  };
+}
+
 let datasetPromise: Promise<SurnameDataset> | undefined;
 
 export function decodeSurnameDataset(input: unknown): SurnameDataset {
@@ -124,7 +172,9 @@ export function decodeSurnameDataset(input: unknown): SurnameDataset {
       countryId,
       countryIso2: country.countryIso2,
       sourceUrls: country.sourceUrls,
-      records: country.records,
+      records: country.records.map((record) =>
+        applyReviewedNameForms(countryId, record),
+      ),
       coverageStatus: getSurnameCoverageStatus(country),
     }));
   return {

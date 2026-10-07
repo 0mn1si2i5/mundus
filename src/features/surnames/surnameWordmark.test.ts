@@ -12,7 +12,7 @@ import {
   SURNAME_WORDMARK_CJK_FONT_FAMILY,
   SURNAME_WORDMARK_LATIN_FONT_FAMILY,
 } from './surnameWordmark';
-import type { SurnameRecord } from './surnameData';
+import { decodeSurnameDataset, type SurnameRecord } from './surnameData';
 import { getCountryLabelWorldWidth } from '../globe/countryLabel';
 
 const record: SurnameRecord = {
@@ -33,15 +33,16 @@ describe('surname wordmarks', () => {
       source: 'local',
       fellBack: false,
     });
+    // Without a reviewed or Han form, Chinese mode falls back and says so.
     expect(
       resolveSurnameWordmark(
         { ...record, zhDisplay: null, localForms: [] },
         'chinese',
       ),
     ).toMatchObject({
-      value: '王',
-      source: 'chinese',
-      generated: true,
+      value: 'Wáng',
+      source: 'latin',
+      fellBack: true,
     });
 
     const multiForm = {
@@ -62,35 +63,17 @@ describe('surname wordmarks', () => {
     });
   });
 
-  it('derives usable forms from a source local spelling', () => {
-    const cyrillic = resolveSurnameWordmark(
-      {
-        ...record,
-        localForms: [{ value: 'Смирно́в', script: 'Cyrillic' }],
-        romanizedForms: [],
-        zhDisplay: null,
-      },
-      'latin',
-    );
-    expect(cyrillic).toMatchObject({
-      value: 'Smirnov',
-      source: 'latin',
-      generated: true,
-    });
-
-    const latin = resolveSurnameWordmark(
-      {
-        ...record,
-        localForms: [{ value: 'Rossi', script: 'Latin' }],
-        romanizedForms: [],
-        zhDisplay: null,
-      },
-      'chinese',
-    );
-    expect(latin).toMatchObject({
-      value: '罗西',
-      source: 'chinese',
-      generated: true,
+  it('never transliterates a local spelling at runtime', () => {
+    const cyrillicOnly = {
+      ...record,
+      localForms: [{ value: 'Смирнов', script: 'Cyrillic' }],
+      romanizedForms: [],
+      zhDisplay: null,
+    };
+    expect(resolveSurnameWordmark(cyrillicOnly, 'latin')).toMatchObject({
+      value: 'Смирнов',
+      source: 'local',
+      fellBack: true,
     });
   });
 
@@ -110,20 +93,26 @@ describe('surname wordmarks', () => {
     });
   });
 
-  it('keeps every bundled source record renderable in all three modes', () => {
-    const records: SurnameRecord[] = Object.values(dataset.countries).flatMap(
-      (country) => country.records as readonly SurnameRecord[],
+  it('renders every bundled record in all three modes without falling back', () => {
+    const records = decodeSurnameDataset(dataset).countries.flatMap(
+      (country) => country.records,
     );
     expect(records.length).toBeGreaterThan(0);
     for (const sourceRecord of records) {
       expect(resolveSurnameWordmark(sourceRecord, 'local')).not.toBeNull();
-      expect(resolveSurnameWordmark(sourceRecord, 'latin')).not.toBeNull();
-      expect(resolveSurnameWordmark(sourceRecord, 'chinese')).not.toBeNull();
+      for (const mode of ['latin', 'chinese'] as const) {
+        expect(resolveSurnameWordmark(sourceRecord, mode)).toMatchObject({
+          source: mode,
+          fellBack: false,
+          generated: false,
+        });
+      }
     }
   });
 
-  it('generates reviewed Khmer transliteration and Chinese fallback', () => {
-    const cambodia = dataset.countries['ne-116']!.records[0] as SurnameRecord;
+  it('shows the reviewed Khmer romanization and Chinese form', () => {
+    const cambodia =
+      decodeSurnameDataset(dataset).countriesById.get('ne-116')!.records[0]!;
     expect(resolveSurnameWordmark(cambodia, 'local')).toMatchObject({
       value: 'កូយ',
       source: 'local',
@@ -131,12 +120,12 @@ describe('surname wordmarks', () => {
     expect(resolveSurnameWordmark(cambodia, 'latin')).toMatchObject({
       value: 'Koy',
       source: 'latin',
-      generated: true,
+      generated: false,
     });
     expect(resolveSurnameWordmark(cambodia, 'chinese')).toMatchObject({
       value: '科伊',
       source: 'chinese',
-      generated: true,
+      generated: false,
     });
   });
 
