@@ -431,15 +431,16 @@ pnpm check
 
 1. `pnpm check:source`: Prettier check, ESLint with zero warnings, TypeScript
    project build/typecheck, the pinned Node.js toolchain check, generated-data
-   hash verification, the GeoNames data tests, the Vitest unit/integration
-   suite, and Pages artifact verifier contract tests;
+   hash verification, the GeoNames data tests, the performance-measurement
+   tool tests, the Vitest unit/integration suite, and Pages artifact verifier
+   contract tests;
 2. the focused Natural Earth vector-data tests;
 3. the production build plus release notices;
 4. Pages artifact verification against the generated `dist/`.
 
-The full vector-data suite runs separately as `pnpm test:data-vector-globe:full`
-in CI so `source-quality` can keep its focused vector tests while
-`vector-data-full` provides the complete vector validation. Both checks are
+CI runs `pnpm check:source` as `source-quality` and the full vector-data suite
+(`pnpm test:data-vector-globe:full`, a superset of the focused local subset) as
+`vector-data-full`; the Pages workflow covers the build and artifact steps. Both checks are
 required directly by protected `main`; there is no pass-through aggregator
 job. The literal `/Mundus/`
 mount rehearsal (`pnpm test:release-server`) remains an explicit low-frequency
