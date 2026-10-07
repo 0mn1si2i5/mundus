@@ -16,6 +16,14 @@ canonical-precision location link with explicit privacy disclosure. Historical
 whole-degree links remain readable. This current behavior supersedes, but does
 not rewrite, the precise/approximate V1.0 history below.
 
+The 2026-10 interface redesign replaces the Mode Atlas and mode previews with
+a header observation switcher (Other Side and Surname Atlas as primary modes;
+Development and Sunline under "More"), moves methods, data notices and
+licenses out of the mode panels into one About dialog (plus a desktop credit
+line), and keeps per-record caveats such as the manual-observation label in
+the result panel. Where the frozen history below mentions the Mode Atlas or
+in-panel attribution, read it as this current shell.
+
 Release metadata has a narrower boundary: tag `v1.0.0` and the GitHub Release
 still target `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. No `v1.1.0` tag or GitHub
 Release exists. Do not create or retarget one without separate authorization.

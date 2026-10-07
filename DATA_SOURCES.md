@@ -5,6 +5,11 @@ verifies committed derived snapshots with `pnpm data:verify`. Raw downloads are
 not committed. The code license does not replace any data license described
 below.
 
+Where the product shows attribution: every notice below appears in the
+**About** dialog (header button "关于" / "About"), which is always one click
+away, and the desktop layout keeps a compact credit line ("Data: Natural Earth
+· GeoNames · UNDP · community surname data") on screen with a link to it.
+
 ## Natural Earth countries, 1:110m
 
 - Source: [Natural Earth Admin 0 – Countries](https://www.naturalearthdata.com/downloads/110m-cultural-vectors/110m-admin-0-countries/)
@@ -138,9 +143,9 @@ sovereign countries have a record (71 rank-one, 54 source-listed and 70 manual
 observations). The asset is 93,515 bytes (7,226 bytes gzip), and its source
 hashes and transformation contract are in
 `src/data/manifests/surnames-by-country.json`. Raw CSV, article and
-country-info files are not committed. The result panel exposes the source
-snapshot, coverage note, license and per-country source links in a "Sources
-and license" disclosure.
+country-info files are not committed. The result panel links each country's
+source page and labels manual observations; the About dialog carries the
+dataset notices and licenses.
 
 ### Surname coverage audit
 

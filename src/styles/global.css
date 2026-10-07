@@ -12,7 +12,23 @@
   --color-vermilion: #9b3f2d;
   --color-indigo: #3f526d;
   --color-mint: #32786e;
+  --color-accent-strong: #1f5a60;
+  --color-accent-soft: rgb(230 234 227);
+  --color-on-accent: #fbf8ef;
+  /* Quieter divider for card interiors; --color-line stays for map ink. */
+  --color-hairline: rgb(120 104 80 / 22%);
+  /* Cards float over the globe as translucent parchment. */
+  --color-surface: rgb(251 248 239);
+  --radius-card: 14px;
+  --radius-control: 9px;
+  --radius-pill: 999px;
   --shadow-paper: 0 0.7rem 2rem rgb(68 54 36 / 12%);
+  --shadow-card:
+    0 1px 2px rgb(68 54 36 / 6%), 0 0.8rem 2.2rem rgb(68 54 36 / 10%);
+  --shadow-float:
+    0 1px 3px rgb(68 54 36 / 8%), 0 1.4rem 3.5rem rgb(68 54 36 / 18%);
+  --text-label: 0.66rem;
+  --space-gutter: 2rem;
   /* Parchment halo that keeps exhibit labels legible over the globe. */
   --paper-halo:
     0 0 2px var(--color-bg), 0 0 6px var(--color-bg),
@@ -89,4 +105,10 @@ summary:focus-visible,
 ::selection {
   color: var(--color-bg);
   background: var(--color-accent);
+}
+
+@media (max-width: 760px) {
+  :root {
+    --space-gutter: 1rem;
+  }
 }

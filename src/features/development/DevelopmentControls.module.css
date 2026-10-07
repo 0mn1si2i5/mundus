@@ -57,26 +57,30 @@
   font-size: 0.65rem;
 }
 
+/* Segmented control, matching the surname script toggle. */
 .indicators {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border-radius: var(--radius-control);
+  background: var(--color-control);
+  box-shadow: inset 0 0 0 1px var(--color-hairline);
 }
 
 .indicators button {
-  min-block-size: 2.75rem;
-  padding: 0.4rem;
-  border-right: 0;
-  color: var(--color-muted);
-  font-size: 0.66rem;
-}
-
-.indicators button:last-child {
-  border-right: 1px solid var(--color-line);
+  min-block-size: 2.4rem;
+  padding: 0.3rem;
+  border: 0 !important;
+  border-radius: calc(var(--radius-control) - 2px) !important;
+  color: var(--color-subtle);
+  background: transparent !important;
+  font-size: 0.78rem;
 }
 
 .indicators button[data-active='true'] {
-  color: var(--color-bg);
-  background: var(--color-accent);
+  color: var(--color-on-accent);
+  background: var(--color-accent) !important;
 }
 
 .timeline {
@@ -90,7 +94,7 @@
 .legend > span,
 .tableHeading span {
   color: var(--color-muted);
-  font-size: 0.58rem;
+  font-size: var(--text-label);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -114,13 +118,13 @@
   gap: 0.3rem 1rem;
   margin-top: 0.65rem;
   padding-top: 0.65rem;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-hairline);
 }
 
 .selection strong {
   grid-column: 1;
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 400;
 }
 
@@ -130,14 +134,14 @@
   align-self: end;
   color: var(--color-accent);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   font-style: normal;
 }
 
 .evidence {
   margin-top: 0.65rem;
   padding-top: 0.65rem;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-hairline);
 }
 
 .evidenceGrid {
@@ -155,21 +159,21 @@
 .evidence span,
 .contrast h3 {
   color: var(--color-muted);
-  font-size: 0.62rem;
+  font-size: var(--text-label);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .evidence strong {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.8rem;
   font-weight: 400;
 }
 
 .evidence small,
 .contrast p {
   color: var(--color-muted);
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   line-height: 1.4;
 }
 
@@ -420,12 +424,8 @@
     width: auto;
   }
 
-  .indicators {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .indicators button:nth-child(2) {
-    border-right: 1px solid var(--color-line);
+  .indicators button {
+    min-block-size: 2.75rem;
   }
 
   .footerActions {

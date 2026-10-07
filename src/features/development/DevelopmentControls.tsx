@@ -73,17 +73,8 @@ const COPY = {
     value: '指数',
     delta: '相对中位数',
     historicalChange: '历史端点变化',
-    method: '数据与方法',
-    methodText:
-      'HDI 为 UNDP 报告值；健康、教育和收入按 HDR 2025 技术说明派生。全球中位数对当前年份全部有效国家和地区等权计算。相对中位数与历史变化均为绝对指数点差，历史端点取当前年份之前最早的有效观测。缺失值不插值也不转为零。',
-    contrastMethod:
-      '结构对照要求双方同年四项数据完整且 HDI 差不超过 0.020；选择健康、教育和收入绝对差之和最大的候选，以 ISO3 处理并列。比较不说明典型性或因果。',
-    source: 'UNDP HDR 2025 来源页',
-    license: 'CC BY 3.0 IGO 许可',
-    attribution:
-      '来源：UNDP《2025 人类发展报告》；由 Mundus 转换并标注派生指标。',
     scope: '195 个国家和地区 · 1990–2023',
-    continueToContrast: '继续查看算法结构对照',
+    continueToContrast: '查看结构对照',
     expand: '展开发展控件',
     collapse: '收起发展控件',
     indicators: {
@@ -137,17 +128,8 @@ const COPY = {
     value: 'Index',
     delta: 'From median',
     historicalChange: 'Historical endpoint change',
-    method: 'Data and method',
-    methodText:
-      'HDI is reported by UNDP; health, education and income are derived using HDR 2025 Technical Note 1. The global median gives equal weight to every valid country or territory observation. Median distance and history are absolute index-point differences; history uses the earliest valid observation before the selected year. Missing values are neither imputed nor converted to zero.',
-    contrastMethod:
-      'A contrast requires complete same-year data and an HDI gap no greater than 0.020. The candidate with the largest sum of absolute health, education and income gaps is selected, with ISO3 resolving ties. The comparison does not establish typicality or causation.',
-    source: 'UNDP HDR 2025 source',
-    license: 'CC BY 3.0 IGO license',
-    attribution:
-      'Source: UNDP Human Development Report 2025; transformed by Mundus with derived indicators identified.',
     scope: '195 countries and territories · 1990–2023',
-    continueToContrast: 'Continue to algorithmic structural contrast',
+    continueToContrast: 'See the structural contrast',
     expand: 'Expand development controls',
     collapse: 'Collapse development controls',
     indicators: {
@@ -322,27 +304,6 @@ export function DevelopmentControls({
                 >
                   {tableOpen ? copy.closeTable : copy.table}
                 </button>
-                <details>
-                  <summary>{copy.method}</summary>
-                  <p>{copy.methodText}</p>
-                  <p>{copy.contrastMethod}</p>
-                  <p>{copy.attribution}</p>
-                  <a
-                    href="https://hdr.undp.org/data-center/documentation-and-downloads"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {copy.source} ↗
-                  </a>
-                  {' · '}
-                  <a
-                    href="https://creativecommons.org/licenses/by/3.0/igo/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {copy.license} ↗
-                  </a>
-                </details>
               </div>
             </>
           ) : null}

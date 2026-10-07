@@ -27,7 +27,11 @@ test('serves the release and renders the Exhibit Shell lobby', async ({
   await expect(
     page.getByRole('heading', { name: '选择一种观察' }),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: /地球另一端/ })).toBeVisible();
+  await expect(
+    page
+      .locator('section[aria-labelledby="lobby-heading"]')
+      .getByRole('button', { name: /地球另一端/ }),
+  ).toBeVisible();
   await expect(page.locator('canvas')).toBeVisible();
   const completedFrameSample = page.locator('output[data-phase="complete"]');
   await expect(completedFrameSample).toContainText('fps');

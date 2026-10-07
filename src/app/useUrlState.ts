@@ -51,7 +51,6 @@ export function useUrlState() {
       applyingHistory = true;
       useAppStore.setState({
         ...parseUrlState(window.location.search),
-        previewMode: null,
         navigationNotice: parseNavigationNotice(window.location.search),
         hoveredCountry: null,
         cameraFocusIntent: { side: 'origin', target: null },

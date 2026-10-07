@@ -26,7 +26,8 @@ ships:
   transliteration, or Chinese (forms reviewed by Mundus). Wordmarks
   stay inside their own country and rotate along narrow countries. It uses
   community snapshots, not a unified official global ranking; missing fields
-  remain explicit and sources are listed in the result panel.
+  remain explicit; each country links its source, and dataset licenses are in
+  the About dialog.
 
 The verified public site is <https://0mn1si2i5.github.io/Mundus/>. The V1.1
 product implementation entered protected `main` at

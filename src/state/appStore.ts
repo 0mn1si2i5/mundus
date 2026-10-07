@@ -22,7 +22,6 @@ export interface CameraFocusIntent {
 interface AppState {
   locale: Locale;
   activeMode: ModeId | null;
-  previewMode: ModeId | null;
   navigationNotice: NavigationNotice | null;
   point: GeoPoint;
   developmentIndicator: DevelopmentIndicator;
@@ -38,9 +37,6 @@ interface AppState {
   hasInteracted: boolean;
   hasMeaningfulInteraction: boolean;
   selectMode: (mode: ModeId) => void;
-  openModePreview: (mode: ModeId) => void;
-  closeModePreview: () => void;
-  enterPreviewMode: () => void;
   exitMode: () => void;
   dismissNavigationNotice: () => void;
   selectPoint: (point: GeoPoint) => void;
@@ -80,7 +76,6 @@ export const useAppStore = create<AppState>((set) => ({
   ...initialUrlState,
   surnameDisplayMode:
     initialUrlState.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
-  previewMode: null,
   navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
   antipodeCountry: null,
@@ -93,22 +88,6 @@ export const useAppStore = create<AppState>((set) => ({
     set(() => {
       return {
         activeMode,
-        previewMode: null,
-        hoveredCountry: null,
-        cameraFocusIntent: { side: 'free', target: null },
-        sunlinePlaying: false,
-      };
-    }),
-  openModePreview: (previewMode) => set({ previewMode }),
-  closeModePreview: () => set({ previewMode: null }),
-  enterPreviewMode: () =>
-    set((state) => {
-      if (state.previewMode === null) {
-        return state;
-      }
-      return {
-        activeMode: state.previewMode,
-        previewMode: null,
         hoveredCountry: null,
         cameraFocusIntent: { side: 'free', target: null },
         sunlinePlaying: false,
@@ -117,7 +96,6 @@ export const useAppStore = create<AppState>((set) => ({
   exitMode: () =>
     set({
       activeMode: null,
-      previewMode: null,
       hoveredCountry: null,
       sunlinePlaying: false,
     }),

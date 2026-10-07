@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, useState } from 'react';
+import { Dialog } from '../controls/Dialog';
 import type { Locale } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
 import { createShareUrl } from './shareUrl';
@@ -60,8 +60,6 @@ export function ShareDialog({
     };
   });
   const [status, setStatus] = useState('');
-  const dialog = useRef<HTMLElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
   const linkField = useRef<HTMLInputElement>(null);
   const copy = COPY[locale];
   const description =
@@ -70,41 +68,6 @@ export function ShareDialog({
       : snapshot.activeMode === 'sunline'
         ? copy.sunlineDescription
         : copy.description;
-
-  useEffect(() => {
-    const restoreFocus = document.activeElement;
-    const root = document.getElementById('root');
-    root?.setAttribute('inert', '');
-    closeButton.current?.focus();
-    return () => {
-      root?.removeAttribute('inert');
-      if (restoreFocus instanceof HTMLElement) restoreFocus.focus();
-    };
-  }, []);
-
-  function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      onClose();
-      return;
-    }
-    if (event.key !== 'Tab') return;
-
-    const controls = dialog.current?.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    );
-    const first = controls?.[0];
-    const last = controls?.[controls.length - 1];
-    if (!first || !last) return;
-
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  }
 
   function selectLink() {
     linkField.current?.select();
@@ -121,52 +84,30 @@ export function ShareDialog({
     }
   }
 
-  return createPortal(
-    <div
-      className={styles.backdrop}
-      onMouseDown={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
+  return (
+    <Dialog
+      titleId="share-title"
+      descriptionId="share-description"
+      eyebrow="URL / POSITION"
+      title={copy.title}
+      description={description}
+      closeLabel={copy.close}
+      onClose={onClose}
     >
-      <section
-        ref={dialog}
-        className={styles.dialog}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="share-title"
-        aria-describedby="share-description"
-        onMouseDown={(event) => event.stopPropagation()}
-        onKeyDown={handleKeyDown}
-      >
-        <button
-          ref={closeButton}
-          className={styles.close}
-          type="button"
-          onClick={onClose}
-          aria-label={copy.close}
-        >
-          ×
+      <input
+        ref={linkField}
+        className={styles.linkField}
+        aria-label={copy.fieldLabel}
+        readOnly
+        value={snapshot.url}
+        onFocus={selectLink}
+      />
+      <div className={styles.actions}>
+        <button type="button" onClick={copyLink}>
+          {copy.copy}
         </button>
-        <p>URL / POSITION</p>
-        <h2 id="share-title">{copy.title}</h2>
-        <p id="share-description">{description}</p>
-        <input
-          ref={linkField}
-          className={styles.linkField}
-          aria-label={copy.fieldLabel}
-          readOnly
-          value={snapshot.url}
-          onFocus={selectLink}
-        />
-        <div className={styles.actions}>
-          <button type="button" onClick={copyLink}>
-            {copy.copy}
-          </button>
-        </div>
-        <output aria-live="polite">{status}</output>
-      </section>
-    </div>,
-    document.body,
+      </div>
+      <output aria-live="polite">{status}</output>
+    </Dialog>
   );
 }

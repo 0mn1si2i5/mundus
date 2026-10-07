@@ -15,7 +15,7 @@ import styles from './CityAutocomplete.module.css';
 const COPY = {
   en: {
     label: 'Search major cities',
-    placeholder: 'City or country',
+    placeholder: 'Search a city or country',
     loading: 'Loading major cities…',
     minimum: 'Type two letters or one Chinese character.',
     none: 'No matching cities.',
@@ -27,7 +27,7 @@ const COPY = {
   },
   zh: {
     label: '搜索全球主要城市',
-    placeholder: '城市或国家',
+    placeholder: '搜索城市或国家',
     loading: '正在载入主要城市…',
     minimum: '请输入两个字母或一个汉字。',
     none: '没有匹配的城市。',
@@ -137,7 +137,8 @@ export function CityAutocomplete({
     }
   }
 
-  let status: string = copy.minimum;
+  // Stay quiet until the user starts typing.
+  let status: string = query.trim() ? copy.minimum : '';
   if (loadState.status === 'loading') status = copy.loading;
   else if (loadState.status === 'ready' && query)
     status = results.length ? copy.count(results.length) : copy.none;
