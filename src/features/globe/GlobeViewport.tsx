@@ -177,6 +177,10 @@ export function GlobeViewport({
     // Cancel programmatic focus at the first user gesture, before
     // OrbitControls receives its own start event. This prevents a disabled
     // controls instance from letting focus animation win the first drag.
+    // It runs in the capture phase: OrbitControls listens on the canvas
+    // itself, which a bubbling React handler would only reach afterwards,
+    // so the pointerdown that starts a drag during a focus animation was
+    // dropped by the still-disabled controls.
     cancelCameraGesture.current?.();
     pointerActiveRef.current = true;
     pointerStarts.set(event.pointerId, {
@@ -465,7 +469,7 @@ export function GlobeViewport({
       }
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      onPointerDown={handlePointerDown}
+      onPointerDownCapture={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}

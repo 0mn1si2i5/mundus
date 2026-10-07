@@ -426,6 +426,29 @@ test('Surname Atlas displays source-listed observations without rank-one claims'
   );
 });
 
+test('a drag during the selection focus animation still turns the globe', async ({
+  page,
+}) => {
+  await page.goto('./?mode=antipodes&point=31.2304%2C121.4737&v=2');
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-vector-state', 'ready', {
+    timeout: 10_000,
+  });
+  const center = await globeCenter(page);
+  // Selecting a point starts an animated camera focus that disables
+  // OrbitControls until the user takes over.
+  await page.mouse.click(center.x + 70, center.y + 50);
+  await page.mouse.move(center.x - 90, center.y);
+  await page.mouse.down();
+  await page.mouse.move(center.x + 90, center.y + 10, { steps: 8 });
+  await page.mouse.up();
+  await expect(globe).toHaveAttribute('data-camera-user-move-revision', '1');
+  await expect(globe).not.toHaveAttribute(
+    'data-camera-focus-state',
+    'complete',
+  );
+});
+
 test('vector drag shell becomes transparent while the hit sphere remains active', async ({
   page,
 }, testInfo) => {

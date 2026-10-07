@@ -170,6 +170,7 @@ export function GlobeScene({
 }: GlobeSceneProps) {
   const {
     cameraFocusStart: onCameraFocusStart,
+    userCameraMove: onUserCameraMove,
     cameraFocusAnimationStart: onCameraFocusAnimationStart,
     cameraFocusComplete: onCameraFocusComplete,
     marker: onMarkerDiagnostic,
@@ -1000,6 +1001,7 @@ export function GlobeScene({
     ) {
       markMeaningfulInteraction();
       setCameraFocusFree();
+      onUserCameraMove();
     }
     manualCameraInteraction.current = false;
     cameraFocusGeneration.current += 1;
@@ -1017,6 +1019,7 @@ export function GlobeScene({
     clearCameraTarget,
     invalidate,
     markMeaningfulInteraction,
+    onUserCameraMove,
     setCameraFocusFree,
   ]);
 
