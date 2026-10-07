@@ -11,7 +11,7 @@ import { chromium, devices } from '@playwright/test';
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const dist = join(root, 'dist');
 const mountPath = '/mundus/';
-const scenarioIdentity = 'mundus-v1.1-publication-candidate-v3';
+const scenarioIdentity = 'mundus-v1.1-publication-candidate-v4';
 
 export function median(values) {
   if (!values.length)
@@ -24,7 +24,7 @@ export function median(values) {
 }
 
 export function validateMeasurementResult(result) {
-  if (result.schemaVersion !== 3) {
+  if (result.schemaVersion !== 4) {
     throw new Error(`Unexpected schema version: ${result.schemaVersion}`);
   }
   if (result.scenarioIdentity !== scenarioIdentity) {
@@ -515,7 +515,7 @@ async function main() {
       },
     };
     const output = {
-      schemaVersion: 3,
+      schemaVersion: 4,
       executionIdentity: randomUUID(),
       scenarioIdentity,
       measuredAt: new Date().toISOString(),

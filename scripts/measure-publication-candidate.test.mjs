@@ -40,9 +40,9 @@ function sample(detail) {
 
 function result() {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     executionIdentity: 'execution-one',
-    scenarioIdentity: 'mundus-v1.1-publication-candidate-v3',
+    scenarioIdentity: 'mundus-v1.1-publication-candidate-v4',
     gitHead: '79c0f67d0595c4c83e07016f147af80c0ff76a45',
     environment: {
       playwrightChromium: '149.0.7827.55',
@@ -221,16 +221,31 @@ test('repeatability validation rejects the same execution identity', () => {
   );
 });
 
+test('measurement validation rejects archived v3 results that still measured Development', () => {
+  const archived = result();
+  archived.schemaVersion = 3;
+  assert.throws(
+    () => validateMeasurementResult(archived),
+    /Unexpected schema version: 3/u,
+  );
+  archived.schemaVersion = 4;
+  archived.scenarioIdentity = 'mundus-v1.1-publication-candidate-v3';
+  assert.throws(
+    () => validateMeasurementResult(archived),
+    /Unexpected scenario identity/u,
+  );
+});
+
 test('repeatability validation rejects schema and build identity changes', () => {
   const first = result();
   const second = structuredClone(first);
   second.executionIdentity = 'execution-two';
-  second.schemaVersion = 4;
+  second.schemaVersion = 5;
   assert.throws(
     () => validateRepeatability(first, second),
     /Unexpected schema version/u,
   );
-  second.schemaVersion = 3;
+  second.schemaVersion = 4;
   second.buildIdentity.assets[0].sha256 = 'two';
   assert.throws(
     () => validateRepeatability(first, second),
