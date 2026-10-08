@@ -1,0 +1,46 @@
+.slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 0.7rem;
+  align-items: center;
+}
+.slider span {
+  color: var(--color-muted);
+  font-size: var(--text-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.slider strong {
+  font-family: var(--font-mono);
+  font-weight: 400;
+}
+.slider input {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--color-brass);
+}
+.heading {
+  margin: 1rem 0 0.45rem;
+  color: var(--color-muted);
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding-left: 1.5rem;
+}
+.list button {
+  width: 100%;
+  min-block-size: 2.5rem;
+  padding: 0.3rem 0.45rem;
+  text-align: left;
+}
+@media (max-width: 760px) {
+  .list button {
+    min-block-size: 2.75rem;
+  }
+}

@@ -36,6 +36,10 @@ const COPY = {
         '日照线',
         '太阳位置与晨昏线采用 NOAA/Meeus 近似算法，仅供教育参考，不能用于导航、航空或法定时间。',
       ],
+      [
+        '城市孤立度',
+        '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级孤立半径是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，半径呈阶梯式增长。相邻城市可能被合并为一个城市中心；结果只反映几何与人口规模，不代表交通或经济可达性。',
+      ],
     ] as const,
     credits: [
       {
@@ -83,6 +87,19 @@ const COPY = {
           },
         ],
       },
+      {
+        name: 'GHSL Urban Centre Database',
+        use: '城市孤立度',
+        notice:
+          'GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset], DOI 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd · CC BY 4.0',
+        links: [
+          {
+            label: '数据集页面',
+            href: 'https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
     ] satisfies readonly Credit[],
   },
   en: {
@@ -108,6 +125,10 @@ const COPY = {
       [
         'Sunline',
         'Solar position and the terminator use NOAA/Meeus-style approximations, for education only — not for navigation, aviation or legal time.',
+      ],
+      [
+        'Urban Isolation',
+        'Uses 2025 populations from the GHSL Urban Centre Database (R2024A). The hierarchical isolation radius is the great-circle distance from a city of at least one million people to the nearest urban centre with at least α times its population; a higher α raises the bar, and the radius grows in steps. Neighbouring cities can merge into one urban centre; results reflect geometry and size only, not travel or economic access.',
       ],
     ] as const,
     credits: [
@@ -155,6 +176,19 @@ const COPY = {
             label: 'Pulse Nigeria',
             href: 'https://www.pulse.ng/story/these-are-the-most-common-surnames-in-every-african-country-2024121210174957832',
           },
+        ],
+      },
+      {
+        name: 'GHSL Urban Centre Database',
+        use: 'Urban Isolation',
+        notice:
+          'GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset], DOI 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd · CC BY 4.0',
+        links: [
+          {
+            label: 'Dataset page',
+            href: 'https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
         ],
       },
     ] satisfies readonly Credit[],

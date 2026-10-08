@@ -22,6 +22,20 @@ import {
 } from '../surnames/surnameData';
 import type { SurnameDisplayMode } from '../../state/urlState';
 import { DEFAULT_SURNAME_DISPLAY_MODE } from '../../state/urlState';
+import {
+  useIsolationDataset,
+  type IsolationLoadState,
+} from '../isolation/useIsolationDataset';
+import {
+  nearestFocalCity,
+  type IsolationDataset,
+} from '../isolation/isolationData';
+import {
+  competitorAt,
+  rankingAt,
+  type RecordHolder,
+} from '../isolation/isolationMetric';
+import { greatCircleArcPoints } from '../isolation/isolationGeometry';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -29,6 +43,18 @@ export interface GlobePresentation {
   antipodeRelation: AntipodeRelation | null;
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
+  isolation: IsolationGlobePresentation | null;
+}
+
+export interface IsolationGlobePresentation {
+  alpha: number;
+  focalPoints: readonly GeoPoint[];
+  city: GeoPoint;
+  competitor: GeoPoint | null;
+  radiusKm: number | null;
+  cityId: string;
+  competitorId: string;
+  arcStatus: 'drawn' | 'none' | 'antipodal';
 }
 
 export type AntipodeRelationLoadState = 'idle' | 'loading' | 'error' | 'ready';
@@ -57,6 +83,21 @@ export type ModePresentation =
       surnameDisplayMode: SurnameDisplayMode;
       selectedCountry: CountryRef | null;
       surnameData: SurnameLoadState;
+    }
+  | {
+      id: 'isolation';
+      alpha: number;
+      dataset: IsolationLoadState;
+      selection: {
+        cityIndex: number;
+        distanceFromPointKm: number;
+        competitor: RecordHolder | null;
+        rank: { position: number; total: number } | null;
+      } | null;
+      ranking: readonly {
+        city: IsolationDataset['cities'][number];
+        distanceKm: number;
+      }[];
     };
 
 /**
@@ -75,6 +116,8 @@ export function useModePresentation(): ModePresentation | null {
     DEFAULT_SURNAME_DISPLAY_MODE;
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
   const surnameData = useSurnameDataset(activeMode === 'surnames');
+  const isolationData = useIsolationDataset(activeMode === 'isolation');
+  const isolationAlpha = useAppStore((state) => state.isolationAlpha);
 
   const relation = useMemo(
     () =>
@@ -95,6 +138,45 @@ export function useModePresentation(): ModePresentation | null {
       events: solarEventsUtc(point, sunlineTimeMs),
     };
   }, [activeMode, point, sunlineTimeMs]);
+  const isolation = useMemo(() => {
+    if (activeMode !== 'isolation' || isolationData.status !== 'ready')
+      return null;
+    const dataset = isolationData.data;
+    const nearest = nearestFocalCity(point, dataset);
+    if (!nearest) return null;
+    const city = dataset.cities[nearest.index];
+    if (!city) return null;
+    const metricCities = dataset.cities.map((item) => ({
+      id: item.id,
+      ...item.point,
+      population: item.population,
+    }));
+    const competitor = competitorAt(
+      dataset.holders[nearest.index] ?? [],
+      metricCities.map((item) => item.population),
+      city.population,
+      isolationAlpha,
+    );
+    const ranking = rankingAt(
+      dataset.focalIndices,
+      metricCities,
+      dataset.holders,
+      isolationAlpha,
+    ).map((entry) => ({
+      city: dataset.cities[entry.index]!,
+      distanceKm: entry.distanceKm,
+    }));
+    const rankIndex = ranking.findIndex((entry) => entry.city.id === city.id);
+    return {
+      nearest,
+      competitor,
+      ranking,
+      rank:
+        rankIndex >= 0
+          ? { position: rankIndex + 1, total: ranking.length }
+          : null,
+    };
+  }, [activeMode, isolationAlpha, isolationData, point]);
   switch (activeMode) {
     case null:
       return null;
@@ -123,6 +205,21 @@ export function useModePresentation(): ModePresentation | null {
         surnameData,
         surnameDisplayMode,
       };
+    case 'isolation':
+      return {
+        id: activeMode,
+        alpha: isolationAlpha,
+        dataset: isolationData,
+        selection: isolation
+          ? {
+              cityIndex: isolation.nearest.index,
+              distanceFromPointKm: isolation.nearest.distanceKm,
+              competitor: isolation.competitor,
+              rank: isolation.rank,
+            }
+          : null,
+        ranking: isolation?.ranking ?? [],
+      };
     default:
       return assertNever(activeMode);
   }
@@ -142,6 +239,8 @@ export function useGlobePresentation(): GlobePresentation {
   const surnameDisplayMode =
     useAppStore((state) => state.surnameDisplayMode) ??
     DEFAULT_SURNAME_DISPLAY_MODE;
+  const isolationData = useIsolationDataset(activeMode === 'isolation');
+  const isolationAlpha = useAppStore((state) => state.isolationAlpha);
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
@@ -182,12 +281,53 @@ export function useGlobePresentation(): GlobePresentation {
     }
   }, [activeMode, cityIndex, point]);
 
+  const isolation = useMemo<IsolationGlobePresentation | null>(() => {
+    if (activeMode !== 'isolation' || isolationData.status !== 'ready')
+      return null;
+    try {
+      const dataset = isolationData.data;
+      const nearest = nearestFocalCity(point, dataset);
+      if (!nearest) return null;
+      const city = dataset.cities[nearest.index];
+      if (!city) return null;
+      const competitor = competitorAt(
+        dataset.holders[nearest.index] ?? [],
+        dataset.cities.map((item) => item.population),
+        city.population,
+        isolationAlpha,
+      );
+      const competitorCity = competitor
+        ? dataset.cities[competitor.index]
+        : null;
+      const arcStatus = !competitorCity
+        ? 'none'
+        : greatCircleArcPoints(city.point, competitorCity.point).length > 1
+          ? 'drawn'
+          : 'antipodal';
+      return {
+        alpha: isolationAlpha,
+        focalPoints: dataset.focalIndices.map(
+          (index) => dataset.cities[index]!.point,
+        ),
+        city: city.point,
+        competitor: competitor ? dataset.cities[competitor.index]!.point : null,
+        radiusKm: competitor?.distanceKm ?? null,
+        cityId: city.id,
+        competitorId: competitorCity?.id ?? '',
+        arcStatus,
+      };
+    } catch {
+      return null;
+    }
+  }, [activeMode, isolationAlpha, isolationData, point]);
+
   return {
     showAntipodes: activeMode === 'antipodes',
     sunline,
     antipodeRelation,
     surnameMapLabels,
     surnameDisplayMode,
+    isolation,
   };
 }
 
