@@ -253,7 +253,10 @@ test('global regions keep controls reachable in short desktop and phone layouts'
   ]) {
     await page.setViewportSize(viewport);
     const expand = page.getByRole('button', { name: '展开城市邻近性控件' });
-    if (await expand.isVisible()) await expand.click();
+    if (viewport.width <= 760) {
+      await expect(expand).toBeVisible();
+      await expand.click();
+    }
     const panel = page.locator('[data-mode-panel="isolation-controls"]');
     const slider = panel.getByRole('slider');
     await expect(slider).toBeVisible();
