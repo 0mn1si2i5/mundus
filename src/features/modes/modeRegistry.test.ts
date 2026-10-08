@@ -17,7 +17,7 @@ describe('mode registry', () => {
   });
 
   it('provides one explicit product order with unique identifiers', () => {
-    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2]);
+    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3]);
     expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
@@ -28,6 +28,10 @@ describe('mode registry', () => {
     ]);
     expect(MODE_DEFINITIONS.sunline.titlePhrases.zh).toEqual(['日照线']);
     expect(MODE_DEFINITIONS.surnames.titlePhrases.zh).toEqual(['姓氏观察']);
+    expect(MODE_DEFINITIONS.isolation.titlePhrases.zh).toEqual([
+      '城市',
+      '孤立度',
+    ]);
     for (const mode of Object.values(MODE_DEFINITIONS)) {
       expect(mode.titlePhrases.zh.join('')).toBe(mode.title.zh);
     }
@@ -38,7 +42,10 @@ describe('mode registry', () => {
       'antipodes',
       'surnames',
     ]);
-    expect(modesInTier('more').map((mode) => mode.id)).toEqual(['sunline']);
+    expect(modesInTier('more').map((mode) => mode.id)).toEqual([
+      'sunline',
+      'isolation',
+    ]);
   });
 
   it('gives every mode a bilingual question and summary', () => {

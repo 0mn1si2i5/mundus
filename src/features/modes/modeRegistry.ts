@@ -1,8 +1,14 @@
 import type { Locale } from '../../i18n/messages';
 import { z } from 'zod';
 import { SUNLINE_MAX_TIME_MS, SUNLINE_MIN_TIME_MS } from '../sunline/solar';
+import { ALPHA_MAX, ALPHA_MIN } from '../isolation/isolationMetric';
 
-export const MODE_ORDER = ['antipodes', 'surnames', 'sunline'] as const;
+export const MODE_ORDER = [
+  'antipodes',
+  'surnames',
+  'sunline',
+  'isolation',
+] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
 
 /**
@@ -99,6 +105,30 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         .min(SUNLINE_MIN_TIME_MS)
         .max(SUNLINE_MAX_TIME_MS),
       clockMode: z.enum(['live', 'fixed']),
+    }),
+  },
+  isolation: {
+    id: 'isolation',
+    version: 1,
+    tier: 'more',
+    title: { zh: '城市孤立度', en: 'Urban Isolation' },
+    titlePhrases: { zh: ['城市', '孤立度'] },
+    question: {
+      zh: '从一座大城市出发，要走多远才会遇到一座“足够大”的城市？',
+      en: 'How far must you travel from a large city before you meet one that is large enough?',
+    },
+    summary: {
+      zh: '拖动 α 改变“足够大”的定义，看孤立半径如何跳变。',
+      en: 'Move α to change what counts as large enough, and watch the isolation radius jump.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['natural-earth-countries-110m', 'urban-isolation'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
+      alpha: z.number().min(ALPHA_MIN).max(ALPHA_MAX),
     }),
   },
 };

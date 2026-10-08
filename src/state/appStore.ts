@@ -12,6 +12,10 @@ import {
 } from './urlState';
 import type { SunlineClockMode } from './urlState';
 import { clampSunlineTime } from '../features/sunline/solar';
+import {
+  ALPHA_DEFAULT,
+  clampAlpha,
+} from '../features/isolation/isolationMetric';
 
 export interface CameraFocusIntent {
   side: 'origin' | 'antipode' | 'free' | 'major-city';
@@ -27,6 +31,7 @@ interface AppState {
   sunlineClockMode: SunlineClockMode;
   sunlinePlaying: boolean;
   surnameDisplayMode: SurnameDisplayMode;
+  isolationAlpha: number;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -45,6 +50,7 @@ interface AppState {
   setSurnameDisplayMode: (
     mode: import('./urlState').SurnameDisplayMode,
   ) => void;
+  setIsolationAlpha: (value: number) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
   setAntipodeCountry: (country: CountryRef | null) => void;
@@ -71,6 +77,7 @@ export const useAppStore = create<AppState>((set) => ({
   ...initialUrlState,
   surnameDisplayMode:
     initialUrlState.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
+  isolationAlpha: initialUrlState.isolationAlpha ?? ALPHA_DEFAULT,
   navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
   antipodeCountry: null,
@@ -133,6 +140,7 @@ export const useAppStore = create<AppState>((set) => ({
       sunlineClockMode: sunlinePlaying ? 'fixed' : state.sunlineClockMode,
     })),
   setSurnameDisplayMode: (surnameDisplayMode) => set({ surnameDisplayMode }),
+  setIsolationAlpha: (value) => set({ isolationAlpha: clampAlpha(value) }),
   returnSunlineToLive: (timestampMs = Date.now()) =>
     set({
       sunlineTimeMs: clampSunlineTime(timestampMs),

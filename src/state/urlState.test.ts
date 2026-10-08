@@ -7,6 +7,7 @@ import {
   serializeUrlState,
   type ShareableState,
 } from './urlState';
+import { ALPHA_DEFAULT } from '../features/isolation/isolationMetric';
 
 describe('URL state codec', () => {
   const nowMs = Date.parse('2026-07-14T09:37:00Z');
@@ -20,6 +21,7 @@ describe('URL state codec', () => {
     point: DEFAULT_POINT,
     ...sunlineDefaults,
     surnameDisplayMode: DEFAULT_SURNAME_DISPLAY_MODE,
+    isolationAlpha: ALPHA_DEFAULT,
   };
 
   describe('parseUrlState', () => {
@@ -65,6 +67,39 @@ describe('URL state codec', () => {
       });
       expect(parseUrlState('?v=2&mode=surnames', nowMs)).toMatchObject({
         activeMode: 'surnames',
+      });
+      expect(
+        parseUrlState('?v=2&mode=isolation&alpha=0.37', nowMs),
+      ).toMatchObject({
+        activeMode: 'isolation',
+        isolationAlpha: 0.37,
+      });
+    });
+
+    it('rounds valid isolation alpha values and defaults invalid or out-of-range values', () => {
+      expect(
+        parseUrlState('?v=2&mode=isolation&alpha=0.374', nowMs),
+      ).toMatchObject({ isolationAlpha: 0.37 });
+      expect(parseUrlState('?v=2&mode=isolation&alpha=1', nowMs)).toMatchObject(
+        { isolationAlpha: 1 },
+      );
+
+      for (const raw of ['5', '0.05', '0.099', '-1', 'abc', '']) {
+        expect(
+          parseUrlState(
+            `?v=2&mode=isolation&alpha=${encodeURIComponent(raw)}`,
+            nowMs,
+          ),
+        ).toMatchObject({ isolationAlpha: ALPHA_DEFAULT });
+      }
+    });
+
+    it('ignores isolation alpha outside the isolation mode', () => {
+      expect(
+        parseUrlState('?v=2&mode=sunline&alpha=0.37', nowMs),
+      ).toMatchObject({
+        activeMode: 'sunline',
+        isolationAlpha: ALPHA_DEFAULT,
       });
     });
 
@@ -158,6 +193,23 @@ describe('URL state codec', () => {
       ).toBe('?mode=sunline&time=2026-07-14T09%3A37Z&v=2');
     });
 
+    it('serializes isolation alpha only when it differs from the default', () => {
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'isolation',
+          isolationAlpha: ALPHA_DEFAULT,
+        }),
+      ).toBe('?mode=isolation&v=2');
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'isolation',
+          isolationAlpha: 0.37,
+        }),
+      ).toBe('?mode=isolation&alpha=0.37&v=2');
+    });
+
     it('serializes non-default surname display mode and omits the local default', () => {
       expect(
         serializeUrlState({
@@ -198,6 +250,21 @@ describe('URL state codec', () => {
         point: { latitude: 12.3457, longitude: -98.7654 },
         ...sunlineDefaults,
         surnameDisplayMode: 'local',
+        isolationAlpha: ALPHA_DEFAULT,
+      });
+    });
+
+    it('round-trips an isolation alpha through V2', () => {
+      const link = serializeUrlState({
+        ...lobby,
+        activeMode: 'isolation',
+        isolationAlpha: 0.37,
+      });
+      expect(link).toBe('?mode=isolation&alpha=0.37&v=2');
+      expect(parseUrlState(link, nowMs)).toEqual({
+        ...lobby,
+        activeMode: 'isolation',
+        isolationAlpha: 0.37,
       });
     });
 

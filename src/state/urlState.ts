@@ -9,6 +9,10 @@ import {
   formatSunlineTime,
   parseSunlineTime,
 } from '../features/sunline/solar';
+import {
+  ALPHA_DEFAULT,
+  parseAlphaParam,
+} from '../features/isolation/isolationMetric';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
@@ -31,11 +35,13 @@ export interface ShareableState {
   sunlineTimeMs: number;
   sunlineClockMode: SunlineClockMode;
   surnameDisplayMode: SurnameDisplayMode;
+  /** Optional for callers that construct legacy share state literals. */
+  isolationAlpha?: number;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
 
-const modeSchema = z.enum(['antipodes', 'sunline', 'surnames']);
+const modeSchema = z.enum(['antipodes', 'sunline', 'surnames', 'isolation']);
 /** Observations that once shipped; their links open the lobby with a notice. */
 const RETIRED_MODES: ReadonlySet<string> = new Set(['development']);
 const surnameDisplayModeSchema = z.enum(['local', 'latin', 'chinese']);
@@ -88,6 +94,10 @@ export function parseUrlState(
     activeMode === 'sunline' && parsedSunlineTime
       ? parseSunlineTime(parsedSunlineTime)
       : null;
+  const isolationAlpha =
+    activeMode === 'isolation'
+      ? parseAlphaParam(params.get('alpha'))
+      : ALPHA_DEFAULT;
 
   return {
     activeMode,
@@ -102,6 +112,7 @@ export function parseUrlState(
     surnameDisplayMode: surnameDisplayMode.success
       ? surnameDisplayMode.data
       : DEFAULT_SURNAME_DISPLAY_MODE,
+    isolationAlpha,
   };
 }
 
@@ -141,6 +152,12 @@ export function serializeUrlState(state: ShareableState): string {
         'surname',
         state.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
       );
+    }
+    if (
+      state.activeMode === 'isolation' &&
+      (state.isolationAlpha ?? ALPHA_DEFAULT) !== ALPHA_DEFAULT
+    ) {
+      params.set('alpha', (state.isolationAlpha ?? ALPHA_DEFAULT).toFixed(2));
     }
     params.set('v', '2');
   }
