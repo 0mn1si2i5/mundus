@@ -53,6 +53,9 @@ alternatives and WebGL failure behaviour are release requirements.
 Stable product scope, interaction principles and data policy:
 `docs/PROJECT_PLAN.md`. Implementation history: `docs/IMPLEMENTATION.md`.
 
+Next observation: **Urban Isolation** (`isolation`), accepted design in
+`docs/URBAN_ISOLATION.md`, not yet implemented.
+
 ## 2. Working agreement
 
 The product owner decides direction. The agent acts as technical product lead
