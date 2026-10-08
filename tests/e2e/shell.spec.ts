@@ -79,9 +79,8 @@ test('offers the other observations behind a keyboard-friendly More menu', async
   await page.keyboard.press('Enter');
   await expect(more).toHaveAttribute('aria-expanded', 'true');
   const menu = nav.getByRole('list', { name: '更多观察' });
-  await expect(menu.getByRole('button')).toHaveCount(2);
+  await expect(menu.getByRole('button')).toHaveCount(1);
   await expect(menu.getByRole('button', { name: '日照线' })).toBeVisible();
-  await expect(menu.getByRole('button', { name: '城市孤立度' })).toBeVisible();
 
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
@@ -515,13 +514,13 @@ test('presents the primary observations and keeps the others one step away', asy
 }) => {
   await page.goto('./');
   const list = page.getByRole('list', { name: '观察模式' });
-  await expect(list.getByRole('listitem')).toHaveCount(2);
+  await expect(list.getByRole('listitem')).toHaveCount(3);
   await expect(list.getByRole('button', { name: /地球另一端/ })).toBeVisible();
   await expect(list.getByRole('button', { name: /姓氏观察/ })).toBeVisible();
+  await expect(list.getByRole('button', { name: /城市邻近性/ })).toBeVisible();
   const more = page.getByRole('list', { name: '更多观察' });
-  await expect(more.getByRole('listitem')).toHaveCount(2);
+  await expect(more.getByRole('listitem')).toHaveCount(1);
   await expect(more.getByRole('button', { name: '日照线' })).toBeVisible();
-  await expect(more.getByRole('button', { name: '城市孤立度' })).toBeVisible();
 });
 
 test('@smoke enters a mode from the lobby and only then loads its lazy resources', async ({

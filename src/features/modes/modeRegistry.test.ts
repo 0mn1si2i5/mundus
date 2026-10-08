@@ -30,22 +30,20 @@ describe('mode registry', () => {
     expect(MODE_DEFINITIONS.surnames.titlePhrases.zh).toEqual(['姓氏观察']);
     expect(MODE_DEFINITIONS.isolation.titlePhrases.zh).toEqual([
       '城市',
-      '孤立度',
+      '邻近性',
     ]);
     for (const mode of Object.values(MODE_DEFINITIONS)) {
       expect(mode.titlePhrases.zh.join('')).toBe(mode.title.zh);
     }
   });
 
-  it('offers Other Side and the Surname Atlas first, the rest under More', () => {
+  it('offers Urban Proximity as a primary observation and Sunline under More', () => {
     expect(modesInTier('primary').map((mode) => mode.id)).toEqual([
       'antipodes',
       'surnames',
-    ]);
-    expect(modesInTier('more').map((mode) => mode.id)).toEqual([
-      'sunline',
       'isolation',
     ]);
+    expect(modesInTier('more').map((mode) => mode.id)).toEqual(['sunline']);
   });
 
   it('gives every mode a bilingual question and summary', () => {

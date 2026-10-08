@@ -66,7 +66,7 @@ function expectedRegionCity(
   return winner;
 }
 
-test('loads the Urban Isolation asset only after entering the mode', async ({
+test('loads the Urban Proximity asset only after entering the mode', async ({
   page,
 }) => {
   const requests: string[] = [];
@@ -82,7 +82,7 @@ test('loads the Urban Isolation asset only after entering the mode', async ({
   expect(
     requests.filter((url) => url.includes('urban-isolation')),
   ).toHaveLength(0);
-  await switchMode(page, '城市孤立度');
+  await switchMode(page, '城市邻近性');
   await expect
     .poll(
       () => requests.filter((url) => url.includes('urban-isolation')).length,
@@ -106,7 +106,7 @@ test('global regions load on demand, follow alpha, and preserve sharing and hist
     workers.filter((url) => url.includes('isolationField.worker')),
   ).toHaveLength(0);
   if (testInfo.project.name === 'mobile')
-    await page.getByRole('button', { name: '展开孤立度控件' }).click();
+    await page.getByRole('button', { name: '展开城市邻近性控件' }).click();
   await page.getByRole('button', { name: '全球分区', exact: true }).click();
   await expect(globeRegion(page)).toHaveAttribute(
     'data-isolation-field-rendered-alpha',
@@ -183,7 +183,7 @@ test('global regions select the weighted owner through the globe and all centres
   const chosen = await picker.inputValue();
   await expect(globe).toHaveAttribute('data-isolation-city-id', chosen);
   const city = asset.cities.find((row) => row[0] === chosen)!;
-  await expect(page.getByLabel('孤立度结果').locator('em')).toHaveText(
+  await expect(page.getByLabel('城市邻近性结果').locator('em')).toHaveText(
     asset.strings[city[5]!]!,
   );
 });
@@ -223,7 +223,7 @@ test('global regions recover from a worker download failure', async ({
   );
   await page.goto('./?mode=isolation&view=field&v=2');
   if (testInfo.project.name === 'mobile')
-    await page.getByRole('button', { name: '展开孤立度控件' }).click();
+    await page.getByRole('button', { name: '展开城市邻近性控件' }).click();
   await expect(globeRegion(page)).toHaveAttribute(
     'data-isolation-field-state',
     'error',
@@ -252,7 +252,7 @@ test('global regions keep controls reachable in short desktop and phone layouts'
     { width: 393, height: 851 },
   ]) {
     await page.setViewportSize(viewport);
-    const expand = page.getByRole('button', { name: '展开孤立度控件' });
+    const expand = page.getByRole('button', { name: '展开城市邻近性控件' });
     if (await expand.isVisible()) await expand.click();
     const panel = page.locator('[data-mode-panel="isolation-controls"]');
     const slider = panel.getByRole('slider');
@@ -265,7 +265,7 @@ test('global regions keep controls reachable in short desktop and phone layouts'
     expect(
       overlaps(
         await panel.boundingBox(),
-        await page.getByLabel('孤立度结果').boundingBox(),
+        await page.getByLabel('城市邻近性结果').boundingBox(),
       ),
     ).toBe(false);
     await expectMinimumHeight(
@@ -297,7 +297,7 @@ for (const location of [
   }) => {
     await page.goto(`./?mode=isolation&point=${location.point}&v=2`);
     await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
-    const result = page.getByRole('complementary', { name: '孤立度结果' });
+    const result = page.getByRole('complementary', { name: '城市邻近性结果' });
     const selectedCity = result.locator('em');
     await expect(selectedCity).toBeVisible();
     await expect(selectedCity).toHaveText(location.city);
@@ -311,10 +311,10 @@ test('slider changes replace history and serialize alpha', async ({
   page,
 }, testInfo) => {
   await page.goto('./');
-  await switchMode(page, '城市孤立度');
+  await switchMode(page, '城市邻近性');
   const slider = page.getByRole('slider', { name: '规模门槛 α' });
   if (testInfo.project.name === 'mobile')
-    await page.getByRole('button', { name: '展开孤立度控件' }).click();
+    await page.getByRole('button', { name: '展开城市邻近性控件' }).click();
   await slider.focus();
   await slider.press('End');
   await expect(globeRegion(page)).toHaveAttribute(
@@ -333,7 +333,7 @@ test('keyboard changes alpha and selects a ranked city', async ({
 }, testInfo) => {
   await page.goto('./?mode=isolation&v=2');
   if (testInfo.project.name === 'mobile') {
-    await page.getByRole('button', { name: '展开孤立度控件' }).click();
+    await page.getByRole('button', { name: '展开城市邻近性控件' }).click();
   }
   const slider = page.getByRole('slider', { name: '规模门槛 α' });
   await slider.focus();
@@ -366,7 +366,7 @@ test('a breakpoint city changes competitor across the alpha range', async ({
   );
   const slider = page.getByRole('slider', { name: '规模门槛 α' });
   if (testInfo.project.name === 'mobile')
-    await page.getByRole('button', { name: '展开孤立度控件' }).click();
+    await page.getByRole('button', { name: '展开城市邻近性控件' }).click();
   await slider.focus();
   await slider.press('End');
   await expect(globeRegion(page)).toHaveAttribute(
@@ -392,7 +392,7 @@ test('clicking a Top 10 entry selects that city', async ({
 }, testInfo) => {
   await page.goto('./?mode=isolation&v=2');
   if (testInfo.project.name === 'mobile') {
-    await page.getByRole('button', { name: '展开孤立度控件' }).click();
+    await page.getByRole('button', { name: '展开城市邻近性控件' }).click();
   }
   const first = page
     .locator('[data-mode-panel="isolation-controls"] ol button')
@@ -407,12 +407,12 @@ test('clicking a Top 10 entry selects that city', async ({
   await expect(page).toHaveURL(/point=/);
 });
 
-test('mobile isolation controls have touch targets and do not cover the result', async ({
+test('mobile Urban Proximity controls have touch targets and do not cover the result', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 393, height: 851 });
   await page.goto('./?mode=isolation&v=2');
-  const toggle = page.getByRole('button', { name: '展开孤立度控件' });
+  const toggle = page.getByRole('button', { name: '展开城市邻近性控件' });
   await expectMinimumHeight(toggle, 44);
   await toggle.click();
   const panel = page.locator('[data-mode-panel="isolation-controls"]');
@@ -421,10 +421,10 @@ test('mobile isolation controls have touch targets and do not cover the result',
   expect(
     overlaps(
       await panel.boundingBox(),
-      await page.getByLabel('孤立度结果').boundingBox(),
+      await page.getByLabel('城市邻近性结果').boundingBox(),
     ),
   ).toBe(false);
-  const result = page.getByLabel('孤立度结果');
+  const result = page.getByLabel('城市邻近性结果');
   await expect(result.getByRole('img')).toBeVisible();
   expect(
     overlaps(
@@ -445,7 +445,7 @@ const desktopIsolationViewports = [
 ];
 
 for (const [index, viewport] of desktopIsolationViewports.entries()) {
-  test(`desktop isolation controls keep the introduction clear and scroll the ranking at ${viewport.width}x${viewport.height}`, async ({
+  test(`desktop Urban Proximity controls keep the introduction clear and scroll the ranking at ${viewport.width}x${viewport.height}`, async ({
     page,
   }) => {
     const adjacentViewport =
@@ -498,18 +498,18 @@ for (const [index, viewport] of desktopIsolationViewports.entries()) {
   });
 }
 
-test('reduced motion keeps Urban Isolation interactive', async ({
+test('reduced motion keeps Urban Proximity interactive', async ({
   page,
 }, testInfo) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./?mode=isolation&v=2');
-  await expect(page.getByLabel('孤立度结果')).toBeVisible();
+  await expect(page.getByLabel('城市邻近性结果')).toBeVisible();
   await expect(
     page.locator('[data-mode-panel="isolation-controls"]'),
   ).toBeVisible();
   const slider = page.getByRole('slider', { name: '规模门槛 α' });
   if (testInfo.project.name === 'mobile') {
-    await page.getByRole('button', { name: '展开孤立度控件' }).click();
+    await page.getByRole('button', { name: '展开城市邻近性控件' }).click();
   }
   await expect(slider).toBeVisible();
   await slider.focus();

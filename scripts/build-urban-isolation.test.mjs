@@ -153,7 +153,7 @@ test('offline build rejects missing country coverage and duplicate city names', 
           overrides: {},
           countryNames: {},
         }),
-      /Missing Urban Isolation Chinese country names/,
+      /Missing Urban Proximity Chinese country names/,
     );
     const duplicateInput = syntheticInput();
     duplicateInput.rows = duplicateInput.rows.map((row) =>

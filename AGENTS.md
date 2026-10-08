@@ -18,10 +18,10 @@ observation while keeping the selected place.
 - Live site: <https://0mn1si2i5.github.io/mundus/> (repository
   `0mn1si2i5/mundus`; Pages paths are case-sensitive, and the deploy job's
   `page_url` is the authority for the address).
-- The bare address opens a neutral lobby. The header switcher offers the two
-  primary observations, **Other Side** (`antipodes`) and **Surname Atlas**
-  (`surnames`); **Sunline** (`sunline`) and **Urban Isolation** (`isolation`)
-  sit under "More observations".
+- The bare address opens a neutral lobby. The header switcher offers the three
+  primary observations, **Other Side** (`antipodes`), **Surname Atlas**
+  (`surnames`) and **Urban Proximity** (`isolation`); **Sunline** (`sunline`)
+  sits under "More observations".
   **Development, Unpacked** was retired in 2026-10: its links
   (`mode=development`) open the lobby with a "retired" notice, and its UNDP
   data, code and attribution were removed.
@@ -45,7 +45,7 @@ Observation contracts:
   approximate sunrise/sunset computed in the browser (NOAA/Meeus-style
   approximations, educational only; never legal, navigational or aviation
   time).
-- **Urban Isolation** — hierarchical great-circle distance from a GHSL urban
+- **Urban Proximity** — hierarchical great-circle distance from a GHSL urban
   centre of at least one million people to the nearest centre meeting the
   visible α population threshold; it describes geometry and size, not travel
   accessibility.

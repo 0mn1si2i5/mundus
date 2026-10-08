@@ -98,7 +98,7 @@ export function mollweideToWgs84(x, y) {
 export function checkBudget(rawBytes, gzipBytes) {
   if (rawBytes > 400 * 1024 || gzipBytes > 120 * 1024) {
     throw new Error(
-      `Urban Isolation asset budget exceeded: ${rawBytes} raw, ${gzipBytes} gzip`,
+      `Urban Proximity asset budget exceeded: ${rawBytes} raw, ${gzipBytes} gzip`,
     );
   }
 }
@@ -126,15 +126,15 @@ export function captureCsv(text, expectedHash = CAPTURE_CSV_SHA256) {
   const actualHash = sha256(bytes);
   if (expectedHash && actualHash !== expectedHash) {
     throw new Error(
-      `Urban Isolation CSV SHA-256 mismatch: expected ${expectedHash}, received ${actualHash}`,
+      `Urban Proximity CSV SHA-256 mismatch: expected ${expectedHash}, received ${actualHash}`,
     );
   }
   const parsed = parseCsv(text);
-  if (!parsed.length) throw new Error('Urban Isolation CSV is empty');
+  if (!parsed.length) throw new Error('Urban Proximity CSV is empty');
   const missing = CSV_HEADERS.filter((header) => !(header in parsed[0]));
   if (missing.length)
     throw new Error(
-      `Urban Isolation CSV missing columns: ${missing.join(', ')}`,
+      `Urban Proximity CSV missing columns: ${missing.join(', ')}`,
     );
 
   const seen = new Set();
@@ -286,7 +286,7 @@ async function buildOffline(
   { root = ROOT, geoNames, overrides, countryNames } = {},
 ) {
   if (input?.schemaVersion !== 1 || !input.source || !Array.isArray(input.rows))
-    throw new Error('Invalid Urban Isolation immutable input schema');
+    throw new Error('Invalid Urban Proximity immutable input schema');
   const seenIds = new Set();
   for (const row of input.rows) {
     const [id, name, country, , population, latitude, longitude] = row;
@@ -306,7 +306,7 @@ async function buildOffline(
       Math.abs(longitude) > 180
     )
       throw new Error(
-        `Invalid Urban Isolation immutable input row: ${String(id)}`,
+        `Invalid Urban Proximity immutable input row: ${String(id)}`,
       );
     seenIds.add(id);
   }
@@ -326,12 +326,12 @@ async function buildOffline(
     .map((city, index) => (city.population >= 1_000_000 ? index : -1))
     .filter((index) => index >= 0);
   if (focalIndices.length === 0)
-    throw new Error('Urban Isolation has no focal cities');
+    throw new Error('Urban Proximity has no focal cities');
   const minFocalPopulation = Math.min(
     ...focalIndices.map((index) => cities[index].population),
   );
   if (ALPHA_MIN * minFocalPopulation < 100_000)
-    throw new Error('Urban Isolation completeness invariant failed');
+    throw new Error('Urban Proximity completeness invariant failed');
   const metricCities = cities.map((city) => ({
     id: city.id,
     latitude: city.latitude,
@@ -363,7 +363,7 @@ async function buildOffline(
   ].filter((country) => !countryNames[country]);
   if (missingCountries.length)
     throw new Error(
-      `Missing Urban Isolation Chinese country names: ${missingCountries.join(', ')}`,
+      `Missing Urban Proximity Chinese country names: ${missingCountries.join(', ')}`,
     );
   const geonameCandidates = [];
   const { haversineKm } =
@@ -553,7 +553,7 @@ function createReport(
     (city) => !city[8] && city[5] === null,
   ).length;
   const lines = [
-    `# Urban Isolation build report`,
+    `# Urban Proximity build report`,
     '',
     `- Focal cities: ${focalIndices.length}`,
     `- Competitor universe: ${cities.length}`,
@@ -667,7 +667,7 @@ async function main() {
   const input = JSON.parse(inputBytes.toString('utf8'));
   const manifest = JSON.parse(await readFile(MANIFEST_PATH, 'utf8'));
   if (sha256(inputBytes) !== manifest.immutableBuildInput?.sha256)
-    throw new Error('Urban Isolation immutable input SHA-256 mismatch');
+    throw new Error('Urban Proximity immutable input SHA-256 mismatch');
   await buildOffline(input);
   console.log(`Built ${ASSET_PATH}`);
 }

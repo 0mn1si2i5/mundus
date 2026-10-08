@@ -44,11 +44,11 @@ export function decodeIsolationDataset(raw: unknown): IsolationDataset {
     !Array.isArray(raw.cities) ||
     !Array.isArray(raw.holders)
   ) {
-    throw new Error('Invalid Urban Isolation dataset schema');
+    throw new Error('Invalid Urban Proximity dataset schema');
   }
   const strings = raw.strings;
   if (!strings.every((value) => typeof value === 'string')) {
-    throw new Error('Invalid Urban Isolation string table');
+    throw new Error('Invalid Urban Proximity string table');
   }
   const stringAt = (value: unknown, nullable = false): string | null => {
     if (nullable && value === null) return null;
@@ -58,14 +58,14 @@ export function decodeIsolationDataset(raw: unknown): IsolationDataset {
       (value as number) >= strings.length
     ) {
       throw new Error(
-        `Urban Isolation string reference out of bounds: ${String(value)}`,
+        `Urban Proximity string reference out of bounds: ${String(value)}`,
       );
     }
     return strings[value as number] ?? null;
   };
   const cities = raw.cities.map((row, index) => {
     if (!Array.isArray(row) || row.length !== 9)
-      throw new Error(`Invalid Urban Isolation city row ${index}`);
+      throw new Error(`Invalid Urban Proximity city row ${index}`);
     const [
       id,
       latitudeE4,
@@ -91,12 +91,12 @@ export function decodeIsolationDataset(raw: unknown): IsolationDataset {
       population <= 0 ||
       typeof isFocal !== 'boolean'
     ) {
-      throw new Error(`Invalid Urban Isolation city values: ${String(id)}`);
+      throw new Error(`Invalid Urban Proximity city values: ${String(id)}`);
     }
     const nameEnValue = stringAt(nameEn);
     const countryEnValue = stringAt(countryEn);
     if (nameEnValue === null || countryEnValue === null)
-      throw new Error(`Missing Urban Isolation city labels: ${id}`);
+      throw new Error(`Missing Urban Proximity city labels: ${id}`);
     return {
       id,
       point: {
@@ -110,11 +110,11 @@ export function decodeIsolationDataset(raw: unknown): IsolationDataset {
     } satisfies IsolationCity;
   });
   if (raw.holders.length !== cities.length)
-    throw new Error('Urban Isolation holder count mismatch');
+    throw new Error('Urban Proximity holder count mismatch');
   const holders = raw.holders.map((value, index) => {
     if (value === null) return null;
     if (!Array.isArray(value))
-      throw new Error(`Invalid Urban Isolation holders ${index}`);
+      throw new Error(`Invalid Urban Proximity holders ${index}`);
     return value.map((entry) => {
       if (
         !Array.isArray(entry) ||
@@ -126,7 +126,7 @@ export function decodeIsolationDataset(raw: unknown): IsolationDataset {
         !Number.isFinite(entry[1]) ||
         (entry[1] as number) < 0
       ) {
-        throw new Error(`Invalid Urban Isolation holder ${index}`);
+        throw new Error(`Invalid Urban Proximity holder ${index}`);
       }
       return { index: entry[0] as number, distanceKm: entry[1] as number };
     });
@@ -135,7 +135,7 @@ export function decodeIsolationDataset(raw: unknown): IsolationDataset {
     city.isFocal ? [index] : [],
   );
   if (focalIndices.some((index) => holders[index] === null))
-    throw new Error('Urban Isolation focal city has no holder list');
+    throw new Error('Urban Proximity focal city has no holder list');
   return { cities, holders, focalIndices };
 }
 

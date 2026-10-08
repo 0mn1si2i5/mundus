@@ -38,8 +38,8 @@ const COPY = {
         '太阳位置与晨昏线采用 NOAA/Meeus 近似算法，仅供教育参考，不能用于导航、航空或法定时间。',
       ],
       [
-        '城市孤立度',
-        '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级孤立半径是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，半径呈阶梯式增长。全球分区把陆地点归给“距离 ÷ 当前孤立半径”最小的中心，形成不规则区域；颜色只区分归属，无有效半径的中心只标点。相邻城市可能被合并为一个城市中心；结果只反映几何与人口规模，不代表交通或经济可达性。',
+        '城市邻近性',
+        '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级邻近距离是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，距离呈阶梯式增长。全球分区把陆地点归给“距离 ÷ 当前邻近距离”最小的中心，形成不规则区域；颜色只区分归属，没有有效邻近距离的中心只标点。相邻城市可能被合并为一个城市中心；结果只反映几何与人口规模，不代表交通或经济可达性。',
       ],
     ] as const,
     credits: [
@@ -90,7 +90,7 @@ const COPY = {
       },
       {
         name: 'GHSL Urban Centre Database',
-        use: '城市孤立度',
+        use: '城市邻近性',
         notice: `${urbanIsolationManifest.attribution} · CC BY 4.0`,
         links: [
           {
@@ -127,8 +127,8 @@ const COPY = {
         'Solar position and the terminator use NOAA/Meeus-style approximations, for education only — not for navigation, aviation or legal time.',
       ],
       [
-        'Urban Isolation',
-        'Uses 2025 populations from the GHSL Urban Centre Database (R2024A). The hierarchical isolation radius is the great-circle distance from a city of at least one million people to the nearest urban centre with at least α times its population; a higher α raises the bar, and the radius grows in steps. Global regions assign land points to the centre with the lowest distance / current isolation radius, producing irregular boundaries. Colours distinguish owners; centres without a valid radius remain dots only. Neighbouring cities can merge into one urban centre; results reflect geometry and size only, not travel or economic access.',
+        'Urban Proximity',
+        'Uses 2025 populations from the GHSL Urban Centre Database (R2024A). The hierarchical proximity distance is the great-circle distance from a city of at least one million people to the nearest urban centre with at least α times its population; a higher α raises the bar, and the distance grows in steps. Global regions assign land points to the centre with the lowest distance / current proximity distance, producing irregular boundaries. Colours distinguish owners; centres without a valid proximity distance remain dots only. Neighbouring cities can merge into one urban centre; results reflect geometry and size only, not travel or economic access.',
       ],
     ] as const,
     credits: [
@@ -180,7 +180,7 @@ const COPY = {
       },
       {
         name: 'GHSL Urban Centre Database',
-        use: 'Urban Isolation',
+        use: 'Urban Proximity',
         notice: `${urbanIsolationManifest.attribution} · CC BY 4.0`,
         links: [
           {

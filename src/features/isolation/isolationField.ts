@@ -107,7 +107,7 @@ export function buildIsolationFieldTable(
   rows = FIELD_ROWS,
 ): IsolationFieldTable {
   if (sites.length === 0)
-    throw new Error('No cities have a defined positive isolation radius.');
+    throw new Error('No cities have a defined positive proximity distance.');
   const tiles = new Float32Array(columns * rows * 4);
   const candidates: number[] = [];
   const distances = new Float64Array(sites.length);

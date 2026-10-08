@@ -25,7 +25,7 @@ ships:
   community snapshots, not a unified official global ranking; missing fields
   remain explicit; each country links its source, and dataset licenses are in
   the About dialog.
-- **Urban Isolation** shows the distance to the nearest GHSL urban centre that
+- **Urban Proximity** shows the distance to the nearest GHSL urban centre that
   meets a visible population threshold α, with a ranked list and step chart.
   Distances are great-circle distances between urban-centre points, not travel
   accessibility.

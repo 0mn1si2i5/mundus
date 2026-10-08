@@ -74,7 +74,7 @@ describe('IsolationResult', () => {
     expect(screen.getByText(/no city in the dataset/i)).toBeVisible();
     expect(screen.getByRole('img')).toHaveAttribute(
       'aria-label',
-      expect.stringContaining('no radius'),
+      expect.stringContaining('no proximity distance'),
     );
     expect(screen.getByRole('img')).not.toHaveAttribute(
       'aria-label',

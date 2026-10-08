@@ -2,7 +2,7 @@
 
 ## Source and licence
 
-Urban Isolation uses the Global Human Settlement Layer Urban Centre Database
+Urban Proximity uses the Global Human Settlement Layer Urban Centre Database
 GHS-UCDB R2024A, V1.1, the fixed 2025 urban-centre population edition from
 the European Commission Joint Research Centre (JRC).
 
@@ -98,20 +98,20 @@ by any focal record-holder list; if it becomes a referenced competitor, the
 build fails unless a reviewed name override supplies its labels.
 The offline build verifies the immutable input hash and the bundled GeoNames
 snapshot hash before rebuilding. `pnpm data:verify` checks both the immutable
-input and the derived Urban Isolation asset.
+input and the derived Urban Proximity asset.
 
 Distances use a sphere of radius 6371.0088 km. Compared with a WGS84 ellipsoid,
 the great-circle approximation can differ by less than 0.5%.
 
 The optional global field view applies these distances to each focal centre's
-current isolation radius. A land point x is assigned to the focal centre that
+current proximity distance. A land point x is assigned to the focal centre that
 minimises `d(x, centre) / R(α)`, where R(α) is the nearest qualifying
 competitor distance at the selected α. This weighted spherical Voronoi rule
 allows curved, irregular borders and is evaluated against the existing Natural
 Earth land surface. It does not model terrain, roads, travel time,
 administrative territory or accessibility. Centres whose R(α) is undefined or
 zero remain selectable points but do not own a region. Colours identify the
-categorical owner only; they are not another population or isolation scale.
+categorical owner only; they are not another population or proximity scale.
 Because R(α) is a step function of the qualifying population threshold, region
 borders change at those steps and remain unchanged between them; the method
 does not interpolate weights across thresholds.
@@ -139,5 +139,5 @@ Additional known limitations:
 - Some centres use the name of a smaller town within the footprint. Sarvestan
   in Iran has about 1.0 million people in the 2025 data.
 
-Urban Isolation preserves both source records and populations without
+Urban Proximity preserves both source records and populations without
 correcting them to municipal boundaries or census counts.

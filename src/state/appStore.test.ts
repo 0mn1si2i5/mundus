@@ -213,7 +213,7 @@ describe('shell mode state', () => {
     expect(useAppStore.getState().sunlinePlaying).toBe(false);
   });
 
-  it('clamps the isolation alpha slider value', () => {
+  it('clamps the Urban Proximity alpha slider value', () => {
     useAppStore.getState().setIsolationAlpha(0.374);
     expect(useAppStore.getState().isolationAlpha).toBe(0.37);
 

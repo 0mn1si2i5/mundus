@@ -131,7 +131,7 @@ export function competitorAt(
 }
 
 /**
- * Rank focal cities by their current hierarchical isolation radius.
+ * Rank focal cities by their current hierarchical proximity distance.
  *
  * `holdersByCity` is indexed by city index and contains null for non-focal
  * cities.  Keeping this aligned with the dataset's city array avoids making

@@ -1,4 +1,4 @@
-# Urban Isolation — design contract
+# Urban Proximity — design contract
 
 Status: implemented, pending owner review (2026-10-08). This document
 records the product question, data, metric, interaction and acceptance
@@ -16,15 +16,15 @@ competitor must have at least α times the population of the selected city.
 
 Mundus measures only:
 
-- **geometric isolation** — great-circle distance between city centre points
+- **geometric proximity** — great-circle distance between city centre points
   (oceans count); and
-- **hierarchical isolation** — whether a city of comparable size is nearby.
+- **hierarchical proximity** — whether a city of comparable size is nearby.
 
 It does not measure transport, economic or travel-time accessibility and must
 not suggest it.
 
-Names: 城市孤立度 / Urban Isolation (mode); 层级孤立半径 / Hierarchical
-Isolation Radius (metric). Mode id: `isolation`.
+Names: 城市邻近性 / Urban Proximity (mode); 层级邻近距离 / Hierarchical
+Proximity Distance (metric). Mode id: `isolation`.
 
 ## 2. Data
 
@@ -97,7 +97,7 @@ ranked cities at that α.
 
 ### Global field view
 
-Urban Isolation also has a static **global field** view (`view=field`). It is
+Urban Proximity also has a static **global field** view (`view=field`). It is
 the same observation and uses the same α and R_i(α) values; it does not add a
 second metric. For each point x on the bundled land surface, ownership is
 
@@ -106,8 +106,8 @@ owner(x; α) = arg min over focal i with defined positive R_i(α) of d(x, i) / R
 ```
 
 where d is the same spherical great-circle distance used above. A larger
-isolation radius reduces a centre's weighted distance and extends its relative
-reach; the final region also depends on the other centres and their weights.
+proximity distance reduces a centre's weighted distance and extends
+its relative reach; the final region also depends on the other centres and their weights.
 The result is a weighted spherical Voronoi partition, clipped to land. Its borders
 can be curved and irregular; they are geometric boundaries, not coastlines,
 administrative borders, terrain catchments or travel-time regions. A tie uses
@@ -296,7 +296,7 @@ Stop and report instead of continuing if:
 
 Research notes (2026-10-06) compared the WUP, GHSL, Natural Earth and
 GeoNames sources and discussed weighted Voronoi and gravity fields. Their
-conclusions are folded into §2 and §3 above. Candidate "most isolated" cities
+conclusions are folded into §2 and §3 above. Candidate "greatest proximity distance" cities
 (Perth, Honolulu, Auckland, Ulaanbaatar) are hypotheses until computed from
 the pinned dataset; no city is to be presented as an absolute champion,
 because every ranking is conditional on the dataset and on α. Cities below the

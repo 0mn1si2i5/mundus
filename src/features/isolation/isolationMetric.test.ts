@@ -89,7 +89,7 @@ function nearestByBruteForce(
   );
 }
 
-describe('urban isolation metric', () => {
+describe('urban proximity metric', () => {
   it('matches reference great-circle distances', () => {
     expect(
       haversineKm(

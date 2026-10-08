@@ -77,7 +77,7 @@ describe('URL state codec', () => {
       });
     });
 
-    it('rounds valid isolation alpha values and defaults invalid or out-of-range values', () => {
+    it('rounds valid Urban Proximity alpha values and defaults invalid or out-of-range values', () => {
       expect(
         parseUrlState('?v=2&mode=isolation&alpha=0.374', nowMs),
       ).toMatchObject({ isolationAlpha: 0.37 });
@@ -95,7 +95,7 @@ describe('URL state codec', () => {
       }
     });
 
-    it('ignores isolation alpha outside the isolation mode', () => {
+    it('ignores Urban Proximity alpha outside the Urban Proximity mode', () => {
       expect(
         parseUrlState('?v=2&mode=sunline&alpha=0.37', nowMs),
       ).toMatchObject({
@@ -195,7 +195,7 @@ describe('URL state codec', () => {
       ).toBe('?mode=sunline&time=2026-07-14T09%3A37Z&v=2');
     });
 
-    it('serializes isolation alpha only when it differs from the default', () => {
+    it('serializes Urban Proximity alpha only when it differs from the default', () => {
       expect(
         serializeUrlState({
           ...lobby,
@@ -257,7 +257,7 @@ describe('URL state codec', () => {
       });
     });
 
-    it('round-trips an isolation alpha through V2', () => {
+    it('round-trips an Urban Proximity alpha through V2', () => {
       const link = serializeUrlState({
         ...lobby,
         activeMode: 'isolation',

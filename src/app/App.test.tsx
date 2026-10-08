@@ -120,7 +120,7 @@ function headerReturnButton() {
   });
 }
 
-describe('App mode failure isolation', () => {
+describe('App mode failure Urban Proximity', () => {
   beforeEach(() => {
     failure.dataCalc = false;
     failure.modeResultMode = null;
