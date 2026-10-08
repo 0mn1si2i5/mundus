@@ -91,8 +91,11 @@ places by the capture build.
   `0.10 * min focal population >= 100,000`.
 
 Capture rejects missing, non-finite or non-positive populations and missing or
-invalid centroids. Rows below 100,000 are filtered; unnamed rows from 100,000
-to below 1,000,000 are dropped, while an unnamed focal row stops the build.
+invalid centroids. Rows below 100,000 are filtered; unnamed rows at or above
+100,000 remain in the immutable input (including unnamed focal rows). An
+unnamed row may remain absent from the compact asset when it is not referenced
+by any focal record-holder list; if it becomes a referenced competitor, the
+build fails unless a reviewed name override supplies its labels.
 The offline build verifies the immutable input hash and the bundled GeoNames
 snapshot hash before rebuilding. `pnpm data:verify` checks both the immutable
 input and the derived Urban Isolation asset.

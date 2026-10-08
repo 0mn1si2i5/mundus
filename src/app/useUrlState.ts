@@ -17,7 +17,7 @@ export function useUrlState() {
           state.sunlineTimeMs === previous.sunlineTimeMs &&
           state.sunlineClockMode === previous.sunlineClockMode &&
           state.surnameDisplayMode === previous.surnameDisplayMode &&
-          (state.isolationAlpha ?? 0.5) === (previous.isolationAlpha ?? 0.5))
+          state.isolationAlpha === previous.isolationAlpha)
       ) {
         return;
       }
@@ -33,7 +33,7 @@ export function useUrlState() {
         state.sunlineTimeMs === previous.sunlineTimeMs &&
         state.sunlineClockMode === previous.sunlineClockMode &&
         state.surnameDisplayMode === previous.surnameDisplayMode &&
-        (state.isolationAlpha ?? 0.5) !== (previous.isolationAlpha ?? 0.5);
+        state.isolationAlpha !== previous.isolationAlpha;
       const updateHistory =
         onlySunlineTimeChanged || onlyIsolationAlphaChanged
           ? window.history.replaceState

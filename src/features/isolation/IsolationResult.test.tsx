@@ -47,7 +47,7 @@ describe('IsolationResult', () => {
       />,
     );
     expect(screen.getByText('Alpha')).toBeVisible();
-    expect(screen.getByText('Beta')).toBeVisible();
+    expect(screen.getByText('Beta · Country')).toBeVisible();
     expect(screen.getByRole('img')).toHaveAttribute(
       'aria-label',
       expect.stringContaining('0.50'),

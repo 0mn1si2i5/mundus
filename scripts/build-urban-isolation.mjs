@@ -161,11 +161,6 @@ export function captureCsv(text, expectedHash = CAPTURE_CSV_SHA256) {
     )
       throw new Error(`Invalid centroid for ${id}`);
     if (population < 100_000) continue;
-    if (!name) {
-      if (population >= 1_000_000)
-        throw new Error(`Missing name for focal urban centre ${id}`);
-      continue;
-    }
     if (!countryName) throw new Error(`Missing country name for ${id}`);
     rows.push([
       id,
@@ -212,7 +207,6 @@ export function matchNames(city, geoNames, overrides = {}) {
   if (override) {
     return {
       nameZh: override.nameZh ?? null,
-      countryZh: override.countryZh ?? null,
       matchType: 'override',
       matchDistanceKm: null,
     };
@@ -233,7 +227,6 @@ export function matchNames(city, geoNames, overrides = {}) {
   if (exact) {
     return {
       nameZh: exact.nameZhFallback ? null : exact.nameZh,
-      countryZh: exact.countryZh ?? null,
       matchType: 'exact',
       matchDistanceKm: exact.distanceKm,
     };
@@ -248,15 +241,15 @@ export function matchNames(city, geoNames, overrides = {}) {
     )[0];
   if (proximity) {
     return {
-      nameZh: proximity.nameZhFallback ? null : proximity.nameZh,
-      countryZh: proximity.countryZh ?? null,
+      // Proximity is reported for review only and never enters the asset.
+      nameZh: null,
+      candidateNameZh: proximity.nameZhFallback ? null : proximity.nameZh,
       matchType: 'proximity',
       matchDistanceKm: proximity.distanceKm,
     };
   }
   return {
     nameZh: null,
-    countryZh: null,
     matchType: 'none',
     matchDistanceKm: null,
   };
@@ -283,14 +276,15 @@ async function loadGeoNamesSnapshot(root) {
       population: city.population,
       nameEn: city.name.en,
       nameZh: city.name.zh,
-      countryEn: city.country.en,
-      countryZh: city.country.zh,
       nameZhFallback: city.nameZhFallback,
     }),
   );
 }
 
-async function buildOffline(input, { root = ROOT, geoNames, overrides } = {}) {
+async function buildOffline(
+  input,
+  { root = ROOT, geoNames, overrides, countryNames } = {},
+) {
   if (input?.schemaVersion !== 1 || !input.source || !Array.isArray(input.rows))
     throw new Error('Invalid Urban Isolation immutable input schema');
   const seenIds = new Set();
@@ -302,7 +296,6 @@ async function buildOffline(input, { root = ROOT, geoNames, overrides } = {}) {
       !id ||
       seenIds.has(id) ||
       typeof name !== 'string' ||
-      !name.trim() ||
       typeof country !== 'string' ||
       !country.trim() ||
       !Number.isFinite(population) ||
@@ -321,6 +314,7 @@ async function buildOffline(input, { root = ROOT, geoNames, overrides } = {}) {
     ([id, name, countryName, countryIso, population, latitude, longitude]) => ({
       id,
       name,
+      sourceName: name,
       countryName,
       countryIso,
       population,
@@ -357,6 +351,20 @@ async function buildOffline(input, { root = ROOT, geoNames, overrides } = {}) {
       await import('../src/features/isolation/isolationNameOverrides.ts');
     overrides = ISOLATION_NAME_OVERRIDES;
   }
+  for (const city of cities) {
+    const correctedName = overrides[city.id]?.nameEn;
+    if (correctedName) city.name = correctedName;
+  }
+  countryNames ??= (
+    await import('../src/features/isolation/isolationCountryNames.ts')
+  ).ISOLATION_COUNTRY_NAMES;
+  const missingCountries = [
+    ...new Set([...referenced].map((index) => cities[index].countryName)),
+  ].filter((country) => !countryNames[country]);
+  if (missingCountries.length)
+    throw new Error(
+      `Missing Urban Isolation Chinese country names: ${missingCountries.join(', ')}`,
+    );
   const geonameCandidates = [];
   const { haversineKm } =
     await import('../src/features/isolation/isolationMetric.ts');
@@ -370,6 +378,32 @@ async function buildOffline(input, { root = ROOT, geoNames, overrides } = {}) {
     const match = matchNames(city, candidates, overrides);
     nameMatches.set(index, match);
     geonameCandidates.push({ city, match });
+  }
+  for (const focalIndex of focalIndices) {
+    for (const holder of holderLists[focalIndex]) {
+      const city = cities[holder.index];
+      const override = overrides[city.id];
+      if (
+        !city.sourceName.trim() &&
+        !(override?.nameEn?.trim() && override?.nameZh?.trim())
+      ) {
+        throw new Error(
+          `Missing name for referenced competitor ${city.id}; add an isolationNameOverrides entry`,
+        );
+      }
+    }
+  }
+  const seenChineseNames = new Map();
+  for (const index of referenced) {
+    const match = nameMatches.get(index);
+    if (!match?.nameZh) continue;
+    const previous = seenChineseNames.get(match.nameZh);
+    if (previous && !(overrides[previous] && overrides[cities[index].id])) {
+      throw new Error(
+        `Duplicate Chinese urban-centre name ${match.nameZh}: ${previous}, ${cities[index].id}`,
+      );
+    }
+    seenChineseNames.set(match.nameZh, cities[index].id);
   }
   const sortedIndices = [...referenced].sort((a, b) =>
     cities[a].id.localeCompare(cities[b].id, 'en'),
@@ -390,15 +424,16 @@ async function buildOffline(input, { root = ROOT, geoNames, overrides } = {}) {
   const outputCities = sortedIndices.map((inputIndex) => {
     const city = cities[inputIndex];
     const match = nameMatches.get(inputIndex);
+    const displayName = overrides[city.id]?.nameEn?.trim() || city.name;
     return [
       city.id,
       Math.round(city.latitude * 10_000),
       Math.round(city.longitude * 10_000),
       city.population,
-      intern(city.name),
+      intern(displayName),
       intern(match?.nameZh ?? null),
       intern(city.countryName),
-      intern(match?.countryZh ?? null),
+      intern(countryNames[city.countryName]),
       focalIndices.includes(inputIndex),
     ];
   });
@@ -438,10 +473,11 @@ async function buildOffline(input, { root = ROOT, geoNames, overrides } = {}) {
       'Filtered 2025 population >= 100,000',
       'Converted EPSG:54009 Mollweide centroids to WGS84 degrees',
       'Precomputed hierarchical record holders',
-      'Attached reviewed GeoNames Chinese names at build time',
+      'Attached exact or reviewed GeoNames Chinese city names at build time; proximity candidates are report-only',
+      'Attached reviewed GHSL-country Chinese names from the complete country table',
     ],
     missingValuePolicy:
-      'Missing Chinese names and country ISO codes remain null; empty sub-million names are dropped during capture.',
+      'Missing Chinese city names and country ISO codes remain null; empty names at or above the universe threshold remain in the immutable input, and a referenced unnamed competitor fails the build unless it has a reviewed override.',
     boundaryPolicy:
       'Cities are GHSL urban centres; no runtime geographic boundary matching is performed.',
     recordCount: outputCities.length,
@@ -552,10 +588,26 @@ function createReport(
     '| GHSL id | English name | Chinese name | Match | Distance km |',
     '| --- | --- | --- | --- | ---: |',
   );
-  for (const item of nameMatches)
+  for (const item of nameMatches) {
+    const assetMatch =
+      item.match.matchType === 'proximity' ? 'none' : item.match.matchType;
     lines.push(
-      `| ${item.city.id} | ${item.city.name} | ${item.match.nameZh ?? ''} | ${item.match.matchType} | ${item.match.matchDistanceKm === null ? '' : item.match.matchDistanceKm.toFixed(2)} |`,
+      `| ${item.city.id} | ${item.city.name} | ${item.match.nameZh ?? ''} | ${assetMatch} | ${assetMatch === 'none' || item.match.matchDistanceKm === null ? '' : item.match.matchDistanceKm.toFixed(2)} |`,
     );
+  }
+  lines.push(
+    '',
+    '## Proximity candidates (review only)',
+    '',
+    '| GHSL id | English name | Candidate Chinese name | Distance km |',
+    '| --- | --- | --- | ---: |',
+  );
+  for (const item of nameMatches) {
+    if (item.match.matchType !== 'proximity') continue;
+    lines.push(
+      `| ${item.city.id} | ${item.city.name} | ${item.match.candidateNameZh ?? ''} | ${item.match.matchDistanceKm.toFixed(2)} |`,
+    );
+  }
   return `${lines.join('\n')}\n`;
 }
 

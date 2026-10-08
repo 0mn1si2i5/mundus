@@ -1,4 +1,9 @@
-import { haversineKm, type RecordHolder } from './isolationMetric';
+import {
+  competitorAt,
+  haversineKm,
+  rankingAt,
+  type RecordHolder,
+} from './isolationMetric';
 import type { GeoPoint } from '../globe/geo';
 
 export interface IsolationCity {
@@ -14,6 +19,17 @@ export interface IsolationDataset {
   cities: readonly IsolationCity[];
   holders: readonly (readonly RecordHolder[] | null)[];
   focalIndices: readonly number[];
+}
+
+export interface IsolationSelection {
+  cityIndex: number;
+  distanceFromPointKm: number;
+  competitor: RecordHolder | null;
+  ranking: readonly {
+    city: IsolationCity;
+    distanceKm: number;
+  }[];
+  rank: { position: number; total: number } | null;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -158,6 +174,50 @@ export function nearestFocalCity(
     }
   }
   return nearest;
+}
+
+/** Resolve the selected focal city, its current competitor, and its ranking. */
+export function computeIsolationSelection(
+  point: GeoPoint,
+  alpha: number,
+  dataset: IsolationDataset,
+): IsolationSelection | null {
+  const nearest = nearestFocalCity(point, dataset);
+  if (!nearest) return null;
+  const city = dataset.cities[nearest.index];
+  if (!city) return null;
+  const metricCities = dataset.cities.map((item) => ({
+    id: item.id,
+    ...item.point,
+    population: item.population,
+  }));
+  const populations = metricCities.map((item) => item.population);
+  const competitor = competitorAt(
+    dataset.holders[nearest.index] ?? [],
+    populations,
+    city.population,
+    alpha,
+  );
+  const ranking = rankingAt(
+    dataset.focalIndices,
+    metricCities,
+    dataset.holders,
+    alpha,
+  ).map((entry) => ({
+    city: dataset.cities[entry.index]!,
+    distanceKm: entry.distanceKm,
+  }));
+  const rankIndex = ranking.findIndex((entry) => entry.city.id === city.id);
+  return {
+    cityIndex: nearest.index,
+    distanceFromPointKm: nearest.distanceKm,
+    competitor,
+    ranking,
+    rank:
+      rankIndex >= 0
+        ? { position: rankIndex + 1, total: ranking.length }
+        : null,
+  };
 }
 
 export function displayIsolationName(

@@ -23,12 +23,16 @@ test('capture rejects a wrong SHA-256', () => {
   );
 });
 
-test('capture filters small rows, drops empty non-focal names and rejects an empty focal name', () => {
+test('capture filters small rows and retains empty names at the competitor threshold', () => {
   const text = `${header}1,Alpha,Country,100000,0,0\n2,Small,Country,99999,0,0\n3,,Country,1000000,0,0\n`;
-  assert.throws(() => captureCsv(text, sha256(Buffer.from(text))));
+  assert.deepEqual(captureCsv(text, sha256(Buffer.from(text))).rows, [
+    ['1', 'Alpha', 'Country', null, 100000, 0, 0],
+    ['3', '', 'Country', null, 1000000, 0, 0],
+  ]);
   const valid = `${header}1,Alpha,Country,100000,0,0\n2,Small,Country,99999,0,0\n3,,Country,100000,0,0\n`;
   assert.deepEqual(captureCsv(valid, sha256(Buffer.from(valid))).rows, [
     ['1', 'Alpha', 'Country', null, 100000, 0, 0],
+    ['3', '', 'Country', null, 100000, 0, 0],
   ]);
 });
 
@@ -117,6 +121,8 @@ test('name matching covers exact, proximity, fallback and override', () => {
     },
   ]);
   assert.equal(proximity.matchType, 'proximity');
+  assert.equal(proximity.nameZh, null);
+  assert.equal(proximity.candidateNameZh, '其他');
   const fallback = matchNames({ id: 'fallback', name: 'Other' }, [
     {
       id: '3',
@@ -134,6 +140,64 @@ test('name matching covers exact, proximity, fallback and override', () => {
   });
   assert.equal(override.matchType, 'override');
   assert.equal(override.nameZh, '覆写');
+});
+
+test('offline build rejects missing country coverage and duplicate city names', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'mundus-isolation-validation-'));
+  try {
+    await assert.rejects(
+      () =>
+        buildOffline(syntheticInput(), {
+          root,
+          geoNames: syntheticGeoNames,
+          overrides: {},
+          countryNames: {},
+        }),
+      /Missing Urban Isolation Chinese country names/,
+    );
+    const duplicateInput = syntheticInput();
+    duplicateInput.rows = duplicateInput.rows.map((row) =>
+      row[0] === '3' ? [...row.slice(0, 5), 0, 0] : row,
+    );
+    const duplicateGeoNames = [
+      ...syntheticGeoNames,
+      {
+        id: '11',
+        latitude: 0,
+        longitude: 0,
+        population: 900000,
+        nameEn: 'Beta',
+        nameZh: '阿尔法',
+        nameZhFallback: false,
+      },
+    ];
+    await assert.rejects(
+      () =>
+        buildOffline(duplicateInput, {
+          root,
+          geoNames: duplicateGeoNames,
+          overrides: {},
+          countryNames: { Country: '国家' },
+        }),
+      /Duplicate Chinese urban-centre name/,
+    );
+    const { asset } = await buildOffline(duplicateInput, {
+      root,
+      geoNames: duplicateGeoNames,
+      overrides: {
+        1: { nameZh: '阿尔法' },
+        3: { nameZh: '阿尔法' },
+      },
+      countryNames: { Country: '国家' },
+    });
+    for (const id of ['1', '3']) {
+      const city = asset.cities.find((row) => row[0] === id);
+      assert.ok(city);
+      assert.equal(asset.strings[city[5]], '阿尔法');
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 function syntheticInput() {
@@ -160,7 +224,12 @@ test('offline output and manifest are byte-identical across two synthetic builds
   const root = await mkdtemp(join(tmpdir(), 'mundus-isolation-build-'));
   try {
     const input = syntheticInput();
-    const options = { root, geoNames: syntheticGeoNames, overrides: {} };
+    const options = {
+      root,
+      geoNames: syntheticGeoNames,
+      overrides: {},
+      countryNames: { Country: '国家' },
+    };
     const firstResult = await buildOffline(input, options);
     const assetPath = join(root, 'src/data/generated/urban-isolation.json');
     const manifestPath = join(root, 'src/data/manifests/urban-isolation.json');
@@ -192,6 +261,7 @@ test('offline asset includes only focal cities and their referenced competitors'
       root,
       geoNames: syntheticGeoNames,
       overrides: {},
+      countryNames: { Country: '国家' },
     });
     assert.deepEqual(
       asset.cities.map((city) => city[0]),
@@ -207,6 +277,48 @@ test('offline asset includes only focal cities and their referenced competitors'
     }
     assert.equal(referenced.size, asset.cities.length);
     assert.equal(asset.strings[asset.cities[0][5]], '阿尔法');
+    assert.ok(asset.cities.every((city) => asset.strings[city[7]] === '国家'));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('offline build rejects an unnamed referenced competitor without an override', async () => {
+  const input = syntheticInput();
+  input.rows = input.rows.map((row) =>
+    row[0] === '2' ? [...row.slice(0, 1), '', ...row.slice(2)] : row,
+  );
+  const root = await mkdtemp(join(tmpdir(), 'mundus-isolation-empty-name-'));
+  try {
+    await assert.rejects(
+      () =>
+        buildOffline(input, {
+          root,
+          geoNames: syntheticGeoNames,
+          overrides: {},
+          countryNames: { Country: '国家' },
+        }),
+      /referenced competitor/,
+    );
+    await assert.rejects(
+      () =>
+        buildOffline(input, {
+          root,
+          geoNames: syntheticGeoNames,
+          overrides: { 2: { nameEn: 'Named centre', nameZh: null } },
+          countryNames: { Country: '国家' },
+        }),
+      /referenced competitor/,
+    );
+    const { asset } = await buildOffline(input, {
+      root,
+      geoNames: syntheticGeoNames,
+      overrides: { 2: { nameEn: 'Named centre', nameZh: '命名中心' } },
+      countryNames: { Country: '国家' },
+    });
+    const renamed = asset.cities.find((city) => city[0] === '2');
+    assert.equal(asset.strings[renamed[4]], 'Named centre');
+    assert.equal(asset.strings[renamed[5]], '命名中心');
   } finally {
     await rm(root, { recursive: true, force: true });
   }

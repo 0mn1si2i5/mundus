@@ -12,10 +12,7 @@ import {
 } from './urlState';
 import type { SunlineClockMode } from './urlState';
 import { clampSunlineTime } from '../features/sunline/solar';
-import {
-  ALPHA_DEFAULT,
-  clampAlpha,
-} from '../features/isolation/isolationMetric';
+import { clampAlpha } from '../features/isolation/isolationMetric';
 
 export interface CameraFocusIntent {
   side: 'origin' | 'antipode' | 'free' | 'major-city';
@@ -77,7 +74,7 @@ export const useAppStore = create<AppState>((set) => ({
   ...initialUrlState,
   surnameDisplayMode:
     initialUrlState.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
-  isolationAlpha: initialUrlState.isolationAlpha ?? ALPHA_DEFAULT,
+  isolationAlpha: initialUrlState.isolationAlpha,
   navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
   antipodeCountry: null,

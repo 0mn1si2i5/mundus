@@ -98,7 +98,7 @@ export function IsolationResult({
           <dt>{t.isolationCompetitor}</dt>
           <dd>
             {competitor
-              ? displayIsolationName(competitor, locale)
+              ? `${displayIsolationName(competitor, locale)} · ${displayIsolationCountry(competitor, locale)}`
               : t.isolationNoCompetitor.replace('{p}', String(percent))}
           </dd>
         </div>

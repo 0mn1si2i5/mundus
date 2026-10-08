@@ -64,6 +64,34 @@ test('slider changes replace history and serialize alpha', async ({
   ).toBeVisible();
 });
 
+test('keyboard changes alpha and selects a ranked city', async ({
+  page,
+}, testInfo) => {
+  await page.goto('./?mode=isolation&v=2');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: '展开孤立度控件' }).click();
+  }
+  const slider = page.getByRole('slider', { name: '规模门槛 α' });
+  await slider.focus();
+  await slider.press('ArrowRight');
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-isolation-alpha',
+    '0.51',
+  );
+  await slider.press('Tab');
+  const first = page
+    .locator('[data-mode-panel="isolation-controls"] ol button')
+    .first();
+  await expect(first).toBeFocused();
+  const before = await globeRegion(page).getAttribute('data-isolation-city-id');
+  await first.press('Enter');
+  await expect(globeRegion(page)).not.toHaveAttribute(
+    'data-isolation-city-id',
+    before ?? '',
+  );
+  await expect(first).toHaveAttribute('aria-current', 'true');
+});
+
 test('a breakpoint city changes competitor across the alpha range', async ({
   page,
 }, testInfo) => {

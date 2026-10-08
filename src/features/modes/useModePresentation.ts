@@ -27,14 +27,10 @@ import {
   type IsolationLoadState,
 } from '../isolation/useIsolationDataset';
 import {
-  nearestFocalCity,
+  computeIsolationSelection,
   type IsolationDataset,
 } from '../isolation/isolationData';
-import {
-  competitorAt,
-  rankingAt,
-  type RecordHolder,
-} from '../isolation/isolationMetric';
+import type { RecordHolder } from '../isolation/isolationMetric';
 import { greatCircleArcPoints } from '../isolation/isolationGeometry';
 
 export interface GlobePresentation {
@@ -141,41 +137,7 @@ export function useModePresentation(): ModePresentation | null {
   const isolation = useMemo(() => {
     if (activeMode !== 'isolation' || isolationData.status !== 'ready')
       return null;
-    const dataset = isolationData.data;
-    const nearest = nearestFocalCity(point, dataset);
-    if (!nearest) return null;
-    const city = dataset.cities[nearest.index];
-    if (!city) return null;
-    const metricCities = dataset.cities.map((item) => ({
-      id: item.id,
-      ...item.point,
-      population: item.population,
-    }));
-    const competitor = competitorAt(
-      dataset.holders[nearest.index] ?? [],
-      metricCities.map((item) => item.population),
-      city.population,
-      isolationAlpha,
-    );
-    const ranking = rankingAt(
-      dataset.focalIndices,
-      metricCities,
-      dataset.holders,
-      isolationAlpha,
-    ).map((entry) => ({
-      city: dataset.cities[entry.index]!,
-      distanceKm: entry.distanceKm,
-    }));
-    const rankIndex = ranking.findIndex((entry) => entry.city.id === city.id);
-    return {
-      nearest,
-      competitor,
-      ranking,
-      rank:
-        rankIndex >= 0
-          ? { position: rankIndex + 1, total: ranking.length }
-          : null,
-    };
+    return computeIsolationSelection(point, isolationAlpha, isolationData.data);
   }, [activeMode, isolationAlpha, isolationData, point]);
   switch (activeMode) {
     case null:
@@ -212,8 +174,8 @@ export function useModePresentation(): ModePresentation | null {
         dataset: isolationData,
         selection: isolation
           ? {
-              cityIndex: isolation.nearest.index,
-              distanceFromPointKm: isolation.nearest.distanceKm,
+              cityIndex: isolation.cityIndex,
+              distanceFromPointKm: isolation.distanceFromPointKm,
               competitor: isolation.competitor,
               rank: isolation.rank,
             }
@@ -225,11 +187,7 @@ export function useModePresentation(): ModePresentation | null {
   }
 }
 
-/**
- * A defensive globe-only presentation for the base Canvas. Unlike
- * `useModePresentation`, this never throws: any mode-calculation failure
- * degrades to a neutral globe instead of taking down the shell.
- */
+/** Globe-only presentation; isolation uses the same selection as the card. */
 export function useGlobePresentation(): GlobePresentation {
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
@@ -244,11 +202,7 @@ export function useGlobePresentation(): GlobePresentation {
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
-    try {
-      return { subsolarPoint: solarPosition(sunlineTimeMs).subsolarPoint };
-    } catch {
-      return null;
-    }
+    return { subsolarPoint: solarPosition(sunlineTimeMs).subsolarPoint };
   }, [activeMode, sunlineTimeMs]);
 
   const surnameMapLabels = useMemo(() => {
@@ -271,14 +225,10 @@ export function useGlobePresentation(): GlobePresentation {
 
   const antipodeRelation = useMemo(() => {
     if (activeMode !== 'antipodes') return null;
-    try {
-      return createAntipodeRelation(
-        point,
-        cityIndex.status === 'ready' ? cityIndex.data : undefined,
-      );
-    } catch {
-      return null;
-    }
+    return createAntipodeRelation(
+      point,
+      cityIndex.status === 'ready' ? cityIndex.data : undefined,
+    );
   }, [activeMode, cityIndex, point]);
 
   const focalPoints = useMemo(
@@ -291,39 +241,28 @@ export function useGlobePresentation(): GlobePresentation {
   const isolation = useMemo<IsolationGlobePresentation | null>(() => {
     if (activeMode !== 'isolation' || isolationData.status !== 'ready')
       return null;
-    try {
-      const dataset = isolationData.data;
-      const nearest = nearestFocalCity(point, dataset);
-      if (!nearest) return null;
-      const city = dataset.cities[nearest.index];
-      if (!city) return null;
-      const competitor = competitorAt(
-        dataset.holders[nearest.index] ?? [],
-        dataset.cities.map((item) => item.population),
-        city.population,
-        isolationAlpha,
-      );
-      const competitorCity = competitor
-        ? dataset.cities[competitor.index]
-        : null;
-      const arcStatus = !competitorCity
-        ? 'none'
-        : greatCircleArcPoints(city.point, competitorCity.point).length > 1
-          ? 'drawn'
-          : 'antipodal';
-      return {
-        alpha: isolationAlpha,
-        focalPoints,
-        city: city.point,
-        competitor: competitor ? dataset.cities[competitor.index]!.point : null,
-        radiusKm: competitor?.distanceKm ?? null,
-        cityId: city.id,
-        competitorId: competitorCity?.id ?? '',
-        arcStatus,
-      };
-    } catch {
-      return null;
-    }
+    const dataset = isolationData.data;
+    const selection = computeIsolationSelection(point, isolationAlpha, dataset);
+    if (!selection) return null;
+    const city = dataset.cities[selection.cityIndex];
+    if (!city) return null;
+    const competitor = selection.competitor;
+    const competitorCity = competitor ? dataset.cities[competitor.index] : null;
+    const arcStatus = !competitorCity
+      ? 'none'
+      : greatCircleArcPoints(city.point, competitorCity.point).length > 1
+        ? 'drawn'
+        : 'antipodal';
+    return {
+      alpha: isolationAlpha,
+      focalPoints,
+      city: city.point,
+      competitor: competitor ? competitorCity!.point : null,
+      radiusKm: competitor?.distanceKm ?? null,
+      cityId: city.id,
+      competitorId: competitorCity?.id ?? '',
+      arcStatus,
+    };
   }, [activeMode, focalPoints, isolationAlpha, isolationData, point]);
 
   return {

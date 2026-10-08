@@ -35,8 +35,7 @@ export interface ShareableState {
   sunlineTimeMs: number;
   sunlineClockMode: SunlineClockMode;
   surnameDisplayMode: SurnameDisplayMode;
-  /** Optional for callers that construct legacy share state literals. */
-  isolationAlpha?: number;
+  isolationAlpha: number;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
@@ -155,9 +154,9 @@ export function serializeUrlState(state: ShareableState): string {
     }
     if (
       state.activeMode === 'isolation' &&
-      (state.isolationAlpha ?? ALPHA_DEFAULT) !== ALPHA_DEFAULT
+      state.isolationAlpha !== ALPHA_DEFAULT
     ) {
-      params.set('alpha', (state.isolationAlpha ?? ALPHA_DEFAULT).toFixed(2));
+      params.set('alpha', state.isolationAlpha.toFixed(2));
     }
     params.set('v', '2');
   }

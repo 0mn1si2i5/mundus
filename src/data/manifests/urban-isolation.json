@@ -13,23 +13,24 @@
     "Filtered 2025 population >= 100,000",
     "Converted EPSG:54009 Mollweide centroids to WGS84 degrees",
     "Precomputed hierarchical record holders",
-    "Attached reviewed GeoNames Chinese names at build time"
+    "Attached exact or reviewed GeoNames Chinese city names at build time; proximity candidates are report-only",
+    "Attached reviewed GHSL-country Chinese names from the complete country table"
   ],
-  "missingValuePolicy": "Missing Chinese names and country ISO codes remain null; empty sub-million names are dropped during capture.",
+  "missingValuePolicy": "Missing Chinese city names and country ISO codes remain null; empty names at or above the universe threshold remain in the immutable input, and a referenced unnamed competitor fails the build unless it has a reviewed override.",
   "boundaryPolicy": "Cities are GHSL urban centres; no runtime geographic boundary matching is performed.",
   "recordCount": 1282,
-  "rawBytes": 124895,
-  "gzipBytes": 53469,
+  "rawBytes": 123830,
+  "gzipBytes": 52713,
   "immutableBuildInput": {
     "path": "src/data/generated/urban-isolation-input.json",
     "schemaVersion": 1,
-    "sha256": "c36432378fa86de47be77836a233a0f28b0f1df869cf3bb62710045b35142352",
-    "rawBytes": 377984
+    "sha256": "ff27720d6f862565c59bb1e0880c53c4bf5694f4627764ac7ec45472e936fa20",
+    "rawBytes": 378037
   },
   "derivedAsset": {
     "path": "src/data/generated/urban-isolation.json",
-    "sha256": "4ce5aecf96d572211bf7453820830bcba34c12863826bba5d9a18396882bd51c",
-    "rawBytes": 124895,
+    "sha256": "bb06805ce90436d96417439bf74f36028f8b5a67e081589498021cca19f4f43b",
+    "rawBytes": 123830,
     "formatVersion": 1
   },
   "sourceAssets": {

@@ -21,6 +21,7 @@ export function IsolationControls({
     locale === 'zh' ? 'zh-CN' : 'en-US',
   );
   const ranking = presentation.ranking;
+  const selectedCityIndex = presentation.selection?.cityIndex;
   return (
     <ModePanel
       id="isolation-controls"
@@ -48,7 +49,18 @@ export function IsolationControls({
       <ol className={styles.list}>
         {ranking.slice(0, 10).map((entry, index) => (
           <li key={entry.city.id}>
-            <button type="button" onClick={() => selectPoint(entry.city.point)}>
+            <button
+              type="button"
+              aria-current={
+                selectedCityIndex !== undefined &&
+                presentation.dataset.status === 'ready' &&
+                presentation.dataset.data.cities[selectedCityIndex]?.id ===
+                  entry.city.id
+                  ? 'true'
+                  : undefined
+              }
+              onClick={() => selectPoint(entry.city.point)}
+            >
               {t.isolationTopListItem
                 .replace('{n}', String(index + 1))
                 .replace('{city}', displayIsolationName(entry.city, locale))

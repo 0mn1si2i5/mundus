@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   decodeIsolationDataset,
+  computeIsolationSelection,
   displayIsolationName,
   nearestFocalCity,
 } from './isolationData';
@@ -33,5 +34,18 @@ describe('isolation data', () => {
     );
     expect(nearest?.index).toBe(0);
     expect(nearest?.distanceKm).toBeLessThan(30);
+  });
+
+  it('shares nearest-city, competitor, and ranking resolution', () => {
+    const dataset = decodeIsolationDataset(fixture);
+    const selection = computeIsolationSelection(
+      { latitude: 0, longitude: 179.85 },
+      0.5,
+      dataset,
+    );
+    expect(selection?.cityIndex).toBe(0);
+    expect(selection?.competitor?.index).toBe(1);
+    expect(selection?.ranking[0]?.city.id).toBe('c');
+    expect(selection?.rank).toEqual({ position: 2, total: 2 });
   });
 });

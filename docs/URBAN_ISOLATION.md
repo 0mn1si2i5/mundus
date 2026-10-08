@@ -119,18 +119,31 @@ download URL, SHA-256, licence, citation/DOI, epoch and both thresholds.
 
 ## 5. Names
 
-- English: the GHSL main urban-centre name.
-- Chinese: from the bundled GeoNames snapshot, with build-time matching only.
+- English: the GHSL main urban-centre name, with reviewed `nameEn` corrections
+  from the override table when needed.
+- Chinese city names: from the bundled GeoNames snapshot, with build-time
+  matching only.
   - A GeoNames city within 50 km whose normalised English name equals the
     GHSL name is used.
   - Otherwise the most populous GeoNames city within 30 km is a **proximity**
-    match and is flagged for review.
+    match and is recorded in the build report for review. Proximity matches do
+    not enter the shipped asset.
   - GeoNames rows marked as Chinese fallbacks give no Chinese name.
 - Reviewed overrides live in `src/features/isolation/isolationNameOverrides.ts`,
   keyed by GHSL id.
-- The executor never invents translations. With no reviewed Chinese name, the
-  Chinese UI shows the English name. A missing Chinese name is a recorded
-  state, not an error.
+- Only exact matches and reviewed overrides enter the asset. The build fails
+  if the same Chinese city name is assigned to different GHSL ids unless both
+  assignments are reviewed overrides.
+- Country names are assigned from the GHSL English country field using the
+  complete reviewed table in `isolationCountryNames.ts`; city GeoNames country
+  rows are not used. The table must cover every country represented in the
+  asset, and uses `刚果民主共和国` for Democratic Republic of the Congo and
+  `巴勒斯坦` for Palestine.
+- The executor never invents translations. With no reviewed Chinese city name,
+  the Chinese UI shows the English name. A missing Chinese name is a recorded
+  state, not an error. A centre with an empty GHSL main name remains in the
+  competitor universe; if referenced by a focal record-holder list, the build
+  requires an override supplying both `nameEn` and `nameZh`.
 
 ## 6. Interaction
 
