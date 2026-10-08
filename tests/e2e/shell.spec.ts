@@ -146,15 +146,16 @@ test('keeps the English header and More menu usable at 320px', async ({
   }
 });
 
-test('keeps every lobby and active header action inside compact viewports', async ({
-  page,
-}) => {
-  const compactViewports = [
-    { width: 320, height: 568 },
-    { width: 390, height: 844 },
-    { width: 412, height: 915 },
-  ];
-  for (const viewport of compactViewports) {
+// One test per viewport: each pass reloads the globe twice, and the three
+// passes together sat at the 30 s test budget on CI runners.
+for (const viewport of [
+  { width: 320, height: 568 },
+  { width: 390, height: 844 },
+  { width: 412, height: 915 },
+]) {
+  test(`keeps every lobby and active header action inside a ${viewport.width}px viewport`, async ({
+    page,
+  }) => {
     await page.setViewportSize(viewport);
 
     await page.goto('./');
@@ -196,8 +197,8 @@ test('keeps every lobby and active header action inside compact viewports', asyn
     await expectHeaderActionsContained(page, viewport);
     await page.getByRole('button', { name: '切换为英文' }).click();
     await expectHeaderActionsContained(page, viewport);
-  }
-});
+  });
+}
 
 test('returns lobby focus to the originating label and falls back to the heading', async ({
   page,
