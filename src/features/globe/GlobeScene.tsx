@@ -86,6 +86,7 @@ import {
 } from './surnameLabelLayout';
 import { SurnameMapLabelLayer } from './SurnameMapLabelLayer';
 import { IsolationLayer } from './IsolationLayer';
+import { IsolationFieldLayer } from './IsolationFieldLayer';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
 
 export interface GlobeKeyboardController {
@@ -120,6 +121,7 @@ interface GlobeSceneProps {
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
   isolation: IsolationGlobePresentation | null;
+  onIsolationFieldRendered: (alpha: number) => void;
   cameraGestureCancelRef: MutableRefObject<(() => void) | null>;
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
   onSurnameLabelLayoutChange: (layout: {
@@ -157,6 +159,7 @@ export function GlobeScene({
   surnameMapLabels,
   surnameDisplayMode,
   isolation,
+  onIsolationFieldRendered,
   cameraGestureCancelRef,
   onSurnameLabelVisibilityChange,
   onSurnameLabelLayoutChange,
@@ -251,6 +254,8 @@ export function GlobeScene({
   const innerWall = useRef<Mesh>(null);
   const innerMaterial = useRef<MeshBasicMaterial>(null);
   const [vectorReady, setVectorReady] = useState(false);
+  const [vectorResources, setVectorResources] =
+    useState<VectorGlobeResources | null>(null);
   // Keep the gesture gate synchronous with the pointer event. React state can
   // commit after OrbitControls has already emitted its first drag frame.
   const cameraGestureActiveRef = useRef(false);
@@ -604,6 +609,7 @@ export function GlobeScene({
   const handleVectorStateChange = useCallback(
     (state: VectorGlobeState, resources: VectorGlobeResources | null) => {
       setVectorReady(state === 'ready');
+      setVectorResources(resources);
       onVectorStateChange(state, resources);
     },
     [onVectorStateChange],
@@ -838,6 +844,7 @@ export function GlobeScene({
     }
     if (
       activeMode !== 'surnames' &&
+      isolation?.view !== 'field' &&
       !hasInteracted &&
       !manualCameraInteraction.current &&
       !reducedMotion &&
@@ -1250,6 +1257,18 @@ export function GlobeScene({
           </>
         ) : null}
         {isolation ? <IsolationLayer isolation={isolation} /> : null}
+        {isolation?.view === 'field' &&
+        isolation.field.status === 'ready' &&
+        vectorResources ? (
+          <IsolationFieldLayer
+            surface={vectorResources.surface}
+            sites={isolation.field.sites}
+            table={isolation.field.table!}
+            selectedCityId={isolation.cityId}
+            alpha={isolation.alpha}
+            onRendered={onIsolationFieldRendered}
+          />
+        ) : null}
       </group>
       <OrbitControls
         ref={(controls) => {

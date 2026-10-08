@@ -181,8 +181,16 @@ export function computeIsolationSelection(
   point: GeoPoint,
   alpha: number,
   dataset: IsolationDataset,
+  selectedCityIndex?: number | null,
 ): IsolationSelection | null {
-  const nearest = nearestFocalCity(point, dataset);
+  const selectedCity =
+    selectedCityIndex == null ? null : dataset.cities[selectedCityIndex];
+  const nearest = selectedCity?.isFocal
+    ? {
+        index: selectedCityIndex!,
+        distanceKm: haversineKm(point, selectedCity.point),
+      }
+    : nearestFocalCity(point, dataset);
   if (!nearest) return null;
   const city = dataset.cities[nearest.index];
   if (!city) return null;

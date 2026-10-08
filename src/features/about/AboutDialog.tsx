@@ -39,7 +39,7 @@ const COPY = {
       ],
       [
         '城市孤立度',
-        '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级孤立半径是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，半径呈阶梯式增长。相邻城市可能被合并为一个城市中心；结果只反映几何与人口规模，不代表交通或经济可达性。',
+        '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级孤立半径是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，半径呈阶梯式增长。全球分区把陆地点归给“距离 ÷ 当前孤立半径”最小的中心，形成不规则区域；颜色只区分归属，无有效半径的中心只标点。相邻城市可能被合并为一个城市中心；结果只反映几何与人口规模，不代表交通或经济可达性。',
       ],
     ] as const,
     credits: [
@@ -128,7 +128,7 @@ const COPY = {
       ],
       [
         'Urban Isolation',
-        'Uses 2025 populations from the GHSL Urban Centre Database (R2024A). The hierarchical isolation radius is the great-circle distance from a city of at least one million people to the nearest urban centre with at least α times its population; a higher α raises the bar, and the radius grows in steps. Neighbouring cities can merge into one urban centre; results reflect geometry and size only, not travel or economic access.',
+        'Uses 2025 populations from the GHSL Urban Centre Database (R2024A). The hierarchical isolation radius is the great-circle distance from a city of at least one million people to the nearest urban centre with at least α times its population; a higher α raises the bar, and the radius grows in steps. Global regions assign land points to the centre with the lowest distance / current isolation radius, producing irregular boundaries. Colours distinguish owners; centres without a valid radius remain dots only. Neighbouring cities can merge into one urban centre; results reflect geometry and size only, not travel or economic access.',
       ],
     ] as const,
     credits: [

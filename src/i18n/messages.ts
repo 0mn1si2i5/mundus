@@ -77,6 +77,19 @@ export const messages = {
     retiredModeNotice: '这个观察已下线，已回到展厅。',
     dismissNotice: '关闭提示',
     isolationPanelTitle: '规模门槛',
+    isolationViewLabel: '孤立度视图',
+    isolationCityView: '单城观察',
+    isolationFieldView: '全球分区',
+    isolationFieldRule:
+      '陆地按“到城市的距离 ÷ 该城当前孤立半径”最小值分区。颜色区分区域，圆点标出中心。',
+    isolationFieldLoading: '正在计算当前 α 下的全球分区…',
+    isolationFieldError: '分区计算失败，可重试或切回单城观察。',
+    isolationFieldCount: '{n} 个中心参与分区；无竞争城市的中心只标点。',
+    isolationFieldCenter: '区域中心',
+    isolationFieldChooseCenter: '选择中心城市',
+    isolationFieldSelectionNote:
+      '所选位置归属这个中心（相距 {d} km），不一定是最近的城市。',
+    isolationFieldSurfaceError: '陆地表面载入失败，无法显示全球分区。',
     isolationExpand: '展开孤立度控件',
     isolationCollapse: '收起孤立度控件',
     isolationSliderLabel: '规模门槛 α',
@@ -184,6 +197,22 @@ export const messages = {
       'That observation has been retired; you have been returned to the lobby.',
     dismissNotice: 'Dismiss',
     isolationPanelTitle: 'Size threshold',
+    isolationViewLabel: 'Isolation view',
+    isolationCityView: 'One city',
+    isolationFieldView: 'Global regions',
+    isolationFieldRule:
+      'Land goes to the city with the lowest distance / current isolation radius. Colors distinguish regions; dots mark their centres.',
+    isolationFieldLoading: 'Computing global regions for the current α…',
+    isolationFieldError:
+      'Region calculation failed. Retry or return to One city.',
+    isolationFieldCount:
+      '{n} centres define regions; centres without competitors remain dots only.',
+    isolationFieldCenter: 'Region centre',
+    isolationFieldChooseCenter: 'Choose a centre city',
+    isolationFieldSelectionNote:
+      'This centre owns the selected point ({d} km away); it need not be the nearest city.',
+    isolationFieldSurfaceError:
+      'The land surface failed to load; global regions cannot be shown.',
     isolationExpand: 'Expand isolation controls',
     isolationCollapse: 'Collapse isolation controls',
     isolationSliderLabel: 'Size threshold α',

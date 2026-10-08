@@ -26,6 +26,8 @@ export const DEFAULT_POINT: GeoPoint = {
 export const DEFAULT_MODE: ModeId = 'antipodes';
 export type SurnameDisplayMode = 'local' | 'latin' | 'chinese';
 export const DEFAULT_SURNAME_DISPLAY_MODE: SurnameDisplayMode = 'local';
+export type IsolationView = 'city' | 'field';
+export const DEFAULT_ISOLATION_VIEW: IsolationView = 'city';
 export type SunlineClockMode = 'live' | 'fixed';
 
 export interface ShareableState {
@@ -36,6 +38,7 @@ export interface ShareableState {
   sunlineClockMode: SunlineClockMode;
   surnameDisplayMode: SurnameDisplayMode;
   isolationAlpha: number;
+  isolationView: IsolationView;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
@@ -97,6 +100,10 @@ export function parseUrlState(
     activeMode === 'isolation'
       ? parseAlphaParam(params.get('alpha'))
       : ALPHA_DEFAULT;
+  const isolationView =
+    activeMode === 'isolation' && params.get('view') === 'field'
+      ? 'field'
+      : DEFAULT_ISOLATION_VIEW;
 
   return {
     activeMode,
@@ -112,6 +119,7 @@ export function parseUrlState(
       ? surnameDisplayMode.data
       : DEFAULT_SURNAME_DISPLAY_MODE,
     isolationAlpha,
+    isolationView,
   };
 }
 
@@ -157,6 +165,12 @@ export function serializeUrlState(state: ShareableState): string {
       state.isolationAlpha !== ALPHA_DEFAULT
     ) {
       params.set('alpha', state.isolationAlpha.toFixed(2));
+    }
+    if (
+      state.activeMode === 'isolation' &&
+      state.isolationView !== DEFAULT_ISOLATION_VIEW
+    ) {
+      params.set('view', state.isolationView);
     }
     params.set('v', '2');
   }

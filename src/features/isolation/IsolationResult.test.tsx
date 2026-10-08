@@ -25,6 +25,8 @@ function presentation(
   return {
     id: 'isolation',
     alpha: 0.5,
+    view: 'city',
+    field: { status: 'idle', alpha: 0, sites: [], table: null, retry: vi.fn() },
     dataset: datasetState,
     selection,
     ranking: [],

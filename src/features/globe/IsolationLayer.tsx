@@ -59,19 +59,19 @@ export function IsolationLayer({
     <>
       <points geometry={focalPositions} raycast={ignoreRaycast}>
         <pointsMaterial
-          color="#8a7a60"
-          size={3}
+          color={isolation.view === 'field' ? '#343f38' : '#8a7a60'}
+          size={isolation.view === 'field' ? 4 : 3}
           sizeAttenuation={false}
           transparent
-          opacity={0.55}
+          opacity={isolation.view === 'field' ? 0.85 : 0.55}
           depthWrite={false}
         />
       </points>
       <IsolationMarker point={isolation.city} color="#b88746" />
-      {isolation.competitor ? (
+      {isolation.view === 'city' && isolation.competitor ? (
         <IsolationMarker point={isolation.competitor} color="#79bba9" />
       ) : null}
-      {ring.length > 1 ? (
+      {isolation.view === 'city' && ring.length > 1 ? (
         <Line
           points={ring.map((point) => geoToVector3(point, 1.012))}
           color="#b88746"
@@ -82,7 +82,7 @@ export function IsolationLayer({
           raycast={ignoreRaycast}
         />
       ) : null}
-      {arc.length > 1 ? (
+      {isolation.view === 'city' && arc.length > 1 ? (
         <Line
           points={arc.map((point) => geoToVector3(point, 1.016))}
           color="#79bba9"

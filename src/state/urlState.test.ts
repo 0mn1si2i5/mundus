@@ -22,6 +22,7 @@ describe('URL state codec', () => {
     ...sunlineDefaults,
     surnameDisplayMode: DEFAULT_SURNAME_DISPLAY_MODE,
     isolationAlpha: ALPHA_DEFAULT,
+    isolationView: 'city',
   };
 
   describe('parseUrlState', () => {
@@ -100,6 +101,7 @@ describe('URL state codec', () => {
       ).toMatchObject({
         activeMode: 'sunline',
         isolationAlpha: ALPHA_DEFAULT,
+        isolationView: 'city',
       });
     });
 
@@ -251,6 +253,7 @@ describe('URL state codec', () => {
         ...sunlineDefaults,
         surnameDisplayMode: 'local',
         isolationAlpha: ALPHA_DEFAULT,
+        isolationView: 'city',
       });
     });
 
@@ -266,6 +269,28 @@ describe('URL state codec', () => {
         activeMode: 'isolation',
         isolationAlpha: 0.37,
       });
+    });
+
+    it('preserves global regions and ignores invalid or unrelated view parameters', () => {
+      const state = {
+        ...lobby,
+        activeMode: 'isolation' as const,
+        isolationAlpha: 0.37,
+        isolationView: 'field' as const,
+      };
+      const link = serializeUrlState(state);
+      expect(link).toBe('?mode=isolation&alpha=0.37&view=field&v=2');
+      expect(parseUrlState(link, nowMs)).toEqual(state);
+      for (const query of [
+        '?mode=isolation&view=invalid&v=2',
+        '?mode=sunline&view=field&v=2',
+        '?view=field&v=2',
+      ]) {
+        expect(parseUrlState(query, nowMs).isolationView).toBe('city');
+      }
+      expect(serializeUrlState({ ...state, activeMode: 'antipodes' })).toBe(
+        '?mode=antipodes&v=2',
+      );
     });
 
     it('round-trips a lobby point link back to the lobby', () => {

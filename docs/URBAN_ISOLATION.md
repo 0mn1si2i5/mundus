@@ -95,9 +95,46 @@ Ranking at α: focal cities with a defined R_i(α), sorted by R descending, then
 population descending, then id. Rank is shown as "n / N", where N counts the
 ranked cities at that α.
 
-Deferred to a later packet: the integrated isolation score, area variants,
-weighted Voronoi, gravity/Huff fields, land-only territory, and colour-coding
-every city by R.
+### Global field view
+
+Urban Isolation also has a static **global field** view (`view=field`). It is
+the same observation and uses the same α and R_i(α) values; it does not add a
+second metric. For each point x on the bundled land surface, ownership is
+
+```text
+owner(x; α) = arg min over focal i with defined positive R_i(α) of d(x, i) / R_i(α)
+```
+
+where d is the same spherical great-circle distance used above. A larger
+isolation radius reduces a centre's weighted distance and extends its relative
+reach; the final region also depends on the other centres and their weights.
+The result is a weighted spherical Voronoi partition, clipped to land. Its borders
+can be curved and irregular; they are geometric boundaries, not coastlines,
+administrative borders, terrain catchments or travel-time regions. A tie uses
+the same deterministic population-then-source-id order as the rest of the
+mode.
+
+Focal centres with an undefined or zero R remain visible and selectable but do
+not own a field region. At α = 1 this includes any centre without a qualifying
+competitor. The field is categorical: its colours distinguish owners and do
+not encode a second continuous score. A selected land point resolves to the
+same owner in the result card and globe. Choosing an exact centre retains that
+centre even when it has no field region.
+
+The partition changes only when some R_i(α) crosses a population threshold;
+moving α within one set of unchanged radii leaves its boundaries unchanged.
+These changes are steps and are not animated or smoothed into a continuous
+population field.
+
+The field is evaluated on the existing Natural Earth land triangles. A shared,
+lazy Web Worker builds conservative tile candidate lists so the fragment
+shader can evaluate the exact weighted distance; the lists are an acceleration
+structure and never a raster approximation of the boundary. The worker is
+started only after entering the field view, is cancelled and its GPU textures
+released when α or the view changes, and reports a local retryable error if it
+fails. Entering the field view stops the globe's idle rotation so that the
+static partition can be inspected and manually rotated. The field view,
+selected city and α round-trip through a shared URL (`view=field`).
 
 ## 4. Asset
 
@@ -149,7 +186,7 @@ download URL, SHA-256, licence, citation/DOI, epoch and both thresholds.
 
 - Entry: tier `more` (under "更多观察"), beside Sunline. Promotion to a primary
   tab is a separate owner decision after review.
-- Selection: the shared selected point maps to the **nearest focal city**. When
+- City view selection: the shared selected point maps to the **nearest focal city**. When
   that city is more than 50 km from the point, the card says "离所选位置最近的
   数据集城市（相距 X km）". Choosing a city from the ranking moves the selected
   point to that city.
@@ -163,18 +200,29 @@ download URL, SHA-256, licence, citation/DOI, epoch and both thresholds.
   - the rank "n / N";
   - an SVG step chart of R(α) over 0.10–1.00, with a cursor at the current α;
   - a one-line caveat.
-- Globe:
+- City view globe:
   - focal cities as small dim dots;
   - the selected city and its competitor as accent markers;
   - a thin geodesic ring (small circle of radius R) around the selected city;
   - a great-circle arc to the competitor.
   - No filled discs.
-- URL: `mode=isolation&point=…&alpha=0.37&v=2`.
+- Global field view:
+  - a toggle switches between the city view and `view=field`;
+  - all land is assigned by the weighted rule in §3, with one centre per
+    region; ocean has no region fill;
+  - the city selector remains a keyboard-accessible way to choose any focal
+    centre, including one that has no field region;
+  - the static view does not use idle rotation, but keeps manual globe
+    rotation and selection.
+- URL: `mode=isolation&point=…&alpha=0.37&view=field&v=2`.
   - `alpha` has two decimals and is omitted at the 0.50 default.
+  - `view=field` is emitted only for the global field view; city view is the
+    default.
   - Invalid or out-of-range values fall back to 0.50.
-  - Slider moves replace the history entry; mode and point changes push one.
+  - Slider moves replace the history entry; mode, view and point changes push one.
 - Lazy loading: no isolation chunk or data request in the lobby or other
-  modes. A failed load shows a local error with a retry action.
+  modes. The field worker is likewise lazy. A failed data or field build shows
+  a local error with a retry action.
 - About: a method note and a GHSL credit (CC BY 4.0 + citation). The credit
   line adds "GHSL".
 
@@ -188,6 +236,9 @@ Mathematics (unit tests):
   step lookup on random fixtures for α on a 0.01 grid.
 - Ties follow §3; the no-competitor state appears exactly when expected.
 - The completeness invariant holds.
+- The field owner follows the weighted d/R rule, including deterministic ties.
+- Conservative tile lists retain the brute-force winner at tile boundaries,
+  the antimeridian and the poles.
 
 Geography (unit tests):
 
@@ -213,6 +264,9 @@ Product (browser tests, desktop and Pixel 7):
 - lazy loading;
 - choosing a ranked city;
 - moving α changes competitor, ring and arc diagnostics at a known breakpoint;
+- entering `view=field` partitions land by d/R, updates when α crosses a step,
+  leaves centres without R selectable, and keeps the field stable after idle
+  rotation is stopped;
 - the URL round-trip;
 - the no-competitor state;
 - 44 px touch targets;

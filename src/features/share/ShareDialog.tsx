@@ -52,6 +52,7 @@ export function ShareDialog({
       sunlineClockMode: state.sunlineClockMode,
       surnameDisplayMode: state.surnameDisplayMode,
       isolationAlpha: state.isolationAlpha,
+      isolationView: state.isolationView,
     };
     return {
       activeMode: state.activeMode,

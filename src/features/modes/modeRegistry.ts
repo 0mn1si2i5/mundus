@@ -129,6 +129,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         longitude: z.number().min(-180).max(180),
       }),
       alpha: z.number().min(ALPHA_MIN).max(ALPHA_MAX),
+      view: z.enum(['city', 'field']),
     }),
   },
 };

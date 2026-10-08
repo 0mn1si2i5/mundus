@@ -32,6 +32,10 @@ import {
 } from '../isolation/isolationData';
 import type { RecordHolder } from '../isolation/isolationMetric';
 import { greatCircleArcPoints } from '../isolation/isolationGeometry';
+import type { IsolationView } from '../../state/urlState';
+import { useIsolationField } from '../isolation/useIsolationField';
+import { isolationFieldSelection } from '../isolation/isolationField';
+import type { IsolationFieldState } from '../isolation/useIsolationField';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -44,6 +48,8 @@ export interface GlobePresentation {
 
 export interface IsolationGlobePresentation {
   alpha: number;
+  view: IsolationView;
+  field: IsolationFieldState;
   focalPoints: readonly GeoPoint[];
   city: GeoPoint;
   competitor: GeoPoint | null;
@@ -83,6 +89,8 @@ export type ModePresentation =
   | {
       id: 'isolation';
       alpha: number;
+      view: IsolationView;
+      field: IsolationFieldState & { retry: () => void };
       dataset: IsolationLoadState;
       selection: {
         cityIndex: number;
@@ -114,6 +122,12 @@ export function useModePresentation(): ModePresentation | null {
   const surnameData = useSurnameDataset(activeMode === 'surnames');
   const isolationData = useIsolationDataset(activeMode === 'isolation');
   const isolationAlpha = useAppStore((state) => state.isolationAlpha);
+  const isolationView = useAppStore((state) => state.isolationView);
+  const field = useIsolationField(
+    isolationData.status === 'ready' ? isolationData.data : null,
+    isolationAlpha,
+    activeMode === 'isolation' && isolationView === 'field',
+  );
 
   const relation = useMemo(
     () =>
@@ -137,8 +151,22 @@ export function useModePresentation(): ModePresentation | null {
   const isolation = useMemo(() => {
     if (activeMode !== 'isolation' || isolationData.status !== 'ready')
       return null;
-    return computeIsolationSelection(point, isolationAlpha, isolationData.data);
-  }, [activeMode, isolationAlpha, isolationData, point]);
+    return computeIsolationSelection(
+      point,
+      isolationAlpha,
+      isolationData.data,
+      isolationView === 'field'
+        ? isolationFieldSelection(point, isolationData.data, field.sites)
+        : null,
+    );
+  }, [
+    activeMode,
+    field.sites,
+    isolationAlpha,
+    isolationData,
+    isolationView,
+    point,
+  ]);
   switch (activeMode) {
     case null:
       return null;
@@ -171,6 +199,8 @@ export function useModePresentation(): ModePresentation | null {
       return {
         id: activeMode,
         alpha: isolationAlpha,
+        view: isolationView,
+        field,
         dataset: isolationData,
         selection: isolation
           ? {
@@ -199,6 +229,12 @@ export function useGlobePresentation(): GlobePresentation {
     DEFAULT_SURNAME_DISPLAY_MODE;
   const isolationData = useIsolationDataset(activeMode === 'isolation');
   const isolationAlpha = useAppStore((state) => state.isolationAlpha);
+  const isolationView = useAppStore((state) => state.isolationView);
+  const field = useIsolationField(
+    isolationData.status === 'ready' ? isolationData.data : null,
+    isolationAlpha,
+    activeMode === 'isolation' && isolationView === 'field',
+  );
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
@@ -242,19 +278,31 @@ export function useGlobePresentation(): GlobePresentation {
     if (activeMode !== 'isolation' || isolationData.status !== 'ready')
       return null;
     const dataset = isolationData.data;
-    const selection = computeIsolationSelection(point, isolationAlpha, dataset);
+    const selection = computeIsolationSelection(
+      point,
+      isolationAlpha,
+      dataset,
+      isolationView === 'field'
+        ? isolationFieldSelection(point, dataset, field.sites)
+        : null,
+    );
     if (!selection) return null;
     const city = dataset.cities[selection.cityIndex];
     if (!city) return null;
     const competitor = selection.competitor;
     const competitorCity = competitor ? dataset.cities[competitor.index] : null;
-    const arcStatus = !competitorCity
-      ? 'none'
-      : greatCircleArcPoints(city.point, competitorCity.point).length > 1
-        ? 'drawn'
-        : 'antipodal';
+    const arcStatus =
+      isolationView === 'field'
+        ? 'none'
+        : !competitorCity
+          ? 'none'
+          : greatCircleArcPoints(city.point, competitorCity.point).length > 1
+            ? 'drawn'
+            : 'antipodal';
     return {
       alpha: isolationAlpha,
+      view: isolationView,
+      field,
       focalPoints,
       city: city.point,
       competitor: competitor ? competitorCity!.point : null,
@@ -263,7 +311,15 @@ export function useGlobePresentation(): GlobePresentation {
       competitorId: competitorCity?.id ?? '',
       arcStatus,
     };
-  }, [activeMode, focalPoints, isolationAlpha, isolationData, point]);
+  }, [
+    activeMode,
+    field,
+    focalPoints,
+    isolationAlpha,
+    isolationData,
+    isolationView,
+    point,
+  ]);
 
   return {
     showAntipodes: activeMode === 'antipodes',

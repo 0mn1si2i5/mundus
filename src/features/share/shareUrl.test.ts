@@ -9,6 +9,7 @@ describe('createShareUrl', () => {
     sunlineClockMode: 'live' as const,
     surnameDisplayMode: 'local' as const,
     isolationAlpha: 0.5,
+    isolationView: 'city' as const,
   };
 
   it('serializes a default lobby to a bare URL', () => {

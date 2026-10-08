@@ -103,6 +103,26 @@ input and the derived Urban Isolation asset.
 Distances use a sphere of radius 6371.0088 km. Compared with a WGS84 ellipsoid,
 the great-circle approximation can differ by less than 0.5%.
 
+The optional global field view applies these distances to each focal centre's
+current isolation radius. A land point x is assigned to the focal centre that
+minimises `d(x, centre) / R(α)`, where R(α) is the nearest qualifying
+competitor distance at the selected α. This weighted spherical Voronoi rule
+allows curved, irregular borders and is evaluated against the existing Natural
+Earth land surface. It does not model terrain, roads, travel time,
+administrative territory or accessibility. Centres whose R(α) is undefined or
+zero remain selectable points but do not own a region. Colours identify the
+categorical owner only; they are not another population or isolation scale.
+Because R(α) is a step function of the qualifying population threshold, region
+borders change at those steps and remain unchanged between them; the method
+does not interpolate weights across thresholds.
+
+The field uses a lazy Web Worker to build conservative tile candidate lists
+for exact fragment-shader evaluation. Candidate tiles are an acceleration
+structure rather than a rasterised boundary. The worker and field textures are
+released when the field view or α changes, and a failed build is reported as a
+local retryable state. The static field view stops automatic idle globe
+rotation while preserving manual rotation and city selection.
+
 The method note preserves the three effects from the accepted design:
 
 1. Adjacent cities can merge into one urban centre, removing them as each
