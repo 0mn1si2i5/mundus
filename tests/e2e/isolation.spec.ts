@@ -132,6 +132,14 @@ test('mobile isolation controls have touch targets and do not cover the result',
       await page.getByLabel('孤立度结果').boundingBox(),
     ),
   ).toBe(false);
+  const result = page.getByLabel('孤立度结果');
+  await expect(result.getByRole('img')).toBeVisible();
+  expect(
+    overlaps(
+      await result.getByRole('img').boundingBox(),
+      await result.getByText(/^城市以 GHSL 城市中心/u).boundingBox(),
+    ),
+  ).toBe(false);
 });
 
 test('reduced motion keeps Urban Isolation interactive', async ({

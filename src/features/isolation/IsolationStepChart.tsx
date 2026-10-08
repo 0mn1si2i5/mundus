@@ -62,7 +62,7 @@ export function IsolationStepChart({
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      style={{ maxWidth: '100%', height: 'auto' }}
+      style={{ maxWidth: '100%', height: 'auto', minHeight: height }}
       role="img"
       aria-label={ariaLabel}
     >
