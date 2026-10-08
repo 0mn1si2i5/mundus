@@ -7,7 +7,7 @@ different scientific lenses. It is designed as a small digital museum exhibit:
 direct enough to explore, explicit about its methods, and careful about the
 limits of its data.
 
-The current public product includes four observation modes. **V1.1.0 Parchment Atlas**
+The current implementation includes four observation modes. **V1.1.0 Parchment Atlas**
 ships:
 
 - **Other Side** calculates exact antipodal endpoints and shows the nearest

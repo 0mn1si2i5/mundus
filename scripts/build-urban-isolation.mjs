@@ -2,15 +2,15 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = resolve(new URL('..', import.meta.url).pathname);
+const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const INPUT_PATH = resolve(
   ROOT,
   'src/data/generated/urban-isolation-input.json',
 );
 const ASSET_PATH = resolve(ROOT, 'src/data/generated/urban-isolation.json');
 const MANIFEST_PATH = resolve(ROOT, 'src/data/manifests/urban-isolation.json');
-const REPORT_PATH = resolve(ROOT, 'tmp/urban-isolation-report.md');
 
 export const SOURCE_PACKAGE_SHA256 =
   '7b644df16b0791f88c3db28ce56338b5e1725be02b6a79ca253849822db26b21';
@@ -21,6 +21,10 @@ export const SOURCE_URL =
 export const SOURCE_PAGE =
   'https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php';
 export const RETRIEVED_AT = '2026-10-08';
+export const SOURCE_CITATION =
+  'Mari Rivero, Ines; Melchiorri, Michele; Florio, Pietro; Schiavina, Marcello; Goch, Katarzyna; Politis, Panagiotis; Uhl, Johannes H; Pesaresi, Martino; Maffenini, Luca; Sulis, Patrizia; Crippa, Monica; Guizzardi, Diego; Pisoni, Enrico; Belis, Claudio; Jacome Felix Oom, Duarte; Branco, Alfredo; Mwaniki, Dennis; Kochulem, Edwin; Githira, Daniel; Carioli, Alessandra; Ehrlich, Daniele; Tommasi, Pierpaolo; Kemper, Thomas; Dijkstra, Lewis (2024): GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset] doi: 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd PID: http://data.europa.eu/89h/1a338be6-7eaf-480c-9664-3a8ade88cbcd';
+const CSV_EXPORT =
+  'Export from GHS_UCDB_GLOBE_R2024A.gpkg: join GHS_UCDB_THEME_GENERAL_CHARACTERISTICS_GLOBE_R2024A to UC_centroids on ID_UC_G0; select CSV_HEADERS in order; order by numeric ID_UC_G0; strip leading U+FEFF from text; write UTF-8 CSV with CRLF records. No CSV distribution URL is published.';
 export const CSV_HEADERS = [
   'ID_UC_G0',
   'GC_UCN_MAI_2025',
@@ -30,7 +34,7 @@ export const CSV_HEADERS = [
   'GC_UCC_LAT_2025',
 ];
 
-const { ALPHA_MIN, ALPHA_MAX, recordHolders, competitorAt, rankingAt } =
+const { ALPHA_MIN, recordHolders, competitorAt, rankingAt } =
   await import('../src/features/isolation/isolationMetric.ts');
 
 export function sha256(bytes) {
@@ -109,6 +113,14 @@ function clean(value) {
     .trim();
 }
 
+function finiteField(value, field, id) {
+  const text = clean(value);
+  const number = Number(text);
+  if (!text || !Number.isFinite(number))
+    throw new Error(`Missing or invalid ${field} for ${id}`);
+  return number;
+}
+
 export function captureCsv(text, expectedHash = CAPTURE_CSV_SHA256) {
   const bytes = Buffer.from(text, 'utf8');
   const actualHash = sha256(bytes);
@@ -131,18 +143,13 @@ export function captureCsv(text, expectedHash = CAPTURE_CSV_SHA256) {
     const id = clean(row.ID_UC_G0);
     const name = clean(row.GC_UCN_MAI_2025);
     const countryName = clean(row.GC_CNT_GAD_2025);
-    const population = Number(row.GC_POP_TOT_2025);
-    const x = Number(row.GC_UCC_LON_2025);
-    const y = Number(row.GC_UCC_LAT_2025);
-    if (!Number.isFinite(population) || population < 100_000) continue;
     if (!id || seen.has(id))
       throw new Error(`Invalid or duplicate urban-centre id: ${id}`);
-    if (!Number.isFinite(population) || population <= 0)
-      throw new Error(`Invalid population for ${id}`);
-    if (!name && population >= 1_000_000)
-      throw new Error(`Missing name for focal urban centre ${id}`);
-    if (!Number.isFinite(x) || !Number.isFinite(y))
-      throw new Error(`Missing centroid for ${id}`);
+    seen.add(id);
+    const population = finiteField(row.GC_POP_TOT_2025, 'population', id);
+    const x = finiteField(row.GC_UCC_LON_2025, 'centroid x', id);
+    const y = finiteField(row.GC_UCC_LAT_2025, 'centroid y', id);
+    if (population <= 0) throw new Error(`Invalid population for ${id}`);
     const point = mollweideToWgs84(x, y);
     if (
       !Number.isFinite(point.latitude) ||
@@ -153,7 +160,13 @@ export function captureCsv(text, expectedHash = CAPTURE_CSV_SHA256) {
       point.longitude > 180
     )
       throw new Error(`Invalid centroid for ${id}`);
-    seen.add(id);
+    if (population < 100_000) continue;
+    if (!name) {
+      if (population >= 1_000_000)
+        throw new Error(`Missing name for focal urban centre ${id}`);
+      continue;
+    }
+    if (!countryName) throw new Error(`Missing country name for ${id}`);
     rows.push([
       id,
       name,
@@ -176,6 +189,8 @@ export function captureCsv(text, expectedHash = CAPTURE_CSV_SHA256) {
       releaseDate: '2025-07-31',
       packageSha256: SOURCE_PACKAGE_SHA256,
       csvSha256: actualHash,
+      csvRawBytes: bytes.byteLength,
+      csvExport: CSV_EXPORT,
       coordinateReferenceSystem: 'EPSG:54009',
     },
     rows,
@@ -247,29 +262,61 @@ export function matchNames(city, geoNames, overrides = {}) {
   };
 }
 
-async function loadGeoNamesSnapshot() {
-  const raw = JSON.parse(
+async function loadGeoNamesSnapshot(root) {
+  const bytes = await readFile(
+    resolve(root, 'src/data/generated/geonames-major-cities.json'),
+  );
+  const manifest = JSON.parse(
     await readFile(
-      resolve(ROOT, 'src/data/generated/geonames-major-cities.json'),
+      resolve(root, 'src/data/manifests/geonames-major-cities.json'),
       'utf8',
     ),
   );
-  const strings = raw.strings;
-  const cities = raw.rows.map((row) => ({
-    id: String(row[0]),
-    latitude: row[1] / 100_000,
-    longitude: row[2] / 100_000,
-    population: row[3],
-    nameEn: strings[row[6]],
-    nameZh: strings[row[7]],
-    countryEn: strings[row[8]],
-    countryZh: strings[row[9]],
-    nameZhFallback: (row[13] & 1) === 1,
-  }));
-  return cities;
+  if (sha256(bytes) !== manifest.derivedAsset.sha256)
+    throw new Error('GeoNames snapshot SHA-256 mismatch');
+  const { decodeGeoNamesCityIndex } =
+    await import('../src/features/antipodes/geonamesCities.ts');
+  return decodeGeoNamesCityIndex(JSON.parse(bytes.toString('utf8'))).map(
+    (city) => ({
+      id: String(city.id),
+      ...city.point,
+      population: city.population,
+      nameEn: city.name.en,
+      nameZh: city.name.zh,
+      countryEn: city.country.en,
+      countryZh: city.country.zh,
+      nameZhFallback: city.nameZhFallback,
+    }),
+  );
 }
 
-async function buildOffline(input) {
+async function buildOffline(input, { root = ROOT, geoNames, overrides } = {}) {
+  if (input?.schemaVersion !== 1 || !input.source || !Array.isArray(input.rows))
+    throw new Error('Invalid Urban Isolation immutable input schema');
+  const seenIds = new Set();
+  for (const row of input.rows) {
+    const [id, name, country, , population, latitude, longitude] = row;
+    if (
+      row.length !== 7 ||
+      typeof id !== 'string' ||
+      !id ||
+      seenIds.has(id) ||
+      typeof name !== 'string' ||
+      !name.trim() ||
+      typeof country !== 'string' ||
+      !country.trim() ||
+      !Number.isFinite(population) ||
+      population < 100_000 ||
+      !Number.isFinite(latitude) ||
+      Math.abs(latitude) > 90 ||
+      !Number.isFinite(longitude) ||
+      Math.abs(longitude) > 180
+    )
+      throw new Error(
+        `Invalid Urban Isolation immutable input row: ${String(id)}`,
+      );
+    seenIds.add(id);
+  }
   const cities = input.rows.map(
     ([id, name, countryName, countryIso, population, latitude, longitude]) => ({
       id,
@@ -304,9 +351,12 @@ async function buildOffline(input) {
     holderLists[focalIndex] = holders;
     holders.forEach((holder) => referenced.add(holder.index));
   }
-  const geoNames = await loadGeoNamesSnapshot();
-  const { ISOLATION_NAME_OVERRIDES } =
-    await import('../src/features/isolation/isolationNameOverrides.ts');
+  geoNames ??= await loadGeoNamesSnapshot(root);
+  if (overrides === undefined) {
+    const { ISOLATION_NAME_OVERRIDES } =
+      await import('../src/features/isolation/isolationNameOverrides.ts');
+    overrides = ISOLATION_NAME_OVERRIDES;
+  }
   const geonameCandidates = [];
   const { haversineKm } =
     await import('../src/features/isolation/isolationMetric.ts');
@@ -317,7 +367,7 @@ async function buildOffline(input) {
       ...candidate,
       distanceKm: haversineKm(city, candidate),
     }));
-    const match = matchNames(city, candidates, ISOLATION_NAME_OVERRIDES);
+    const match = matchNames(city, candidates, overrides);
     nameMatches.set(index, match);
     geonameCandidates.push({ city, match });
   }
@@ -381,10 +431,10 @@ async function buildOffline(input) {
     licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
     version: 'R2024A V1_1',
     retrievedAt: RETRIEVED_AT,
-    attribution:
-      'GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset], DOI 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd',
+    attribution: SOURCE_CITATION,
     redistribution: 'allowed',
     transformations: [
+      CSV_EXPORT,
       'Filtered 2025 population >= 100,000',
       'Converted EPSG:54009 Mollweide centroids to WGS84 degrees',
       'Precomputed hierarchical record holders',
@@ -410,15 +460,30 @@ async function buildOffline(input) {
       formatVersion: 1,
     },
     sourceAssets: {
-      csv: { distributionUrl: SOURCE_URL, sha256: input.source.csvSha256 },
+      zip: { distributionUrl: SOURCE_URL, sha256: input.source.packageSha256 },
+    },
+    derivedCapture: {
+      fileName: 'GHS_UCDB_R2024A_V1_1_urban_centres.csv',
+      sha256: input.source.csvSha256,
+      rawBytes: input.source.csvRawBytes,
+      sourceAsset: 'zip',
+      export: input.source.csvExport,
     },
   };
-  await mkdir(dirname(INPUT_PATH), { recursive: true });
-  await writeFile(INPUT_PATH, inputBytes);
-  await writeFile(ASSET_PATH, assetBytes);
-  await writeFile(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
+  const inputPath = resolve(
+    root,
+    'src/data/generated/urban-isolation-input.json',
+  );
+  const assetPath = resolve(root, 'src/data/generated/urban-isolation.json');
+  const manifestPath = resolve(root, 'src/data/manifests/urban-isolation.json');
+  const reportPath = resolve(root, 'tmp/urban-isolation-report.md');
+  for (const path of [inputPath, assetPath, manifestPath, reportPath])
+    await mkdir(dirname(path), { recursive: true });
+  await writeFile(inputPath, inputBytes);
+  await writeFile(assetPath, assetBytes);
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   await writeFile(
-    REPORT_PATH,
+    reportPath,
     createReport(
       cities,
       focalIndices,
@@ -428,7 +493,7 @@ async function buildOffline(input) {
       manifest,
     ),
   );
-  return { input, asset, manifest, reportPath: REPORT_PATH };
+  return { input, asset, manifest, reportPath };
 }
 
 function createReport(
@@ -513,7 +578,14 @@ async function main() {
       rawBytes: bytes.byteLength,
     };
     manifest.sourceAssets = {
-      csv: { distributionUrl: SOURCE_URL, sha256: input.source.csvSha256 },
+      zip: { distributionUrl: SOURCE_URL, sha256: input.source.packageSha256 },
+    };
+    manifest.derivedCapture = {
+      fileName: 'GHS_UCDB_R2024A_V1_1_urban_centres.csv',
+      sha256: input.source.csvSha256,
+      rawBytes: input.source.csvRawBytes,
+      sourceAsset: 'zip',
+      export: input.source.csvExport,
     };
     await writeFile(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
     console.log(`Captured ${input.rows.length} rows into ${INPUT_PATH}`);
@@ -536,6 +608,10 @@ async function readManifestIfPresent() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+)
+  await main();
 
 export { buildOffline };

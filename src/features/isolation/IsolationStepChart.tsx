@@ -47,16 +47,24 @@ export function IsolationStepChart({
     return [{ holder, start: previous, end: next }];
   });
   const current = competitorAt(holders, populations, focalPopulation, alpha);
-  const currentDistance = current?.distanceKm ?? 0;
+  const ariaLabel = current
+    ? t.isolationChartAria
+        .replace('{a}', alpha.toFixed(2))
+        .replace(
+          '{d}',
+          new Intl.NumberFormat(locale === 'zh' ? 'zh-CN' : 'en-US').format(
+            Math.round(current.distanceKm),
+          ),
+        )
+    : t.isolationNoCompetitor.replace('{p}', String(Math.round(alpha * 100)));
   return (
     <svg
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
+      style={{ maxWidth: '100%', height: 'auto' }}
       role="img"
-      aria-label={t.isolationChartAria
-        .replace('{a}', alpha.toFixed(2))
-        .replace('{d}', String(Math.round(currentDistance)))}
+      aria-label={ariaLabel}
     >
       <line
         x1={padding.left}
@@ -72,6 +80,17 @@ export function IsolationStepChart({
           x1={x(start)}
           x2={x(end)}
           y1={y(holder.distanceKm)}
+          y2={y(holder.distanceKm)}
+          stroke="#b88746"
+          strokeWidth="2"
+        />
+      ))}
+      {steps.slice(1).map(({ holder, start }, index) => (
+        <line
+          key={`jump-${holder.index}`}
+          x1={x(start)}
+          x2={x(start)}
+          y1={y(steps[index]!.holder.distanceKm)}
           y2={y(holder.distanceKm)}
           stroke="#b88746"
           strokeWidth="2"

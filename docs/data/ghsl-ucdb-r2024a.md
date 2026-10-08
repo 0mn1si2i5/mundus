@@ -41,6 +41,20 @@ the raw download remains outside Git. The derived capture CSV has 11,422 rows,
 is 680,826 bytes, and has SHA-256
 `c122f1fdc8a9da3fdbe83ddb356fadf28b6baa305d7f0d04cce0fde9649ab2d4`.
 
+This CSV is a local export, not a separately published distribution. The
+manifest's `sourceAssets.zip` pairs the official ZIP URL with its ZIP hash;
+`derivedCapture` records the exported CSV filename, hash, byte size and export
+recipe. The two hashes identify different files and must not be interchanged.
+
+To reproduce the capture CSV, join
+`GHS_UCDB_THEME_GENERAL_CHARACTERISTICS_GLOBE_R2024A` with `UC_centroids` on
+`ID_UC_G0`, select the six columns below in their listed order, and order by
+numeric `ID_UC_G0`. The general-characteristics table's relevant column names
+and text values start with U+FEFF; remove that leading marker from the exported
+header and text values. Write the results with Python's standard `csv.writer`
+as UTF-8, using its CRLF record terminator. This reproduces the pinned CSV hash
+from the official GeoPackage without changing numeric values.
+
 The exact columns used are:
 
 | CSV column        | Meaning                                                      |
@@ -75,6 +89,16 @@ places by the capture build.
 - Focal cities: population `>= 1,000,000`.
 - The UI alpha range is `0.10` through `1.00`; the completeness invariant is
   `0.10 * min focal population >= 100,000`.
+
+Capture rejects missing, non-finite or non-positive populations and missing or
+invalid centroids. Rows below 100,000 are filtered; unnamed rows from 100,000
+to below 1,000,000 are dropped, while an unnamed focal row stops the build.
+The offline build verifies the immutable input hash and the bundled GeoNames
+snapshot hash before rebuilding. `pnpm data:verify` checks both the immutable
+input and the derived Urban Isolation asset.
+
+Distances use a sphere of radius 6371.0088 km. Compared with a WGS84 ellipsoid,
+the great-circle approximation can differ by less than 0.5%.
 
 The method note preserves the three effects from the accepted design:
 

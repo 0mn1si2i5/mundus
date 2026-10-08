@@ -1,4 +1,5 @@
 import type { Locale } from '../../i18n/messages';
+import urbanIsolationManifest from '../../data/manifests/urban-isolation.json';
 import { Dialog } from '../controls/Dialog';
 import styles from './AboutDialog.module.css';
 
@@ -90,14 +91,13 @@ const COPY = {
       {
         name: 'GHSL Urban Centre Database',
         use: '城市孤立度',
-        notice:
-          'GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset], DOI 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd · CC BY 4.0',
+        notice: `${urbanIsolationManifest.attribution} · CC BY 4.0`,
         links: [
           {
             label: '数据集页面',
             href: 'https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php',
           },
-          { label: 'CC BY 4.0', href: CC_BY_4 },
+          { label: 'GHSL · CC BY 4.0', href: CC_BY_4 },
         ],
       },
     ] satisfies readonly Credit[],
@@ -181,14 +181,13 @@ const COPY = {
       {
         name: 'GHSL Urban Centre Database',
         use: 'Urban Isolation',
-        notice:
-          'GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset], DOI 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd · CC BY 4.0',
+        notice: `${urbanIsolationManifest.attribution} · CC BY 4.0`,
         links: [
           {
             label: 'Dataset page',
             href: 'https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php',
           },
-          { label: 'CC BY 4.0', href: CC_BY_4 },
+          { label: 'GHSL · CC BY 4.0', href: CC_BY_4 },
         ],
       },
     ] satisfies readonly Credit[],

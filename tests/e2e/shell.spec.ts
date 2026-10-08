@@ -341,8 +341,27 @@ test('credits every data source with its license in the About dialog', async ({
   );
   await expect(about).toContainText('CC BY-SA 4.0');
   await expect(
-    about.getByRole('link', { name: 'CC BY 4.0 ↗' }),
+    about
+      .getByRole('listitem')
+      .filter({ hasText: '包含 GeoNames 数据' })
+      .getByRole('link', { name: 'CC BY 4.0 ↗', exact: true }),
   ).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/');
+  const ghsl = about.getByRole('listitem').filter({
+    hasText: 'GHSL Urban Centre Database',
+  });
+  await expect(ghsl).toContainText('Mari Rivero, Ines');
+  await expect(ghsl).toContainText(
+    '10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd',
+  );
+  await expect(
+    ghsl.getByRole('link', { name: 'GHSL · CC BY 4.0 ↗', exact: true }),
+  ).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/');
+  await expect(
+    ghsl.getByRole('link', { name: '数据集页面 ↗' }),
+  ).toHaveAttribute(
+    'href',
+    'https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php',
+  );
   await expect(about).not.toContainText('UNDP');
   await expect(
     about.getByRole('link', { name: '来源 ↗' }).first(),

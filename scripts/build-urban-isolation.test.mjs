@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
-  CAPTURE_CSV_SHA256,
+  SOURCE_CITATION,
+  SOURCE_PACKAGE_SHA256,
   buildOffline,
   captureCsv,
   checkBudget,
@@ -22,11 +23,47 @@ test('capture rejects a wrong SHA-256', () => {
   );
 });
 
-test('capture filters small rows and rejects an empty focal name', () => {
+test('capture filters small rows, drops empty non-focal names and rejects an empty focal name', () => {
   const text = `${header}1,Alpha,Country,100000,0,0\n2,Small,Country,99999,0,0\n3,,Country,1000000,0,0\n`;
   assert.throws(() => captureCsv(text, sha256(Buffer.from(text))));
-  const valid = `${header}1,Alpha,Country,100000,0,0\n2,Small,Country,99999,0,0\n`;
-  assert.equal(captureCsv(valid, sha256(Buffer.from(valid))).rows.length, 1);
+  const valid = `${header}1,Alpha,Country,100000,0,0\n2,Small,Country,99999,0,0\n3,,Country,100000,0,0\n`;
+  assert.deepEqual(captureCsv(valid, sha256(Buffer.from(valid))).rows, [
+    ['1', 'Alpha', 'Country', null, 100000, 0, 0],
+  ]);
+});
+
+test('capture rejects missing, invalid and non-positive populations', () => {
+  for (const population of ['', ' ', 'abc', 'NaN', 'Infinity', '0', '-1']) {
+    const text = `${header}1,Alpha,Country,${population},0,0\n`;
+    assert.throws(
+      () => captureCsv(text, sha256(Buffer.from(text))),
+      /population/,
+    );
+  }
+});
+
+test('capture rejects missing, invalid and out-of-range centroids', () => {
+  for (const [x, y] of [
+    ['', '0'],
+    [' ', '0'],
+    ['abc', '0'],
+    ['Infinity', '0'],
+    ['0', ''],
+    ['0', 'NaN'],
+    ['100000000', '0'],
+    ['0', '100000000'],
+  ]) {
+    const text = `${header}1,Alpha,Country,100000,${x},${y}\n`;
+    assert.throws(
+      () => captureCsv(text, sha256(Buffer.from(text))),
+      /centroid/,
+    );
+  }
+});
+
+test('capture rejects duplicate source IDs', () => {
+  const text = `${header}1,Alpha,Country,100000,0,0\n1,Beta,Country,100000,0,0\n`;
+  assert.throws(() => captureCsv(text, sha256(Buffer.from(text))), /duplicate/);
 });
 
 test('Mollweide conversion round-trips known points', () => {
@@ -99,34 +136,78 @@ test('name matching covers exact, proximity, fallback and override', () => {
   assert.equal(override.nameZh, '覆写');
 });
 
-test('the checked capture hash is stable', () => {
-  assert.match(CAPTURE_CSV_SHA256, /^[a-f0-9]{64}$/);
+function syntheticInput() {
+  // Alpha selects the nearby 200k centre, then Beta; the remote 100k centre
+  // never becomes a record holder for either focal city.
+  const text = `${header}1,Alpha,Country,1000000,0,0\n2,Near,Country,200000,100000,0\n3,Beta,Country,2000000,1000000,0\n4,Unused,Country,100000,2000000,0\n`;
+  return captureCsv(text, sha256(Buffer.from(text)));
+}
+
+const syntheticGeoNames = [
+  {
+    id: '10',
+    latitude: 0,
+    longitude: 0,
+    population: 1000000,
+    nameEn: 'Alpha',
+    nameZh: '阿尔法',
+    countryZh: '国家',
+    nameZhFallback: false,
+  },
+];
+
+test('offline output and manifest are byte-identical across two synthetic builds', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'mundus-isolation-build-'));
+  try {
+    const input = syntheticInput();
+    const options = { root, geoNames: syntheticGeoNames, overrides: {} };
+    const firstResult = await buildOffline(input, options);
+    const assetPath = join(root, 'src/data/generated/urban-isolation.json');
+    const manifestPath = join(root, 'src/data/manifests/urban-isolation.json');
+    const first = await readFile(assetPath);
+    const firstManifest = await readFile(manifestPath);
+    const report = await readFile(firstResult.reportPath, 'utf8');
+    assert.match(report, /Focal cities: 2/);
+    assert.equal(
+      firstResult.manifest.sourceAssets.zip.sha256,
+      SOURCE_PACKAGE_SHA256,
+    );
+    assert.equal(
+      firstResult.manifest.derivedCapture.sha256,
+      input.source.csvSha256,
+    );
+    assert.equal(firstResult.manifest.attribution, SOURCE_CITATION);
+    await buildOffline(input, options);
+    assert.deepEqual(await readFile(assetPath), first);
+    assert.deepEqual(await readFile(manifestPath), firstManifest);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
-test('offline output is byte-identical across two builds', async () => {
-  const assetPath = join(
-    process.cwd(),
-    'src/data/generated/urban-isolation.json',
-  );
-  const before = await readFile(assetPath);
-  await buildOffline(
-    JSON.parse(
-      await readFile(
-        join(process.cwd(), 'src/data/generated/urban-isolation-input.json'),
-        'utf8',
-      ),
-    ),
-  );
-  const first = await readFile(assetPath);
-  await buildOffline(
-    JSON.parse(
-      await readFile(
-        join(process.cwd(), 'src/data/generated/urban-isolation-input.json'),
-        'utf8',
-      ),
-    ),
-  );
-  const second = await readFile(assetPath);
-  assert.deepEqual(first, second);
-  assert.ok(before.length > 0);
+test('offline asset includes only focal cities and their referenced competitors', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'mundus-isolation-membership-'));
+  try {
+    const { asset } = await buildOffline(syntheticInput(), {
+      root,
+      geoNames: syntheticGeoNames,
+      overrides: {},
+    });
+    assert.deepEqual(
+      asset.cities.map((city) => city[0]),
+      ['1', '2', '3'],
+    );
+    assert.equal(asset.holders[1], null);
+    const focalIndices = asset.cities.flatMap((city, index) =>
+      city[8] ? [index] : [],
+    );
+    const referenced = new Set(focalIndices);
+    for (const holders of asset.holders) {
+      if (holders) for (const [index] of holders) referenced.add(index);
+    }
+    assert.equal(referenced.size, asset.cities.length);
+    assert.equal(asset.strings[asset.cities[0][5]], '阿尔法');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

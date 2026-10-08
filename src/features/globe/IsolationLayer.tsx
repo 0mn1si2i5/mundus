@@ -1,6 +1,13 @@
 import { Billboard, Line } from '@react-three/drei';
-import { useMemo } from 'react';
-import { BufferGeometry, Float32BufferAttribute } from 'three';
+import { useFrame, useThree } from '@react-three/fiber';
+import { useEffect, useMemo, useRef } from 'react';
+import {
+  BufferGeometry,
+  Float32BufferAttribute,
+  Vector3,
+  type Group,
+  type PerspectiveCamera,
+} from 'three';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
 import {
   greatCircleArcPoints,
@@ -8,6 +15,8 @@ import {
 } from '../isolation/isolationGeometry';
 import { geoToVector3 } from './geo';
 import { ignoreRaycast } from './sceneUtils';
+import { cssPixelsToWorldUnits } from './screenSpace';
+import { EARTH_RADIUS_KM } from '../isolation/isolationMetric';
 
 export function IsolationLayer({
   isolation,
@@ -28,11 +37,15 @@ export function IsolationLayer({
     );
     return geometry;
   }, [isolation.focalPoints]);
+  useEffect(() => () => focalPositions.dispose(), [focalPositions]);
   const ring = useMemo(
     () =>
       isolation.radiusKm === null
         ? []
-        : smallCirclePoints(isolation.city, isolation.radiusKm / 6371.0088),
+        : smallCirclePoints(
+            isolation.city,
+            isolation.radiusKm / EARTH_RADIUS_KM,
+          ),
     [isolation.city, isolation.radiusKm],
   );
   const arc = useMemo(
@@ -91,11 +104,33 @@ function IsolationMarker({
   point: { latitude: number; longitude: number };
   color: string;
 }) {
+  const marker = useRef<Group>(null);
+  const worldPosition = useMemo(() => new Vector3(), []);
+  const direction = useMemo(() => new Vector3(), []);
+  const offset = useMemo(() => new Vector3(), []);
+  const { camera, size } = useThree();
+  useFrame(() => {
+    const group = marker.current;
+    if (!group) return;
+    group.getWorldPosition(worldPosition);
+    camera.getWorldDirection(direction);
+    const distance = offset
+      .subVectors(worldPosition, camera.position)
+      .dot(direction);
+    group.scale.setScalar(
+      cssPixelsToWorldUnits(
+        7,
+        distance,
+        (camera as PerspectiveCamera).fov,
+        size.height,
+      ),
+    );
+  });
   return (
-    <group position={geoToVector3(point, 1.022)} renderOrder={6}>
+    <group ref={marker} position={geoToVector3(point, 1.022)} renderOrder={6}>
       <Billboard>
         <mesh raycast={ignoreRaycast} renderOrder={6}>
-          <circleGeometry args={[0.055, 24]} />
+          <circleGeometry args={[0.5, 24]} />
           <meshBasicMaterial
             color={color}
             depthWrite={false}

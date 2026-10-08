@@ -43,11 +43,13 @@ test('selects Tokyo and draws its competitor arc', async ({ page }) => {
   );
 });
 
-test('slider changes replace history and serialize alpha', async ({ page }) => {
+test('slider changes replace history and serialize alpha', async ({
+  page,
+}, testInfo) => {
   await page.goto('./');
   await switchMode(page, '城市孤立度');
   const slider = page.getByRole('slider', { name: '规模门槛 α' });
-  if (await slider.isHidden())
+  if (testInfo.project.name === 'mobile')
     await page.getByRole('button', { name: '展开孤立度控件' }).click();
   await slider.focus();
   await slider.press('End');
@@ -64,14 +66,14 @@ test('slider changes replace history and serialize alpha', async ({ page }) => {
 
 test('a breakpoint city changes competitor across the alpha range', async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto('./?mode=isolation&point=25.3124%2C83.0049&alpha=0.10&v=2');
   await expect(globeRegion(page)).toHaveAttribute(
     'data-isolation-competitor-id',
     '9934',
   );
   const slider = page.getByRole('slider', { name: '规模门槛 α' });
-  if (await slider.isHidden())
+  if (testInfo.project.name === 'mobile')
     await page.getByRole('button', { name: '展开孤立度控件' }).click();
   await slider.focus();
   await slider.press('End');
@@ -115,8 +117,8 @@ test('clicking a Top 10 entry selects that city', async ({
 
 test('mobile isolation controls have touch targets and do not cover the result', async ({
   page,
-}, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile', 'Pixel 7 layout only');
+}) => {
+  await page.setViewportSize({ width: 393, height: 851 });
   await page.goto('./?mode=isolation&v=2');
   const toggle = page.getByRole('button', { name: '展开孤立度控件' });
   await expectMinimumHeight(toggle, 44);
@@ -132,13 +134,20 @@ test('mobile isolation controls have touch targets and do not cover the result',
   ).toBe(false);
 });
 
-test('reduced motion keeps Urban Isolation interactive', async ({ page }) => {
+test('reduced motion keeps Urban Isolation interactive', async ({
+  page,
+}, testInfo) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./?mode=isolation&v=2');
   await expect(page.getByLabel('孤立度结果')).toBeVisible();
+  await expect(
+    page.locator('[data-mode-panel="isolation-controls"]'),
+  ).toBeVisible();
   const slider = page.getByRole('slider', { name: '规模门槛 α' });
-  if (await slider.isHidden())
+  if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: '展开孤立度控件' }).click();
+  }
+  await expect(slider).toBeVisible();
   await slider.focus();
   await slider.press('End');
   await expect(globeRegion(page)).toHaveAttribute(

@@ -57,6 +57,11 @@ const assets = [
   },
   {
     manifest: 'src/data/manifests/urban-isolation.json',
+    asset: 'src/data/generated/urban-isolation-input.json',
+    hashField: 'immutableBuildInput.sha256',
+  },
+  {
+    manifest: 'src/data/manifests/urban-isolation.json',
     asset: 'src/data/generated/urban-isolation.json',
     hashField: 'derivedAsset.sha256',
   },

@@ -281,6 +281,13 @@ export function useGlobePresentation(): GlobePresentation {
     }
   }, [activeMode, cityIndex, point]);
 
+  const focalPoints = useMemo(
+    () =>
+      isolationData.data?.focalIndices.map(
+        (index) => isolationData.data!.cities[index]!.point,
+      ) ?? [],
+    [isolationData.data],
+  );
   const isolation = useMemo<IsolationGlobePresentation | null>(() => {
     if (activeMode !== 'isolation' || isolationData.status !== 'ready')
       return null;
@@ -306,9 +313,7 @@ export function useGlobePresentation(): GlobePresentation {
           : 'antipodal';
       return {
         alpha: isolationAlpha,
-        focalPoints: dataset.focalIndices.map(
-          (index) => dataset.cities[index]!.point,
-        ),
+        focalPoints,
         city: city.point,
         competitor: competitor ? dataset.cities[competitor.index]!.point : null,
         radiusKm: competitor?.distanceKm ?? null,
@@ -319,7 +324,7 @@ export function useGlobePresentation(): GlobePresentation {
     } catch {
       return null;
     }
-  }, [activeMode, isolationAlpha, isolationData, point]);
+  }, [activeMode, focalPoints, isolationAlpha, isolationData, point]);
 
   return {
     showAntipodes: activeMode === 'antipodes',

@@ -6,9 +6,10 @@
   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
   "version": "R2024A V1_1",
   "retrievedAt": "2026-10-08",
-  "attribution": "GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset], DOI 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd",
+  "attribution": "Mari Rivero, Ines; Melchiorri, Michele; Florio, Pietro; Schiavina, Marcello; Goch, Katarzyna; Politis, Panagiotis; Uhl, Johannes H; Pesaresi, Martino; Maffenini, Luca; Sulis, Patrizia; Crippa, Monica; Guizzardi, Diego; Pisoni, Enrico; Belis, Claudio; Jacome Felix Oom, Duarte; Branco, Alfredo; Mwaniki, Dennis; Kochulem, Edwin; Githira, Daniel; Carioli, Alessandra; Ehrlich, Daniele; Tommasi, Pierpaolo; Kemper, Thomas; Dijkstra, Lewis (2024): GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset] doi: 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd PID: http://data.europa.eu/89h/1a338be6-7eaf-480c-9664-3a8ade88cbcd",
   "redistribution": "allowed",
   "transformations": [
+    "Export from GHS_UCDB_GLOBE_R2024A.gpkg: join GHS_UCDB_THEME_GENERAL_CHARACTERISTICS_GLOBE_R2024A to UC_centroids on ID_UC_G0; select CSV_HEADERS in order; order by numeric ID_UC_G0; strip leading U+FEFF from text; write UTF-8 CSV with CRLF records. No CSV distribution URL is published.",
     "Filtered 2025 population >= 100,000",
     "Converted EPSG:54009 Mollweide centroids to WGS84 degrees",
     "Precomputed hierarchical record holders",
@@ -22,8 +23,8 @@
   "immutableBuildInput": {
     "path": "src/data/generated/urban-isolation-input.json",
     "schemaVersion": 1,
-    "sha256": "0c1d9617b0d839a8ed5cedaf5be37f7c32c1e9cdb4bed29af5d3d31d9717c73c",
-    "rawBytes": 377715
+    "sha256": "c36432378fa86de47be77836a233a0f28b0f1df869cf3bb62710045b35142352",
+    "rawBytes": 377984
   },
   "derivedAsset": {
     "path": "src/data/generated/urban-isolation.json",
@@ -32,9 +33,16 @@
     "formatVersion": 1
   },
   "sourceAssets": {
-    "csv": {
+    "zip": {
       "distributionUrl": "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_GLOBE_R2024A/V1-1/GHS_UCDB_GLOBE_R2024A_V1_1.zip",
-      "sha256": "c122f1fdc8a9da3fdbe83ddb356fadf28b6baa305d7f0d04cce0fde9649ab2d4"
+      "sha256": "7b644df16b0791f88c3db28ce56338b5e1725be02b6a79ca253849822db26b21"
     }
+  },
+  "derivedCapture": {
+    "fileName": "GHS_UCDB_R2024A_V1_1_urban_centres.csv",
+    "sha256": "c122f1fdc8a9da3fdbe83ddb356fadf28b6baa305d7f0d04cce0fde9649ab2d4",
+    "rawBytes": 680826,
+    "sourceAsset": "zip",
+    "export": "Export from GHS_UCDB_GLOBE_R2024A.gpkg: join GHS_UCDB_THEME_GENERAL_CHARACTERISTICS_GLOBE_R2024A to UC_centroids on ID_UC_G0; select CSV_HEADERS in order; order by numeric ID_UC_G0; strip leading U+FEFF from text; write UTF-8 CSV with CRLF records. No CSV distribution URL is published."
   }
 }

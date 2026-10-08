@@ -58,15 +58,26 @@ describe('IsolationResult', () => {
     render(
       <IsolationResult
         locale="en"
-        presentation={presentation({
-          cityIndex: 0,
-          distanceFromPointKm: 0,
-          competitor: null,
-          rank: null,
-        })}
+        presentation={{
+          ...presentation({
+            cityIndex: 0,
+            distanceFromPointKm: 0,
+            competitor: null,
+            rank: null,
+          }),
+          alpha: 1,
+        }}
       />,
     );
     expect(screen.getByText(/no city in the dataset/i)).toBeVisible();
+    expect(screen.getByRole('img')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('no radius'),
+    );
+    expect(screen.getByRole('img')).not.toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('0 km'),
+    );
   });
 
   it('renders a retry action after a data error', () => {
