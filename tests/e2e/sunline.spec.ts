@@ -167,9 +167,6 @@ test('resamples Sunline projections once for fixed-time and playback changes', a
 }, testInfo) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./?mode=sunline&point=0%2C0&time=2024-03-20T12%3A00Z&v=1');
-  if (testInfo.project.name === 'mobile') {
-    await page.getByRole('button', { name: '展开日照线控件' }).click();
-  }
   const globe = page.getByRole('region', { name: '交互式三维地球' });
   const timeline = page.getByRole('slider', { name: /UTC 时间/ });
   await expect(globe).toHaveAttribute(
@@ -180,6 +177,15 @@ test('resamples Sunline projections once for fixed-time and playback changes', a
     'data-sunline-solar-projected-center',
     /.+/,
   );
+  if (testInfo.project.name === 'mobile') {
+    // Expanding the panel shrinks the globe stage; the canvas picks up the new
+    // size a frame later, so take the baseline only after that resample.
+    await page.getByRole('button', { name: '展开日照线控件' }).click();
+    await expect(globe).toHaveAttribute(
+      'data-sunline-diagnostic-reason',
+      'resize',
+    );
+  }
   const initialRevision = Number(
     await globe.getAttribute('data-sunline-diagnostic-revision'),
   );
