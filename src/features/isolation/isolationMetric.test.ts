@@ -80,11 +80,11 @@ function nearestByBruteForce(
         const populationOrder =
           right.candidate.population - left.candidate.population;
         if (populationOrder !== 0) return populationOrder;
-      return left.candidate.id < right.candidate.id
-        ? -1
-        : left.candidate.id > right.candidate.id
-          ? 1
-          : 0;
+        return left.candidate.id < right.candidate.id
+          ? -1
+          : left.candidate.id > right.candidate.id
+            ? 1
+            : 0;
       })[0] ?? null
   );
 }

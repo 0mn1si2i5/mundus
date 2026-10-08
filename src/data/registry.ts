@@ -140,7 +140,7 @@ const dataManifestObjectSchema = z.object({
 export const dataManifestSchema = dataManifestObjectSchema.superRefine(
   (manifest, context) => {
     if (
-    manifest.id === 'geonames-major-cities' &&
+      manifest.id === 'geonames-major-cities' &&
       manifest.derivedAsset?.formatVersion !== 2
     ) {
       context.addIssue({

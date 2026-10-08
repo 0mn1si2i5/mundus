@@ -43,12 +43,12 @@ is 680,826 bytes, and has SHA-256
 
 The exact columns used are:
 
-| CSV column | Meaning |
-| --- | --- |
-| `ID_UC_G0` | GHSL urban-centre identifier |
-| `GC_UCN_MAI_2025` | Main urban-centre name |
-| `GC_CNT_GAD_2025` | Country name |
-| `GC_POP_TOT_2025` | Total population, 2025 epoch |
+| CSV column        | Meaning                                                      |
+| ----------------- | ------------------------------------------------------------ |
+| `ID_UC_G0`        | GHSL urban-centre identifier                                 |
+| `GC_UCN_MAI_2025` | Main urban-centre name                                       |
+| `GC_CNT_GAD_2025` | Country name                                                 |
+| `GC_POP_TOT_2025` | Total population, 2025 epoch                                 |
 | `GC_UCC_LON_2025` | Centroid x, Mollweide metres (despite the source field name) |
 | `GC_UCC_LAT_2025` | Centroid y, Mollweide metres (despite the source field name) |
 

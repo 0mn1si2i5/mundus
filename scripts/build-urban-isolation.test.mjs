@@ -13,10 +13,13 @@ import {
   sha256,
 } from './build-urban-isolation.mjs';
 
-const header = 'ID_UC_G0,GC_UCN_MAI_2025,GC_CNT_GAD_2025,GC_POP_TOT_2025,GC_UCC_LON_2025,GC_UCC_LAT_2025\n';
+const header =
+  'ID_UC_G0,GC_UCN_MAI_2025,GC_CNT_GAD_2025,GC_POP_TOT_2025,GC_UCC_LON_2025,GC_UCC_LAT_2025\n';
 
 test('capture rejects a wrong SHA-256', () => {
-  assert.throws(() => captureCsv(`${header}1,Alpha,Country,100000,0,0\n`, 'wrong'));
+  assert.throws(() =>
+    captureCsv(`${header}1,Alpha,Country,100000,0,0\n`, 'wrong'),
+  );
 });
 
 test('capture filters small rows and rejects an empty focal name', () => {
@@ -34,8 +37,9 @@ test('Mollweide conversion round-trips known points', () => {
   const lambda = 1.2;
   const radius = 6378137;
   const point = {
-    latitude: Math.asin((2 * theta + Math.sin(2 * theta)) / Math.PI) * 180 / Math.PI,
-    longitude: lambda * 180 / Math.PI,
+    latitude:
+      (Math.asin((2 * theta + Math.sin(2 * theta)) / Math.PI) * 180) / Math.PI,
+    longitude: (lambda * 180) / Math.PI,
   };
   const x = (2 * Math.SQRT2 * radius * lambda * Math.cos(theta)) / Math.PI;
   const y = radius * Math.SQRT2 * Math.sin(theta);
@@ -52,19 +56,45 @@ test('budget check fails above either published limit', () => {
 
 test('name matching covers exact, proximity, fallback and override', () => {
   const exact = matchNames({ id: 'exact', name: 'São Paulo' }, [
-    { id: '1', nameEn: 'Sao Paulo', nameZh: '圣保罗', countryZh: '巴西', nameZhFallback: false, distanceKm: 4, population: 10 },
+    {
+      id: '1',
+      nameEn: 'Sao Paulo',
+      nameZh: '圣保罗',
+      countryZh: '巴西',
+      nameZhFallback: false,
+      distanceKm: 4,
+      population: 10,
+    },
   ]);
   assert.equal(exact.matchType, 'exact');
   assert.equal(exact.nameZh, '圣保罗');
   const proximity = matchNames({ id: 'near', name: 'New Name' }, [
-    { id: '2', nameEn: 'Other', nameZh: '其他', countryZh: '国家', nameZhFallback: false, distanceKm: 20, population: 10 },
+    {
+      id: '2',
+      nameEn: 'Other',
+      nameZh: '其他',
+      countryZh: '国家',
+      nameZhFallback: false,
+      distanceKm: 20,
+      population: 10,
+    },
   ]);
   assert.equal(proximity.matchType, 'proximity');
   const fallback = matchNames({ id: 'fallback', name: 'Other' }, [
-    { id: '3', nameEn: 'Other', nameZh: 'Other', countryZh: '国家', nameZhFallback: true, distanceKm: 1, population: 10 },
+    {
+      id: '3',
+      nameEn: 'Other',
+      nameZh: 'Other',
+      countryZh: '国家',
+      nameZhFallback: true,
+      distanceKm: 1,
+      population: 10,
+    },
   ]);
   assert.equal(fallback.nameZh, null);
-  const override = matchNames({ id: 'override', name: 'Other' }, [], { override: { nameZh: '覆写', countryZh: '国家' } });
+  const override = matchNames({ id: 'override', name: 'Other' }, [], {
+    override: { nameZh: '覆写', countryZh: '国家' },
+  });
   assert.equal(override.matchType, 'override');
   assert.equal(override.nameZh, '覆写');
 });
@@ -74,11 +104,28 @@ test('the checked capture hash is stable', () => {
 });
 
 test('offline output is byte-identical across two builds', async () => {
-  const assetPath = join(process.cwd(), 'src/data/generated/urban-isolation.json');
+  const assetPath = join(
+    process.cwd(),
+    'src/data/generated/urban-isolation.json',
+  );
   const before = await readFile(assetPath);
-  await buildOffline(JSON.parse(await readFile(join(process.cwd(), 'src/data/generated/urban-isolation-input.json'), 'utf8')));
+  await buildOffline(
+    JSON.parse(
+      await readFile(
+        join(process.cwd(), 'src/data/generated/urban-isolation-input.json'),
+        'utf8',
+      ),
+    ),
+  );
   const first = await readFile(assetPath);
-  await buildOffline(JSON.parse(await readFile(join(process.cwd(), 'src/data/generated/urban-isolation-input.json'), 'utf8')));
+  await buildOffline(
+    JSON.parse(
+      await readFile(
+        join(process.cwd(), 'src/data/generated/urban-isolation-input.json'),
+        'utf8',
+      ),
+    ),
+  );
   const second = await readFile(assetPath);
   assert.deepEqual(first, second);
   assert.ok(before.length > 0);

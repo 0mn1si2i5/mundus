@@ -4,7 +4,10 @@ import { gzipSync } from 'node:zlib';
 import { dirname, resolve } from 'node:path';
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname);
-const INPUT_PATH = resolve(ROOT, 'src/data/generated/urban-isolation-input.json');
+const INPUT_PATH = resolve(
+  ROOT,
+  'src/data/generated/urban-isolation-input.json',
+);
 const ASSET_PATH = resolve(ROOT, 'src/data/generated/urban-isolation.json');
 const MANIFEST_PATH = resolve(ROOT, 'src/data/manifests/urban-isolation.json');
 const REPORT_PATH = resolve(ROOT, 'tmp/urban-isolation-report.md');
@@ -71,7 +74,9 @@ export function parseCsv(text) {
   if (rows.length === 0) return [];
   const headers = rows.shift();
   return rows.map((values) =>
-    Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ''])),
+    Object.fromEntries(
+      headers.map((header, index) => [header, values[index] ?? '']),
+    ),
   );
 }
 
@@ -79,8 +84,7 @@ export function mollweideToWgs84(x, y) {
   const radius = 6378137;
   const theta = Math.asin(y / (Math.SQRT2 * radius));
   const latitude = Math.asin((2 * theta + Math.sin(2 * theta)) / Math.PI);
-  const longitude =
-    (Math.PI * x) / (2 * Math.SQRT2 * radius * Math.cos(theta));
+  const longitude = (Math.PI * x) / (2 * Math.SQRT2 * radius * Math.cos(theta));
   return {
     latitude: (latitude * 180) / Math.PI,
     longitude: (longitude * 180) / Math.PI,
@@ -89,7 +93,9 @@ export function mollweideToWgs84(x, y) {
 
 export function checkBudget(rawBytes, gzipBytes) {
   if (rawBytes > 400 * 1024 || gzipBytes > 120 * 1024) {
-    throw new Error(`Urban Isolation asset budget exceeded: ${rawBytes} raw, ${gzipBytes} gzip`);
+    throw new Error(
+      `Urban Isolation asset budget exceeded: ${rawBytes} raw, ${gzipBytes} gzip`,
+    );
   }
 }
 
@@ -98,19 +104,26 @@ function roundCoordinate(value) {
 }
 
 function clean(value) {
-  return String(value ?? '').replace(/^\uFEFF/, '').trim();
+  return String(value ?? '')
+    .replace(/^\uFEFF/, '')
+    .trim();
 }
 
 export function captureCsv(text, expectedHash = CAPTURE_CSV_SHA256) {
   const bytes = Buffer.from(text, 'utf8');
   const actualHash = sha256(bytes);
   if (expectedHash && actualHash !== expectedHash) {
-    throw new Error(`Urban Isolation CSV SHA-256 mismatch: expected ${expectedHash}, received ${actualHash}`);
+    throw new Error(
+      `Urban Isolation CSV SHA-256 mismatch: expected ${expectedHash}, received ${actualHash}`,
+    );
   }
   const parsed = parseCsv(text);
   if (!parsed.length) throw new Error('Urban Isolation CSV is empty');
   const missing = CSV_HEADERS.filter((header) => !(header in parsed[0]));
-  if (missing.length) throw new Error(`Urban Isolation CSV missing columns: ${missing.join(', ')}`);
+  if (missing.length)
+    throw new Error(
+      `Urban Isolation CSV missing columns: ${missing.join(', ')}`,
+    );
 
   const seen = new Set();
   const rows = [];
@@ -122,17 +135,24 @@ export function captureCsv(text, expectedHash = CAPTURE_CSV_SHA256) {
     const x = Number(row.GC_UCC_LON_2025);
     const y = Number(row.GC_UCC_LAT_2025);
     if (!Number.isFinite(population) || population < 100_000) continue;
-    if (!id || seen.has(id)) throw new Error(`Invalid or duplicate urban-centre id: ${id}`);
-    if (!Number.isFinite(population) || population <= 0) throw new Error(`Invalid population for ${id}`);
-    if (!name && population >= 1_000_000) throw new Error(`Missing name for focal urban centre ${id}`);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error(`Missing centroid for ${id}`);
+    if (!id || seen.has(id))
+      throw new Error(`Invalid or duplicate urban-centre id: ${id}`);
+    if (!Number.isFinite(population) || population <= 0)
+      throw new Error(`Invalid population for ${id}`);
+    if (!name && population >= 1_000_000)
+      throw new Error(`Missing name for focal urban centre ${id}`);
+    if (!Number.isFinite(x) || !Number.isFinite(y))
+      throw new Error(`Missing centroid for ${id}`);
     const point = mollweideToWgs84(x, y);
     if (
       !Number.isFinite(point.latitude) ||
       !Number.isFinite(point.longitude) ||
-      point.latitude < -90 || point.latitude > 90 ||
-      point.longitude < -180 || point.longitude > 180
-    ) throw new Error(`Invalid centroid for ${id}`);
+      point.latitude < -90 ||
+      point.latitude > 90 ||
+      point.longitude < -180 ||
+      point.longitude > 180
+    )
+      throw new Error(`Invalid centroid for ${id}`);
     seen.add(id);
     rows.push([
       id,
@@ -184,8 +204,17 @@ export function matchNames(city, geoNames, overrides = {}) {
   }
   const normalizedName = normalize(city.name);
   const exact = geoNames
-    .filter((candidate) => candidate.distanceKm <= 50 && normalize(candidate.nameEn) === normalizedName)
-    .sort((a, b) => a.distanceKm - b.distanceKm || b.population - a.population || a.id.localeCompare(b.id))[0];
+    .filter(
+      (candidate) =>
+        candidate.distanceKm <= 50 &&
+        normalize(candidate.nameEn) === normalizedName,
+    )
+    .sort(
+      (a, b) =>
+        a.distanceKm - b.distanceKm ||
+        b.population - a.population ||
+        a.id.localeCompare(b.id),
+    )[0];
   if (exact) {
     return {
       nameZh: exact.nameZhFallback ? null : exact.nameZh,
@@ -196,7 +225,12 @@ export function matchNames(city, geoNames, overrides = {}) {
   }
   const proximity = geoNames
     .filter((candidate) => candidate.distanceKm <= 30)
-    .sort((a, b) => b.population - a.population || a.distanceKm - b.distanceKm || a.id.localeCompare(b.id))[0];
+    .sort(
+      (a, b) =>
+        b.population - a.population ||
+        a.distanceKm - b.distanceKm ||
+        a.id.localeCompare(b.id),
+    )[0];
   if (proximity) {
     return {
       nameZh: proximity.nameZhFallback ? null : proximity.nameZh,
@@ -205,11 +239,21 @@ export function matchNames(city, geoNames, overrides = {}) {
       matchDistanceKm: proximity.distanceKm,
     };
   }
-  return { nameZh: null, countryZh: null, matchType: 'none', matchDistanceKm: null };
+  return {
+    nameZh: null,
+    countryZh: null,
+    matchType: 'none',
+    matchDistanceKm: null,
+  };
 }
 
 async function loadGeoNamesSnapshot() {
-  const raw = JSON.parse(await readFile(resolve(ROOT, 'src/data/generated/geonames-major-cities.json'), 'utf8'));
+  const raw = JSON.parse(
+    await readFile(
+      resolve(ROOT, 'src/data/generated/geonames-major-cities.json'),
+      'utf8',
+    ),
+  );
   const strings = raw.strings;
   const cities = raw.rows.map((row) => ({
     id: String(row[0]),
@@ -226,20 +270,33 @@ async function loadGeoNamesSnapshot() {
 }
 
 async function buildOffline(input) {
-  const cities = input.rows.map(([id, name, countryName, countryIso, population, latitude, longitude]) => ({
-    id,
-    name,
-    countryName,
-    countryIso,
-    population,
-    latitude,
-    longitude,
+  const cities = input.rows.map(
+    ([id, name, countryName, countryIso, population, latitude, longitude]) => ({
+      id,
+      name,
+      countryName,
+      countryIso,
+      population,
+      latitude,
+      longitude,
+    }),
+  );
+  const focalIndices = cities
+    .map((city, index) => (city.population >= 1_000_000 ? index : -1))
+    .filter((index) => index >= 0);
+  if (focalIndices.length === 0)
+    throw new Error('Urban Isolation has no focal cities');
+  const minFocalPopulation = Math.min(
+    ...focalIndices.map((index) => cities[index].population),
+  );
+  if (ALPHA_MIN * minFocalPopulation < 100_000)
+    throw new Error('Urban Isolation completeness invariant failed');
+  const metricCities = cities.map((city) => ({
+    id: city.id,
+    latitude: city.latitude,
+    longitude: city.longitude,
+    population: city.population,
   }));
-  const focalIndices = cities.map((city, index) => city.population >= 1_000_000 ? index : -1).filter((index) => index >= 0);
-  if (focalIndices.length === 0) throw new Error('Urban Isolation has no focal cities');
-  const minFocalPopulation = Math.min(...focalIndices.map((index) => cities[index].population));
-  if (ALPHA_MIN * minFocalPopulation < 100_000) throw new Error('Urban Isolation completeness invariant failed');
-  const metricCities = cities.map((city) => ({ id: city.id, latitude: city.latitude, longitude: city.longitude, population: city.population }));
   const holderLists = cities.map(() => null);
   const referenced = new Set(focalIndices);
   for (const focalIndex of focalIndices) {
@@ -248,9 +305,11 @@ async function buildOffline(input) {
     holders.forEach((holder) => referenced.add(holder.index));
   }
   const geoNames = await loadGeoNamesSnapshot();
-  const { ISOLATION_NAME_OVERRIDES } = await import('../src/features/isolation/isolationNameOverrides.ts');
+  const { ISOLATION_NAME_OVERRIDES } =
+    await import('../src/features/isolation/isolationNameOverrides.ts');
   const geonameCandidates = [];
-  const { haversineKm } = await import('../src/features/isolation/isolationMetric.ts');
+  const { haversineKm } =
+    await import('../src/features/isolation/isolationMetric.ts');
   const nameMatches = new Map();
   for (const index of referenced) {
     const city = cities[index];
@@ -262,8 +321,12 @@ async function buildOffline(input) {
     nameMatches.set(index, match);
     geonameCandidates.push({ city, match });
   }
-  const sortedIndices = [...referenced].sort((a, b) => cities[a].id.localeCompare(cities[b].id, 'en'));
-  const outputIndex = new Map(sortedIndices.map((inputIndex, index) => [inputIndex, index]));
+  const sortedIndices = [...referenced].sort((a, b) =>
+    cities[a].id.localeCompare(cities[b].id, 'en'),
+  );
+  const outputIndex = new Map(
+    sortedIndices.map((inputIndex, index) => [inputIndex, index]),
+  );
   const strings = [];
   const stringIndex = new Map();
   const intern = (value) => {
@@ -292,9 +355,20 @@ async function buildOffline(input) {
   const holders = outputCities.map(() => null);
   for (const focalIndex of focalIndices) {
     const outputFocal = outputIndex.get(focalIndex);
-    holders[outputFocal] = holderLists[focalIndex].map((holder) => [outputIndex.get(holder.index), Math.round(holder.distanceKm)]);
+    holders[outputFocal] = holderLists[focalIndex].map((holder) => [
+      outputIndex.get(holder.index),
+      Math.round(holder.distanceKm),
+    ]);
   }
-  const asset = { formatVersion: 1, referenceYear: 2025, focalMinPopulation: 1_000_000, universeMinPopulation: 100_000, strings, cities: outputCities, holders };
+  const asset = {
+    formatVersion: 1,
+    referenceYear: 2025,
+    focalMinPopulation: 1_000_000,
+    universeMinPopulation: 100_000,
+    strings,
+    cities: outputCities,
+    holders,
+  };
   const assetBytes = Buffer.from(`${JSON.stringify(asset)}\n`);
   const gzipBytes = gzipSync(assetBytes, { level: 9, mtime: 0 }).byteLength;
   checkBudget(assetBytes.byteLength, gzipBytes);
@@ -307,41 +381,116 @@ async function buildOffline(input) {
     licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
     version: 'R2024A V1_1',
     retrievedAt: RETRIEVED_AT,
-    attribution: 'GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset], DOI 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd',
+    attribution:
+      'GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset], DOI 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd',
     redistribution: 'allowed',
-    transformations: ['Filtered 2025 population >= 100,000', 'Converted EPSG:54009 Mollweide centroids to WGS84 degrees', 'Precomputed hierarchical record holders', 'Attached reviewed GeoNames Chinese names at build time'],
-    missingValuePolicy: 'Missing Chinese names and country ISO codes remain null; empty sub-million names are dropped during capture.',
-    boundaryPolicy: 'Cities are GHSL urban centres; no runtime geographic boundary matching is performed.',
+    transformations: [
+      'Filtered 2025 population >= 100,000',
+      'Converted EPSG:54009 Mollweide centroids to WGS84 degrees',
+      'Precomputed hierarchical record holders',
+      'Attached reviewed GeoNames Chinese names at build time',
+    ],
+    missingValuePolicy:
+      'Missing Chinese names and country ISO codes remain null; empty sub-million names are dropped during capture.',
+    boundaryPolicy:
+      'Cities are GHSL urban centres; no runtime geographic boundary matching is performed.',
     recordCount: outputCities.length,
     rawBytes: assetBytes.byteLength,
     gzipBytes,
-    immutableBuildInput: { path: 'src/data/generated/urban-isolation-input.json', schemaVersion: 1, sha256: sha256(inputBytes), rawBytes: inputBytes.byteLength },
-    derivedAsset: { path: 'src/data/generated/urban-isolation.json', sha256: sha256(assetBytes), rawBytes: assetBytes.byteLength, formatVersion: 1 },
-    sourceAssets: { csv: { distributionUrl: SOURCE_URL, sha256: input.source.csvSha256 } },
+    immutableBuildInput: {
+      path: 'src/data/generated/urban-isolation-input.json',
+      schemaVersion: 1,
+      sha256: sha256(inputBytes),
+      rawBytes: inputBytes.byteLength,
+    },
+    derivedAsset: {
+      path: 'src/data/generated/urban-isolation.json',
+      sha256: sha256(assetBytes),
+      rawBytes: assetBytes.byteLength,
+      formatVersion: 1,
+    },
+    sourceAssets: {
+      csv: { distributionUrl: SOURCE_URL, sha256: input.source.csvSha256 },
+    },
   };
   await mkdir(dirname(INPUT_PATH), { recursive: true });
   await writeFile(INPUT_PATH, inputBytes);
   await writeFile(ASSET_PATH, assetBytes);
   await writeFile(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
-  await writeFile(REPORT_PATH, createReport(cities, focalIndices, holderLists, geonameCandidates, asset, manifest));
+  await writeFile(
+    REPORT_PATH,
+    createReport(
+      cities,
+      focalIndices,
+      holderLists,
+      geonameCandidates,
+      asset,
+      manifest,
+    ),
+  );
   return { input, asset, manifest, reportPath: REPORT_PATH };
 }
 
-function createReport(cities, focalIndices, holderLists, nameMatches, asset, manifest) {
-  const lines = [`# Urban Isolation build report`, '', `- Focal cities: ${focalIndices.length}`, `- Competitor universe: ${cities.length}`, `- Referenced competitors: ${asset.cities.length - focalIndices.length}`, `- Asset: ${manifest.rawBytes} raw bytes; ${manifest.gzipBytes} gzip bytes`, ''];
+function createReport(
+  cities,
+  focalIndices,
+  holderLists,
+  nameMatches,
+  asset,
+  manifest,
+) {
+  const lines = [
+    `# Urban Isolation build report`,
+    '',
+    `- Focal cities: ${focalIndices.length}`,
+    `- Competitor universe: ${cities.length}`,
+    `- Referenced competitors: ${asset.cities.length - focalIndices.length}`,
+    `- Asset: ${manifest.rawBytes} raw bytes; ${manifest.gzipBytes} gzip bytes`,
+    '',
+  ];
   for (const alpha of [0.1, 0.5, 1]) {
-    const ranking = rankingAt(focalIndices, cities.map((city) => ({ id: city.id, latitude: city.latitude, longitude: city.longitude, population: city.population })), holderLists, alpha).slice(0, 20);
-    lines.push(`## Top 20 at alpha = ${alpha.toFixed(2)}`, '', '| City | Country | Population | Competitor | km |', '| --- | --- | ---: | --- | ---: |');
+    const ranking = rankingAt(
+      focalIndices,
+      cities.map((city) => ({
+        id: city.id,
+        latitude: city.latitude,
+        longitude: city.longitude,
+        population: city.population,
+      })),
+      holderLists,
+      alpha,
+    ).slice(0, 20);
+    lines.push(
+      `## Top 20 at alpha = ${alpha.toFixed(2)}`,
+      '',
+      '| City | Country | Population | Competitor | km |',
+      '| --- | --- | ---: | --- | ---: |',
+    );
     for (const entry of ranking) {
       const focal = cities[entry.index];
-      const holder = competitorAt(holderLists[entry.index], cities.map((city) => city.population), focal.population, alpha);
+      const holder = competitorAt(
+        holderLists[entry.index],
+        cities.map((city) => city.population),
+        focal.population,
+        alpha,
+      );
       const competitor = holder ? cities[holder.index] : null;
-      lines.push(`| ${focal.name} | ${focal.countryName} | ${Math.round(focal.population)} | ${competitor?.name ?? 'none'} | ${Math.round(entry.distanceKm)} |`);
+      lines.push(
+        `| ${focal.name} | ${focal.countryName} | ${Math.round(focal.population)} | ${competitor?.name ?? 'none'} | ${Math.round(entry.distanceKm)} |`,
+      );
     }
     lines.push('');
   }
-  lines.push('## Name review', '', '| GHSL id | English name | Chinese name | Match | Distance km |', '| --- | --- | --- | --- | ---: |');
-  for (const item of nameMatches) lines.push(`| ${item.city.id} | ${item.city.name} | ${item.match.nameZh ?? ''} | ${item.match.matchType} | ${item.match.matchDistanceKm === null ? '' : item.match.matchDistanceKm.toFixed(2)} |`);
+  lines.push(
+    '## Name review',
+    '',
+    '| GHSL id | English name | Chinese name | Match | Distance km |',
+    '| --- | --- | --- | --- | ---: |',
+  );
+  for (const item of nameMatches)
+    lines.push(
+      `| ${item.city.id} | ${item.city.name} | ${item.match.nameZh ?? ''} | ${item.match.matchType} | ${item.match.matchDistanceKm === null ? '' : item.match.matchDistanceKm.toFixed(2)} |`,
+    );
   return `${lines.join('\n')}\n`;
 }
 
@@ -357,8 +506,15 @@ async function main() {
     await writeFile(INPUT_PATH, bytes);
     const existing = await readManifestIfPresent();
     const manifest = existing ?? { immutableBuildInput: {} };
-    manifest.immutableBuildInput = { path: 'src/data/generated/urban-isolation-input.json', schemaVersion: 1, sha256: sha256(bytes), rawBytes: bytes.byteLength };
-    manifest.sourceAssets = { csv: { distributionUrl: SOURCE_URL, sha256: input.source.csvSha256 } };
+    manifest.immutableBuildInput = {
+      path: 'src/data/generated/urban-isolation-input.json',
+      schemaVersion: 1,
+      sha256: sha256(bytes),
+      rawBytes: bytes.byteLength,
+    };
+    manifest.sourceAssets = {
+      csv: { distributionUrl: SOURCE_URL, sha256: input.source.csvSha256 },
+    };
     await writeFile(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`);
     console.log(`Captured ${input.rows.length} rows into ${INPUT_PATH}`);
     return;
@@ -366,13 +522,18 @@ async function main() {
   const inputBytes = await readFile(INPUT_PATH);
   const input = JSON.parse(inputBytes.toString('utf8'));
   const manifest = JSON.parse(await readFile(MANIFEST_PATH, 'utf8'));
-  if (sha256(inputBytes) !== manifest.immutableBuildInput?.sha256) throw new Error('Urban Isolation immutable input SHA-256 mismatch');
+  if (sha256(inputBytes) !== manifest.immutableBuildInput?.sha256)
+    throw new Error('Urban Isolation immutable input SHA-256 mismatch');
   await buildOffline(input);
   console.log(`Built ${ASSET_PATH}`);
 }
 
 async function readManifestIfPresent() {
-  try { return JSON.parse(await readFile(MANIFEST_PATH, 'utf8')); } catch { return null; }
+  try {
+    return JSON.parse(await readFile(MANIFEST_PATH, 'utf8'));
+  } catch {
+    return null;
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) await main();

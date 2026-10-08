@@ -1,6 +1,6 @@
 # Urban Isolation — design contract
 
-Status: accepted design, pending implementation (2026-10-08). This document
+Status: implemented, pending owner review (2026-10-08). This document
 records the product question, data, metric, interaction and acceptance
 decisions. The step-by-step execution packet is handed to the executor
 separately and is not stored in the repository (see `AGENTS.md` §8).

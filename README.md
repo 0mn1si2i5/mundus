@@ -7,7 +7,7 @@ different scientific lenses. It is designed as a small digital museum exhibit:
 direct enough to explore, explicit about its methods, and careful about the
 limits of its data.
 
-The current public product includes three observation modes. **V1.1.0 Parchment Atlas**
+The current public product includes four observation modes. **V1.1.0 Parchment Atlas**
 ships:
 
 - **Other Side** calculates exact antipodal endpoints and shows the nearest
@@ -25,6 +25,10 @@ ships:
   community snapshots, not a unified official global ranking; missing fields
   remain explicit; each country links its source, and dataset licenses are in
   the About dialog.
+- **Urban Isolation** shows the distance to the nearest GHSL urban centre that
+  meets a visible population threshold α, with a ranked list and step chart.
+  Distances are great-circle distances between urban-centre points, not travel
+  accessibility.
 
 The verified public site is <https://0mn1si2i5.github.io/mundus/>. The V1.1
 product implementation entered protected `main` at

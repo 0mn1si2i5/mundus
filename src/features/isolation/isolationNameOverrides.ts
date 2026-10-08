@@ -4,4 +4,6 @@ export interface IsolationNameOverride {
   countryZh?: string | null;
 }
 
-export const ISOLATION_NAME_OVERRIDES: Readonly<Record<string, IsolationNameOverride>> = {};
+export const ISOLATION_NAME_OVERRIDES: Readonly<
+  Record<string, IsolationNameOverride>
+> = {};
