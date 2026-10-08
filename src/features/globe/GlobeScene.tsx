@@ -85,6 +85,8 @@ import {
   SURNAME_FOCUS_RETRY_OFFSETS,
 } from './surnameLabelLayout';
 import { SurnameMapLabelLayer } from './SurnameMapLabelLayer';
+import { IsolationLayer } from './IsolationLayer';
+import type { IsolationGlobePresentation } from '../modes/useModePresentation';
 
 export interface GlobeKeyboardController {
   rotateHorizontal: (radians: number) => void;
@@ -117,6 +119,7 @@ interface GlobeSceneProps {
   antipodeRelation: AntipodeRelation | null;
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
+  isolation: IsolationGlobePresentation | null;
   cameraGestureCancelRef: MutableRefObject<(() => void) | null>;
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
   onSurnameLabelLayoutChange: (layout: {
@@ -153,6 +156,7 @@ export function GlobeScene({
   antipodeRelation,
   surnameMapLabels,
   surnameDisplayMode,
+  isolation,
   cameraGestureCancelRef,
   onSurnameLabelVisibilityChange,
   onSurnameLabelLayoutChange,
@@ -1245,6 +1249,7 @@ export function GlobeScene({
             />
           </>
         ) : null}
+        {isolation ? <IsolationLayer isolation={isolation} /> : null}
       </group>
       <OrbitControls
         ref={(controls) => {

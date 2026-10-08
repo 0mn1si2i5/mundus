@@ -27,6 +27,7 @@ import { type SurnameLabelHiddenReason } from './surnameLabelLayout';
 import type { SurnameMapLabel } from '../surnames/surnameData';
 import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
 import type { SurnameDisplayMode } from '../../state/urlState';
+import type { IsolationGlobePresentation } from '../modes/useModePresentation';
 import {
   clearCameraDiagnostic,
   createViewportDiagnostics,
@@ -62,6 +63,7 @@ interface GlobeViewportProps {
   antipodeRelation: AntipodeRelation | null;
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
+  isolation: IsolationGlobePresentation | null;
 }
 
 interface PointerStart {
@@ -85,6 +87,7 @@ export function GlobeViewport({
   antipodeRelation,
   surnameMapLabels,
   surnameDisplayMode,
+  isolation,
 }: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
   const [profile] = useState(detectQualityProfile);
@@ -453,6 +456,20 @@ export function GlobeViewport({
           ? surnameLabelLayout.visibleRectangles
           : undefined
       }
+      data-isolation-city-id={isolation?.cityId}
+      data-isolation-competitor-id={isolation?.competitorId}
+      data-isolation-radius-km={
+        isolation?.radiusKm === null
+          ? ''
+          : isolation?.radiusKm === undefined
+            ? undefined
+            : String(Math.round(isolation.radiusKm))
+      }
+      data-isolation-alpha={isolation?.alpha.toFixed(2)}
+      data-isolation-dot-count={
+        isolation ? String(isolation.focalPoints.length) : undefined
+      }
+      data-isolation-arc={isolation?.arcStatus}
       data-sunline-selected-marker-role={
         sunline ? SUNLINE_RENDERING.selectedMarker.role : undefined
       }
@@ -504,6 +521,7 @@ export function GlobeViewport({
           antipodeRelation={antipodeRelation}
           surnameMapLabels={surnameMapLabels}
           surnameDisplayMode={surnameDisplayMode}
+          isolation={isolation}
           cameraGestureCancelRef={cancelCameraGesture}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}
           onSurnameLabelLayoutChange={setSurnameLabelLayout}

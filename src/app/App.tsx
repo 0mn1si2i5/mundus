@@ -243,6 +243,7 @@ export function App() {
               antipodeRelation={globe.antipodeRelation}
               surnameMapLabels={globe.surnameMapLabels}
               surnameDisplayMode={globe.surnameDisplayMode}
+              isolation={globe.isolation}
             />
           </Suspense>
         </ErrorBoundary>
