@@ -30,6 +30,8 @@
     "test:release": "node --test scripts/verify-pages-artifact.test.mjs",
     "test:release-server": "node --test scripts/serve-literal-mount.test.mjs",
     "test:data-cities": "node --test scripts/build-geonames-major-cities.test.mjs",
+    "data:isolation": "node --experimental-strip-types scripts/build-urban-isolation.mjs",
+    "test:data-isolation": "node --experimental-strip-types --test scripts/build-urban-isolation.test.mjs",
     "test:toolchain": "node --test scripts/verify-toolchain.test.mjs",
     "test:data-vector-globe": "node --test --test-name-pattern='production vector assets|handles antimeridian holes|meshopt encoding' scripts/build-natural-earth-vector-globe.test.mjs && node --test scripts/publish-asset-set.test.mjs",
     "test:data-vector-globe:full": "node --test scripts/build-natural-earth-vector-globe.test.mjs scripts/publish-asset-set.test.mjs",
@@ -39,7 +41,7 @@
     "test:watch": "vitest",
     "test:e2e": "node scripts/run-playwright-e2e.mjs",
     "test:e2e:smoke": "node scripts/run-playwright-e2e.mjs --project=chromium --grep @smoke",
-    "check:source": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-cities && pnpm test:toolchain && pnpm test:performance && pnpm test && pnpm test:release",
+    "check:source": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-cities && pnpm test:data-isolation && pnpm test:toolchain && pnpm test:performance && pnpm test && pnpm test:release",
     "check": "pnpm check:source && pnpm test:data-vector-globe && pnpm build && pnpm release:verify"
   },
   "dependencies": {

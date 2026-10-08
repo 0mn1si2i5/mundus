@@ -1,0 +1,40 @@
+{
+  "id": "urban-isolation",
+  "sourceName": "GHS-UCDB R2024A - GHS Urban Centre Database 2025",
+  "sourceUrl": "https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php",
+  "licenseName": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "version": "R2024A V1_1",
+  "retrievedAt": "2026-10-08",
+  "attribution": "GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset], DOI 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd",
+  "redistribution": "allowed",
+  "transformations": [
+    "Filtered 2025 population >= 100,000",
+    "Converted EPSG:54009 Mollweide centroids to WGS84 degrees",
+    "Precomputed hierarchical record holders",
+    "Attached reviewed GeoNames Chinese names at build time"
+  ],
+  "missingValuePolicy": "Missing Chinese names and country ISO codes remain null; empty sub-million names are dropped during capture.",
+  "boundaryPolicy": "Cities are GHSL urban centres; no runtime geographic boundary matching is performed.",
+  "recordCount": 1282,
+  "rawBytes": 124895,
+  "gzipBytes": 53469,
+  "immutableBuildInput": {
+    "path": "src/data/generated/urban-isolation-input.json",
+    "schemaVersion": 1,
+    "sha256": "0c1d9617b0d839a8ed5cedaf5be37f7c32c1e9cdb4bed29af5d3d31d9717c73c",
+    "rawBytes": 377715
+  },
+  "derivedAsset": {
+    "path": "src/data/generated/urban-isolation.json",
+    "sha256": "4ce5aecf96d572211bf7453820830bcba34c12863826bba5d9a18396882bd51c",
+    "rawBytes": 124895,
+    "formatVersion": 1
+  },
+  "sourceAssets": {
+    "csv": {
+      "distributionUrl": "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_GLOBE_R2024A/V1-1/GHS_UCDB_GLOBE_R2024A_V1_1.zip",
+      "sha256": "c122f1fdc8a9da3fdbe83ddb356fadf28b6baa305d7f0d04cce0fde9649ab2d4"
+    }
+  }
+}

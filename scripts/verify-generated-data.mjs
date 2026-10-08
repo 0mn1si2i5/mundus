@@ -55,6 +55,11 @@ const assets = [
     asset: 'src/data/generated/surname-coverage.json',
     hashField: 'derivedAssetSha256',
   },
+  {
+    manifest: 'src/data/manifests/urban-isolation.json',
+    asset: 'src/data/generated/urban-isolation.json',
+    hashField: 'derivedAsset.sha256',
+  },
 ];
 
 let failed = false;

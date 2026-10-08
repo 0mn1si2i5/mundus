@@ -14,6 +14,7 @@ describe('data registry', () => {
       'country-label-anchors',
       'surname-label-slots',
       'surname-coverage',
+      'urban-isolation',
     ]);
     expect(
       DATA_MANIFESTS.every(

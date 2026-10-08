@@ -38,8 +38,8 @@ The V1.1 package README gives this citation:
 The V1.1 global ZIP contains a GeoPackage rather than a single CSV. The
 capture input was exported from its two official tables into a temporary CSV;
 the raw download remains outside Git. The derived capture CSV has 11,422 rows,
-is 828,869 bytes, and has SHA-256
-`67967fa382c5354a9f23b01d1ee228d0a3975b15c02b18df3a84d9a16460327f`.
+is 680,826 bytes, and has SHA-256
+`c122f1fdc8a9da3fdbe83ddb356fadf28b6baa305d7f0d04cce0fde9649ab2d4`.
 
 The exact columns used are:
 
@@ -65,8 +65,9 @@ lat = asin((2 * theta + sin(2 * theta)) / pi)
 lon = pi * x / (2 * sqrt(2) * R * cos(theta))
 ```
 
-The resulting latitude and longitude are converted from radians to degrees and
-rounded to four decimal places by the capture build.
+The CSV retains the source x/y values in metres. The resulting latitude and
+longitude are converted from radians to degrees and rounded to four decimal
+places by the capture build.
 
 ## Thresholds and definitional caveats
 
