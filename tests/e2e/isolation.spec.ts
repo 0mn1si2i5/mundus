@@ -43,6 +43,25 @@ test('selects Tokyo and draws its competitor arc', async ({ page }) => {
   );
 });
 
+for (const location of [
+  { city: '新加坡', country: '新加坡', point: '1.35%2C103.84' },
+  { city: '香港', country: '中国', point: '22.32%2C114.18' },
+]) {
+  test(`shows the reviewed Chinese city and country for ${location.city}`, async ({
+    page,
+  }) => {
+    await page.goto(`./?mode=isolation&point=${location.point}&v=2`);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+    const result = page.getByRole('complementary', { name: '孤立度结果' });
+    const selectedCity = result.locator('em');
+    await expect(selectedCity).toBeVisible();
+    await expect(selectedCity).toHaveText(location.city);
+    const country = selectedCity.locator('..').locator(':scope > small');
+    await expect(country).toBeVisible();
+    await expect(country).toHaveText(location.country);
+  });
+}
+
 test('slider changes replace history and serialize alpha', async ({
   page,
 }, testInfo) => {

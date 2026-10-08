@@ -473,7 +473,8 @@ async function buildOffline(
       'Filtered 2025 population >= 100,000',
       'Converted EPSG:54009 Mollweide centroids to WGS84 degrees',
       'Precomputed hierarchical record holders',
-      'Attached exact or reviewed GeoNames Chinese city names at build time; proximity candidates are report-only',
+      'Applied owner-reviewed English display names to the derived asset and report',
+      'Attached exact GeoNames and owner-reviewed override Chinese city names at build time; proximity candidates are report-only',
       'Attached reviewed GHSL-country Chinese names from the complete country table',
     ],
     missingValuePolicy:
@@ -540,12 +541,25 @@ function createReport(
   asset,
   manifest,
 ) {
+  const nameCounts = { override: 0, exact: 0, none: 0 };
+  for (const { match } of nameMatches) {
+    const category = match.nameZh === null ? 'none' : match.matchType;
+    nameCounts[category] += 1;
+  }
+  const missingFocalNames = asset.cities.filter(
+    (city) => city[8] && city[5] === null,
+  ).length;
+  const missingCompetitorNames = asset.cities.filter(
+    (city) => !city[8] && city[5] === null,
+  ).length;
   const lines = [
     `# Urban Isolation build report`,
     '',
     `- Focal cities: ${focalIndices.length}`,
     `- Competitor universe: ${cities.length}`,
     `- Referenced competitors: ${asset.cities.length - focalIndices.length}`,
+    `- Focal cities without Chinese names: ${missingFocalNames}`,
+    `- Competitor-only cities without Chinese names: ${missingCompetitorNames} (known missing state; to be completed later)`,
     `- Asset: ${manifest.rawBytes} raw bytes; ${manifest.gzipBytes} gzip bytes`,
     '',
   ];
@@ -585,14 +599,20 @@ function createReport(
   lines.push(
     '## Name review',
     '',
-    '| GHSL id | English name | Chinese name | Match | Distance km |',
-    '| --- | --- | --- | --- | ---: |',
+    '| Category | Count |',
+    '| --- | ---: |',
+    `| override | ${nameCounts.override} |`,
+    `| exact | ${nameCounts.exact} |`,
+    `| none (no Chinese name) | ${nameCounts.none} |`,
+    '',
+    '| GHSL id | English name | GHSL name | Chinese name | Match | Distance km |',
+    '| --- | --- | --- | --- | --- | ---: |',
   );
   for (const item of nameMatches) {
     const assetMatch =
-      item.match.matchType === 'proximity' ? 'none' : item.match.matchType;
+      item.match.nameZh === null ? 'none' : item.match.matchType;
     lines.push(
-      `| ${item.city.id} | ${item.city.name} | ${item.match.nameZh ?? ''} | ${assetMatch} | ${assetMatch === 'none' || item.match.matchDistanceKm === null ? '' : item.match.matchDistanceKm.toFixed(2)} |`,
+      `| ${item.city.id} | ${item.city.name} | ${item.city.sourceName} | ${item.match.nameZh ?? ''} | ${assetMatch} | ${assetMatch === 'none' || item.match.matchDistanceKm === null ? '' : item.match.matchDistanceKm.toFixed(2)} |`,
     );
   }
   lines.push(

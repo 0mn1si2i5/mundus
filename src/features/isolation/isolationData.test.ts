@@ -5,6 +5,7 @@ import {
   displayIsolationName,
   nearestFocalCity,
 } from './isolationData';
+import generatedAsset from '../../data/generated/urban-isolation.json';
 
 const fixture = {
   formatVersion: 1,
@@ -18,6 +19,15 @@ const fixture = {
 };
 
 describe('isolation data', () => {
+  it('decodes the reviewed generated asset and names every focal city', () => {
+    const dataset = decodeIsolationDataset(generatedAsset);
+    const conakry = dataset.cities.find((city) => city.id === '673');
+    expect(conakry?.name.en).toBe('Conakry');
+    const focalCities = dataset.cities.filter((city) => city.isFocal);
+    expect(focalCities).not.toHaveLength(0);
+    expect(focalCities.every((city) => city.name.zh !== null)).toBe(true);
+  });
+
   it('decodes compact rows and holder lists', () => {
     const dataset = decodeIsolationDataset(fixture);
     expect(dataset.cities).toHaveLength(3);

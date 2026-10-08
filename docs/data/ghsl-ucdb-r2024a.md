@@ -110,3 +110,14 @@ The method note preserves the three effects from the accepted design:
 2. Populations are modelled grid estimates for 2025, not census counts.
 3. The centroid of a large or irregular urban centre can sit away from its
    historic centre.
+
+Additional known limitations:
+
+- GHSL can classify densely populated rural areas as urban centres. For
+  example, Hajipur in Bihar, India has a modelled 2025 population of about
+  9.8 million in this dataset.
+- Some centres use the name of a smaller town within the footprint. Sarvestan
+  in Iran has about 1.0 million people in the 2025 data.
+
+Urban Isolation preserves both source records and populations without
+correcting them to municipal boundaries or census counts.
