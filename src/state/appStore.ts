@@ -9,9 +9,11 @@ import {
   DEFAULT_SURNAME_DISPLAY_MODE,
   type NavigationNotice,
   type SurnameDisplayMode,
+  type IsolationView,
 } from './urlState';
 import type { SunlineClockMode } from './urlState';
 import { clampSunlineTime } from '../features/sunline/solar';
+import { clampAlpha } from '../features/isolation/isolationMetric';
 
 export interface CameraFocusIntent {
   side: 'origin' | 'antipode' | 'free' | 'major-city';
@@ -27,6 +29,8 @@ interface AppState {
   sunlineClockMode: SunlineClockMode;
   sunlinePlaying: boolean;
   surnameDisplayMode: SurnameDisplayMode;
+  isolationAlpha: number;
+  isolationView: IsolationView;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -45,6 +49,8 @@ interface AppState {
   setSurnameDisplayMode: (
     mode: import('./urlState').SurnameDisplayMode,
   ) => void;
+  setIsolationAlpha: (value: number) => void;
+  setIsolationView: (view: IsolationView) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
   setAntipodeCountry: (country: CountryRef | null) => void;
@@ -71,6 +77,7 @@ export const useAppStore = create<AppState>((set) => ({
   ...initialUrlState,
   surnameDisplayMode:
     initialUrlState.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
+  isolationAlpha: initialUrlState.isolationAlpha,
   navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
   antipodeCountry: null,
@@ -133,6 +140,8 @@ export const useAppStore = create<AppState>((set) => ({
       sunlineClockMode: sunlinePlaying ? 'fixed' : state.sunlineClockMode,
     })),
   setSurnameDisplayMode: (surnameDisplayMode) => set({ surnameDisplayMode }),
+  setIsolationAlpha: (value) => set({ isolationAlpha: clampAlpha(value) }),
+  setIsolationView: (isolationView) => set({ isolationView }),
   returnSunlineToLive: (timestampMs = Date.now()) =>
     set({
       sunlineTimeMs: clampSunlineTime(timestampMs),

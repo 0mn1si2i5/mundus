@@ -6,7 +6,7 @@ export const messages = {
     home: '回到 Mundus 展厅',
     about: '关于',
     moreModes: '更多观察',
-    creditLine: '数据：Natural Earth · GeoNames · 社区姓氏数据',
+    creditLine: '数据：Natural Earth · GeoNames · 社区姓氏数据 · GHSL',
     creditMore: '来源与许可',
     share: '分享',
     changeLanguage: '切换为英文',
@@ -76,13 +76,49 @@ export const messages = {
     unknownModeNotice: '这个观察方式暂时不可用，已回到展厅。',
     retiredModeNotice: '这个观察已下线，已回到展厅。',
     dismissNotice: '关闭提示',
+    isolationPanelTitle: '规模门槛',
+    isolationViewLabel: '城市邻近性视图',
+    isolationCityView: '单城观察',
+    isolationFieldView: '全球分区',
+    isolationFieldRule:
+      '陆地按“到城市的距离 ÷ 该城当前邻近距离”最小值分区。颜色区分区域，圆点标出中心。',
+    isolationFieldLoading: '正在计算当前 α 下的全球分区…',
+    isolationFieldError: '分区计算失败，可重试或切回单城观察。',
+    isolationFieldCount: '{n} 个中心参与分区；无竞争城市的中心只标点。',
+    isolationFieldCenter: '区域中心',
+    isolationFieldChooseCenter: '选择中心城市',
+    isolationFieldSelectionNote:
+      '所选位置归属这个中心（相距 {d} km），不一定是最近的城市。',
+    isolationFieldSurfaceError: '陆地表面载入失败，无法显示全球分区。',
+    isolationExpand: '展开城市邻近性控件',
+    isolationCollapse: '收起城市邻近性控件',
+    isolationSliderLabel: '规模门槛 α',
+    isolationSliderValue: 'α = {a} · 竞争城市人口 ≥ 本城的 {p}%',
+    isolationTopList: '当前门槛下邻近距离最大的 10 座城市',
+    isolationTopListItem: '{n}. {city} · {d} km',
+    isolationResult: '城市邻近性结果',
+    isolationPopulation: '2025 年城市中心人口',
+    isolationCompetitor: '最近的“足够大”城市',
+    isolationDistance: '邻近距离',
+    isolationRank: '第 {n} / {N} 名',
+    isolationRankLabel: '排名',
+    isolationNoCompetitor:
+      '数据集中没有人口至少为它 {p}% 的城市，因此在这个门槛下没有邻近距离。',
+    isolationNearestNote: '离所选位置最近的数据集城市（相距 {d} km）',
+    isolationCaveat:
+      '城市以 GHSL 城市中心为单位，距离为中心点之间的大圆距离，不代表交通可达性。',
+    isolationChartAria: '邻近距离随 α 的阶梯变化，当前 α = {a} 时为 {d} km',
+    isolationLoading: '正在载入城市中心数据…',
+    isolationUnavailable: '城市中心数据载入失败。',
+    isolationRetry: '重试',
   },
   en: {
     laboratory: 'Interactive terrestrial laboratory',
     home: 'Back to the Mundus lobby',
     about: 'About',
     moreModes: 'More',
-    creditLine: 'Data: Natural Earth · GeoNames · community surname data',
+    creditLine:
+      'Data: Natural Earth · GeoNames · community surname data · GHSL',
     creditMore: 'Sources and licenses',
     share: 'Share',
     changeLanguage: 'Switch to Chinese',
@@ -160,5 +196,46 @@ export const messages = {
     retiredModeNotice:
       'That observation has been retired; you have been returned to the lobby.',
     dismissNotice: 'Dismiss',
+    isolationPanelTitle: 'Size threshold',
+    isolationViewLabel: 'Urban Proximity view',
+    isolationCityView: 'One city',
+    isolationFieldView: 'Global regions',
+    isolationFieldRule:
+      'Land goes to the city with the lowest distance / current proximity distance. Colors distinguish regions; dots mark their centres.',
+    isolationFieldLoading: 'Computing global regions for the current α…',
+    isolationFieldError:
+      'Region calculation failed. Retry or return to One city.',
+    isolationFieldCount:
+      '{n} centres define regions; centres without competitors remain dots only.',
+    isolationFieldCenter: 'Region centre',
+    isolationFieldChooseCenter: 'Choose a centre city',
+    isolationFieldSelectionNote:
+      'This centre owns the selected point ({d} km away); it need not be the nearest city.',
+    isolationFieldSurfaceError:
+      'The land surface failed to load; global regions cannot be shown.',
+    isolationExpand: 'Expand Urban Proximity controls',
+    isolationCollapse: 'Collapse Urban Proximity controls',
+    isolationSliderLabel: 'Size threshold α',
+    isolationSliderValue: 'α = {a} · competitor population ≥ {p}% of this city',
+    isolationTopList:
+      'The 10 cities with the greatest proximity distance at this threshold',
+    isolationTopListItem: '{n}. {city} · {d} km',
+    isolationResult: 'Urban Proximity result',
+    isolationPopulation: '2025 urban-centre population',
+    isolationCompetitor: 'Nearest large-enough city',
+    isolationDistance: 'Proximity distance',
+    isolationRank: 'Rank {n} of {N}',
+    isolationRankLabel: 'Rank',
+    isolationNoCompetitor:
+      'No city in the dataset has at least {p}% of its population, so it has no proximity distance at this threshold.',
+    isolationNearestNote:
+      'Nearest dataset city to the selected place ({d} km away)',
+    isolationCaveat:
+      'Cities are GHSL urban centres; distances are great-circle distances between centres, not travel.',
+    isolationChartAria:
+      'Proximity distance as a step function of α; {d} km at α = {a}',
+    isolationLoading: 'Loading urban-centre data…',
+    isolationUnavailable: 'Urban-centre data failed to load.',
+    isolationRetry: 'Retry',
   },
 } as const;

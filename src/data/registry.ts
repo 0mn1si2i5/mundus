@@ -6,6 +6,7 @@ import surnamesManifest from './manifests/surnames-by-country.json';
 import countryLabelAnchorsManifest from './manifests/country-label-anchors.json';
 import surnameLabelSlotsManifest from './manifests/surname-label-slots.json';
 import surnameCoverageManifest from './manifests/surname-coverage.json';
+import urbanIsolationManifest from './manifests/urban-isolation.json';
 
 const auxiliarySourceSchema = z.object({
   sourceName: z.string().min(1),
@@ -56,7 +57,7 @@ const dataManifestObjectSchema = z.object({
     })
     .optional(),
   immutableBuildInput: trackedAssetIdentitySchema
-    .extend({ schemaVersion: z.literal(2) })
+    .extend({ schemaVersion: z.union([z.literal(1), z.literal(2)]) })
     .optional(),
   derivedAsset: trackedAssetIdentitySchema
     .extend({ formatVersion: z.number().int().optional() })
@@ -148,6 +149,16 @@ export const dataManifestSchema = dataManifestObjectSchema.superRefine(
         message: 'GeoNames derived asset requires runtime format version 2',
       });
     }
+    if (
+      manifest.id === 'geonames-major-cities' &&
+      manifest.immutableBuildInput?.schemaVersion !== 2
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['immutableBuildInput', 'schemaVersion'],
+        message: 'GeoNames immutable input requires schema version 2',
+      });
+    }
   },
 );
 
@@ -161,4 +172,5 @@ export const DATA_MANIFESTS: readonly DataManifest[] = [
   dataManifestSchema.parse(countryLabelAnchorsManifest),
   dataManifestSchema.parse(surnameLabelSlotsManifest),
   dataManifestSchema.parse(surnameCoverageManifest),
+  dataManifestSchema.parse(urbanIsolationManifest),
 ];

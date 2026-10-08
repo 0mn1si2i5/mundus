@@ -17,7 +17,7 @@ describe('mode registry', () => {
   });
 
   it('provides one explicit product order with unique identifiers', () => {
-    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2]);
+    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3]);
     expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
@@ -28,15 +28,20 @@ describe('mode registry', () => {
     ]);
     expect(MODE_DEFINITIONS.sunline.titlePhrases.zh).toEqual(['日照线']);
     expect(MODE_DEFINITIONS.surnames.titlePhrases.zh).toEqual(['姓氏观察']);
+    expect(MODE_DEFINITIONS.isolation.titlePhrases.zh).toEqual([
+      '城市',
+      '邻近性',
+    ]);
     for (const mode of Object.values(MODE_DEFINITIONS)) {
       expect(mode.titlePhrases.zh.join('')).toBe(mode.title.zh);
     }
   });
 
-  it('offers Other Side and the Surname Atlas first, the rest under More', () => {
+  it('offers Urban Proximity as a primary observation and Sunline under More', () => {
     expect(modesInTier('primary').map((mode) => mode.id)).toEqual([
       'antipodes',
       'surnames',
+      'isolation',
     ]);
     expect(modesInTier('more').map((mode) => mode.id)).toEqual(['sunline']);
   });

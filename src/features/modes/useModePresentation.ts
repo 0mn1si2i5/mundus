@@ -22,6 +22,20 @@ import {
 } from '../surnames/surnameData';
 import type { SurnameDisplayMode } from '../../state/urlState';
 import { DEFAULT_SURNAME_DISPLAY_MODE } from '../../state/urlState';
+import {
+  useIsolationDataset,
+  type IsolationLoadState,
+} from '../isolation/useIsolationDataset';
+import {
+  computeIsolationSelection,
+  type IsolationDataset,
+} from '../isolation/isolationData';
+import type { RecordHolder } from '../isolation/isolationMetric';
+import { greatCircleArcPoints } from '../isolation/isolationGeometry';
+import type { IsolationView } from '../../state/urlState';
+import { useIsolationField } from '../isolation/useIsolationField';
+import { isolationFieldSelection } from '../isolation/isolationField';
+import type { IsolationFieldState } from '../isolation/useIsolationField';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -29,6 +43,20 @@ export interface GlobePresentation {
   antipodeRelation: AntipodeRelation | null;
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
+  isolation: IsolationGlobePresentation | null;
+}
+
+export interface IsolationGlobePresentation {
+  alpha: number;
+  view: IsolationView;
+  field: IsolationFieldState;
+  focalPoints: readonly GeoPoint[];
+  city: GeoPoint;
+  competitor: GeoPoint | null;
+  radiusKm: number | null;
+  cityId: string;
+  competitorId: string;
+  arcStatus: 'drawn' | 'none' | 'antipodal';
 }
 
 export type AntipodeRelationLoadState = 'idle' | 'loading' | 'error' | 'ready';
@@ -57,6 +85,23 @@ export type ModePresentation =
       surnameDisplayMode: SurnameDisplayMode;
       selectedCountry: CountryRef | null;
       surnameData: SurnameLoadState;
+    }
+  | {
+      id: 'isolation';
+      alpha: number;
+      view: IsolationView;
+      field: IsolationFieldState & { retry: () => void };
+      dataset: IsolationLoadState;
+      selection: {
+        cityIndex: number;
+        distanceFromPointKm: number;
+        competitor: RecordHolder | null;
+        rank: { position: number; total: number } | null;
+      } | null;
+      ranking: readonly {
+        city: IsolationDataset['cities'][number];
+        distanceKm: number;
+      }[];
     };
 
 /**
@@ -75,6 +120,14 @@ export function useModePresentation(): ModePresentation | null {
     DEFAULT_SURNAME_DISPLAY_MODE;
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
   const surnameData = useSurnameDataset(activeMode === 'surnames');
+  const isolationData = useIsolationDataset(activeMode === 'isolation');
+  const isolationAlpha = useAppStore((state) => state.isolationAlpha);
+  const isolationView = useAppStore((state) => state.isolationView);
+  const field = useIsolationField(
+    isolationData.status === 'ready' ? isolationData.data : null,
+    isolationAlpha,
+    activeMode === 'isolation' && isolationView === 'field',
+  );
 
   const relation = useMemo(
     () =>
@@ -95,6 +148,25 @@ export function useModePresentation(): ModePresentation | null {
       events: solarEventsUtc(point, sunlineTimeMs),
     };
   }, [activeMode, point, sunlineTimeMs]);
+  const isolation = useMemo(() => {
+    if (activeMode !== 'isolation' || isolationData.status !== 'ready')
+      return null;
+    return computeIsolationSelection(
+      point,
+      isolationAlpha,
+      isolationData.data,
+      isolationView === 'field'
+        ? isolationFieldSelection(point, isolationData.data, field.sites)
+        : null,
+    );
+  }, [
+    activeMode,
+    field.sites,
+    isolationAlpha,
+    isolationData,
+    isolationView,
+    point,
+  ]);
   switch (activeMode) {
     case null:
       return null;
@@ -123,16 +195,29 @@ export function useModePresentation(): ModePresentation | null {
         surnameData,
         surnameDisplayMode,
       };
+    case 'isolation':
+      return {
+        id: activeMode,
+        alpha: isolationAlpha,
+        view: isolationView,
+        field,
+        dataset: isolationData,
+        selection: isolation
+          ? {
+              cityIndex: isolation.cityIndex,
+              distanceFromPointKm: isolation.distanceFromPointKm,
+              competitor: isolation.competitor,
+              rank: isolation.rank,
+            }
+          : null,
+        ranking: isolation?.ranking ?? [],
+      };
     default:
       return assertNever(activeMode);
   }
 }
 
-/**
- * A defensive globe-only presentation for the base Canvas. Unlike
- * `useModePresentation`, this never throws: any mode-calculation failure
- * degrades to a neutral globe instead of taking down the shell.
- */
+/** Globe-only presentation; isolation uses the same selection as the card. */
 export function useGlobePresentation(): GlobePresentation {
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
@@ -142,14 +227,18 @@ export function useGlobePresentation(): GlobePresentation {
   const surnameDisplayMode =
     useAppStore((state) => state.surnameDisplayMode) ??
     DEFAULT_SURNAME_DISPLAY_MODE;
+  const isolationData = useIsolationDataset(activeMode === 'isolation');
+  const isolationAlpha = useAppStore((state) => state.isolationAlpha);
+  const isolationView = useAppStore((state) => state.isolationView);
+  const field = useIsolationField(
+    isolationData.status === 'ready' ? isolationData.data : null,
+    isolationAlpha,
+    activeMode === 'isolation' && isolationView === 'field',
+  );
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
-    try {
-      return { subsolarPoint: solarPosition(sunlineTimeMs).subsolarPoint };
-    } catch {
-      return null;
-    }
+    return { subsolarPoint: solarPosition(sunlineTimeMs).subsolarPoint };
   }, [activeMode, sunlineTimeMs]);
 
   const surnameMapLabels = useMemo(() => {
@@ -172,15 +261,65 @@ export function useGlobePresentation(): GlobePresentation {
 
   const antipodeRelation = useMemo(() => {
     if (activeMode !== 'antipodes') return null;
-    try {
-      return createAntipodeRelation(
-        point,
-        cityIndex.status === 'ready' ? cityIndex.data : undefined,
-      );
-    } catch {
-      return null;
-    }
+    return createAntipodeRelation(
+      point,
+      cityIndex.status === 'ready' ? cityIndex.data : undefined,
+    );
   }, [activeMode, cityIndex, point]);
+
+  const focalPoints = useMemo(
+    () =>
+      isolationData.data?.focalIndices.map(
+        (index) => isolationData.data!.cities[index]!.point,
+      ) ?? [],
+    [isolationData.data],
+  );
+  const isolation = useMemo<IsolationGlobePresentation | null>(() => {
+    if (activeMode !== 'isolation' || isolationData.status !== 'ready')
+      return null;
+    const dataset = isolationData.data;
+    const selection = computeIsolationSelection(
+      point,
+      isolationAlpha,
+      dataset,
+      isolationView === 'field'
+        ? isolationFieldSelection(point, dataset, field.sites)
+        : null,
+    );
+    if (!selection) return null;
+    const city = dataset.cities[selection.cityIndex];
+    if (!city) return null;
+    const competitor = selection.competitor;
+    const competitorCity = competitor ? dataset.cities[competitor.index] : null;
+    const arcStatus =
+      isolationView === 'field'
+        ? 'none'
+        : !competitorCity
+          ? 'none'
+          : greatCircleArcPoints(city.point, competitorCity.point).length > 1
+            ? 'drawn'
+            : 'antipodal';
+    return {
+      alpha: isolationAlpha,
+      view: isolationView,
+      field,
+      focalPoints,
+      city: city.point,
+      competitor: competitor ? competitorCity!.point : null,
+      radiusKm: competitor?.distanceKm ?? null,
+      cityId: city.id,
+      competitorId: competitorCity?.id ?? '',
+      arcStatus,
+    };
+  }, [
+    activeMode,
+    field,
+    focalPoints,
+    isolationAlpha,
+    isolationData,
+    isolationView,
+    point,
+  ]);
 
   return {
     showAntipodes: activeMode === 'antipodes',
@@ -188,6 +327,7 @@ export function useGlobePresentation(): GlobePresentation {
     antipodeRelation,
     surnameMapLabels,
     surnameDisplayMode,
+    isolation,
   };
 }
 

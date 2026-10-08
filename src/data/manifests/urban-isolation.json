@@ -1,0 +1,50 @@
+{
+  "id": "urban-isolation",
+  "sourceName": "GHS-UCDB R2024A - GHS Urban Centre Database 2025",
+  "sourceUrl": "https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php",
+  "licenseName": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "version": "R2024A V1_1",
+  "retrievedAt": "2026-10-08",
+  "attribution": "Mari Rivero, Ines; Melchiorri, Michele; Florio, Pietro; Schiavina, Marcello; Goch, Katarzyna; Politis, Panagiotis; Uhl, Johannes H; Pesaresi, Martino; Maffenini, Luca; Sulis, Patrizia; Crippa, Monica; Guizzardi, Diego; Pisoni, Enrico; Belis, Claudio; Jacome Felix Oom, Duarte; Branco, Alfredo; Mwaniki, Dennis; Kochulem, Edwin; Githira, Daniel; Carioli, Alessandra; Ehrlich, Daniele; Tommasi, Pierpaolo; Kemper, Thomas; Dijkstra, Lewis (2024): GHS-UCDB R2024A - GHS Urban Centre Database 2025. European Commission, Joint Research Centre (JRC) [Dataset] doi: 10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd PID: http://data.europa.eu/89h/1a338be6-7eaf-480c-9664-3a8ade88cbcd",
+  "redistribution": "allowed",
+  "transformations": [
+    "Export from GHS_UCDB_GLOBE_R2024A.gpkg: join GHS_UCDB_THEME_GENERAL_CHARACTERISTICS_GLOBE_R2024A to UC_centroids on ID_UC_G0; select CSV_HEADERS in order; order by numeric ID_UC_G0; strip leading U+FEFF from text; write UTF-8 CSV with CRLF records. No CSV distribution URL is published.",
+    "Filtered 2025 population >= 100,000",
+    "Converted EPSG:54009 Mollweide centroids to WGS84 degrees",
+    "Precomputed hierarchical record holders",
+    "Applied owner-reviewed English display names to the derived asset and report",
+    "Attached exact GeoNames and owner-reviewed override Chinese city names at build time; proximity candidates are report-only",
+    "Attached reviewed GHSL-country Chinese names from the complete country table"
+  ],
+  "missingValuePolicy": "Missing Chinese city names and country ISO codes remain null; empty names at or above the universe threshold remain in the immutable input, and a referenced unnamed competitor fails the build unless it has a reviewed override.",
+  "boundaryPolicy": "Cities are GHSL urban centres; no runtime geographic boundary matching is performed.",
+  "recordCount": 1282,
+  "rawBytes": 125752,
+  "gzipBytes": 53731,
+  "immutableBuildInput": {
+    "path": "src/data/generated/urban-isolation-input.json",
+    "schemaVersion": 1,
+    "sha256": "ff27720d6f862565c59bb1e0880c53c4bf5694f4627764ac7ec45472e936fa20",
+    "rawBytes": 378037
+  },
+  "derivedAsset": {
+    "path": "src/data/generated/urban-isolation.json",
+    "sha256": "6d4ad32a73c8caee9f08118371ab34020da7102b8b9bd253a7d410d951ba5846",
+    "rawBytes": 125752,
+    "formatVersion": 1
+  },
+  "sourceAssets": {
+    "zip": {
+      "distributionUrl": "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_GLOBE_R2024A/V1-1/GHS_UCDB_GLOBE_R2024A_V1_1.zip",
+      "sha256": "7b644df16b0791f88c3db28ce56338b5e1725be02b6a79ca253849822db26b21"
+    }
+  },
+  "derivedCapture": {
+    "fileName": "GHS_UCDB_R2024A_V1_1_urban_centres.csv",
+    "sha256": "c122f1fdc8a9da3fdbe83ddb356fadf28b6baa305d7f0d04cce0fde9649ab2d4",
+    "rawBytes": 680826,
+    "sourceAsset": "zip",
+    "export": "Export from GHS_UCDB_GLOBE_R2024A.gpkg: join GHS_UCDB_THEME_GENERAL_CHARACTERISTICS_GLOBE_R2024A to UC_centroids on ID_UC_G0; select CSV_HEADERS in order; order by numeric ID_UC_G0; strip leading U+FEFF from text; write UTF-8 CSV with CRLF records. No CSV distribution URL is published."
+  }
+}

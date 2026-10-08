@@ -7,10 +7,10 @@ import { ExhibitLobby } from './ExhibitLobby';
 afterEach(cleanup);
 
 describe('ExhibitLobby', () => {
-  it('offers the two primary observations as one labelled list', () => {
+  it('offers the three primary observations as one labelled list', () => {
     render(<ExhibitLobby locale="en" onEnter={vi.fn()} />);
     const list = screen.getByRole('list', { name: 'Observation modes' });
-    expect(list.querySelectorAll('li')).toHaveLength(2);
+    expect(list.querySelectorAll('li')).toHaveLength(3);
     expect(
       screen.getByRole('button', { name: /Other Side/u }),
     ).toBeInTheDocument();
@@ -26,6 +26,8 @@ describe('ExhibitLobby', () => {
     expect(more.querySelectorAll('li')).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Sunline' }));
     expect(onEnter).toHaveBeenCalledWith('sunline');
+    fireEvent.click(screen.getByRole('button', { name: /Urban Proximity/u }));
+    expect(onEnter).toHaveBeenCalledWith('isolation');
   });
 
   it('enters a primary observation directly', () => {

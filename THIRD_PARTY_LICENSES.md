@@ -117,6 +117,7 @@ license.
 | Community surname observation   | Popular Names by Country v1.2                            | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) plus upstream [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) provenance | Community-compiled source-listed surname records; see `DATA_SOURCES.md`       |
 | Iranian surname supplement      | `farbodbj/iranian-surname-frequencies` commit `9fb2fdcc` | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0)                                                                                          | Iran rank-one record from a community frequency sample; see `DATA_SOURCES.md` |
 | African surname observations    | Pulse Nigeria article, retrieved 2026-09-23              | Factual country/surname pairs only; article text is not redistributed                                                                              | One source-listed surname per listed African country; see `DATA_SOURCES.md`   |
+| GHSL Urban Centre Database      | GHS-UCDB R2024A V1.1                                     | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | Urban Proximity city centres and 2025 populations; see `DATA_SOURCES.md`      |
 
 Natural Earth source and terms are documented at
 <https://www.naturalearthdata.com/about/terms-of-use/>. Exact source URLs,

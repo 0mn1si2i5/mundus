@@ -1,8 +1,14 @@
 import type { Locale } from '../../i18n/messages';
 import { z } from 'zod';
 import { SUNLINE_MAX_TIME_MS, SUNLINE_MIN_TIME_MS } from '../sunline/solar';
+import { ALPHA_MAX, ALPHA_MIN } from '../isolation/isolationMetric';
 
-export const MODE_ORDER = ['antipodes', 'surnames', 'sunline'] as const;
+export const MODE_ORDER = [
+  'antipodes',
+  'surnames',
+  'isolation',
+  'sunline',
+] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
 
 /**
@@ -74,6 +80,31 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         latitude: z.number().min(-90).max(90),
         longitude: z.number().min(-180).max(180),
       }),
+    }),
+  },
+  isolation: {
+    id: 'isolation',
+    version: 1,
+    tier: 'primary',
+    title: { zh: '城市邻近性', en: 'Urban Proximity' },
+    titlePhrases: { zh: ['城市', '邻近性'] },
+    question: {
+      zh: '离一座大城市最近的达标城市中心有多远？',
+      en: 'How far away is the nearest qualifying urban centre?',
+    },
+    summary: {
+      zh: '调整 α，观察达标城市间距如何变化，并在全球分区中查看相对邻近关系。',
+      en: 'Adjust α to change qualifying-centre distance, then explore relative proximity across the globe.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['natural-earth-countries-110m', 'urban-isolation'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
+      alpha: z.number().min(ALPHA_MIN).max(ALPHA_MAX),
+      view: z.enum(['city', 'field']),
     }),
   },
   sunline: {

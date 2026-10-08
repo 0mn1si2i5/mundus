@@ -317,6 +317,7 @@
   .header > nav {
     grid-column: 1 / -1;
     grid-row: 2;
+    min-width: 0;
   }
 
   .eyebrow {

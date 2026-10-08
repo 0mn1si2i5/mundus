@@ -10,6 +10,7 @@ import {
 } from '../surnames/surnameWordmark';
 import { SurnameScriptToggle } from '../surnames/SurnameScriptToggle';
 import type { SurnameRecord } from '../surnames/surnameData';
+import { IsolationResult } from '../isolation/IsolationResult';
 
 export function ModeResult({
   locale,
@@ -254,6 +255,8 @@ export function ModeResult({
         </aside>
       );
     }
+    case 'isolation':
+      return <IsolationResult locale={locale} presentation={presentation} />;
     default:
       return assertNever(presentation);
   }

@@ -7,6 +7,7 @@ import {
   serializeUrlState,
   type ShareableState,
 } from './urlState';
+import { ALPHA_DEFAULT } from '../features/isolation/isolationMetric';
 
 describe('URL state codec', () => {
   const nowMs = Date.parse('2026-07-14T09:37:00Z');
@@ -20,6 +21,8 @@ describe('URL state codec', () => {
     point: DEFAULT_POINT,
     ...sunlineDefaults,
     surnameDisplayMode: DEFAULT_SURNAME_DISPLAY_MODE,
+    isolationAlpha: ALPHA_DEFAULT,
+    isolationView: 'city',
   };
 
   describe('parseUrlState', () => {
@@ -65,6 +68,40 @@ describe('URL state codec', () => {
       });
       expect(parseUrlState('?v=2&mode=surnames', nowMs)).toMatchObject({
         activeMode: 'surnames',
+      });
+      expect(
+        parseUrlState('?v=2&mode=isolation&alpha=0.37', nowMs),
+      ).toMatchObject({
+        activeMode: 'isolation',
+        isolationAlpha: 0.37,
+      });
+    });
+
+    it('rounds valid Urban Proximity alpha values and defaults invalid or out-of-range values', () => {
+      expect(
+        parseUrlState('?v=2&mode=isolation&alpha=0.374', nowMs),
+      ).toMatchObject({ isolationAlpha: 0.37 });
+      expect(parseUrlState('?v=2&mode=isolation&alpha=1', nowMs)).toMatchObject(
+        { isolationAlpha: 1 },
+      );
+
+      for (const raw of ['5', '0.05', '0.099', '-1', 'abc', '']) {
+        expect(
+          parseUrlState(
+            `?v=2&mode=isolation&alpha=${encodeURIComponent(raw)}`,
+            nowMs,
+          ),
+        ).toMatchObject({ isolationAlpha: ALPHA_DEFAULT });
+      }
+    });
+
+    it('ignores Urban Proximity alpha outside the Urban Proximity mode', () => {
+      expect(
+        parseUrlState('?v=2&mode=sunline&alpha=0.37', nowMs),
+      ).toMatchObject({
+        activeMode: 'sunline',
+        isolationAlpha: ALPHA_DEFAULT,
+        isolationView: 'city',
       });
     });
 
@@ -158,6 +195,23 @@ describe('URL state codec', () => {
       ).toBe('?mode=sunline&time=2026-07-14T09%3A37Z&v=2');
     });
 
+    it('serializes Urban Proximity alpha only when it differs from the default', () => {
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'isolation',
+          isolationAlpha: ALPHA_DEFAULT,
+        }),
+      ).toBe('?mode=isolation&v=2');
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'isolation',
+          isolationAlpha: 0.37,
+        }),
+      ).toBe('?mode=isolation&alpha=0.37&v=2');
+    });
+
     it('serializes non-default surname display mode and omits the local default', () => {
       expect(
         serializeUrlState({
@@ -198,7 +252,45 @@ describe('URL state codec', () => {
         point: { latitude: 12.3457, longitude: -98.7654 },
         ...sunlineDefaults,
         surnameDisplayMode: 'local',
+        isolationAlpha: ALPHA_DEFAULT,
+        isolationView: 'city',
       });
+    });
+
+    it('round-trips an Urban Proximity alpha through V2', () => {
+      const link = serializeUrlState({
+        ...lobby,
+        activeMode: 'isolation',
+        isolationAlpha: 0.37,
+      });
+      expect(link).toBe('?mode=isolation&alpha=0.37&v=2');
+      expect(parseUrlState(link, nowMs)).toEqual({
+        ...lobby,
+        activeMode: 'isolation',
+        isolationAlpha: 0.37,
+      });
+    });
+
+    it('preserves global regions and ignores invalid or unrelated view parameters', () => {
+      const state = {
+        ...lobby,
+        activeMode: 'isolation' as const,
+        isolationAlpha: 0.37,
+        isolationView: 'field' as const,
+      };
+      const link = serializeUrlState(state);
+      expect(link).toBe('?mode=isolation&alpha=0.37&view=field&v=2');
+      expect(parseUrlState(link, nowMs)).toEqual(state);
+      for (const query of [
+        '?mode=isolation&view=invalid&v=2',
+        '?mode=sunline&view=field&v=2',
+        '?view=field&v=2',
+      ]) {
+        expect(parseUrlState(query, nowMs).isolationView).toBe('city');
+      }
+      expect(serializeUrlState({ ...state, activeMode: 'antipodes' })).toBe(
+        '?mode=antipodes&v=2',
+      );
     });
 
     it('round-trips a lobby point link back to the lobby', () => {

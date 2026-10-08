@@ -8,7 +8,7 @@ below.
 Where the product shows attribution: every notice below appears in the
 **About** dialog (header button "关于" / "About"), which is always one click
 away, and the desktop layout keeps a compact credit line ("Data: Natural Earth
-· GeoNames · community surname data") on screen with a link to it.
+· GeoNames · community surname data · GHSL") on screen with a link to it.
 
 ## Natural Earth countries, 1:110m
 
@@ -150,6 +150,17 @@ CJK character such as 王 sits in east-central China rather than on the
 Tibetan plateau. Output numbers are rounded to nine
 significant digits so rebuilds with the pinned Node.js release are byte-stable.
 The 50m geometry and this table load only when the Surname Atlas opens.
+
+## GHSL Urban Centre Database
+
+- Source: [GHS-UCDB R2024A](https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php), V1.1, released 2025-07-31
+- Terms: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); redistribution is allowed with attribution
+- Citation: Mari Rivero, Ines et al. (2024), _GHS-UCDB R2024A - GHS Urban Centre Database 2025_, European Commission, Joint Research Centre (JRC) [Dataset], DOI `10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd`
+- Use: Urban Proximity's 2025 urban-centre population, focal-city selection, hierarchical proximity distance and Top 10 ranking
+- Thresholds: competitor universe `>= 100,000`; focal cities `>= 1,000,000`; α `0.10–1.00`
+- Transformation: the official GeoPackage was exported to a temporary CSV, Mollweide centroid x/y were converted to WGS84, coordinates were rounded to four decimals, and record holders plus exact or reviewed GeoNames Chinese city names were generated offline. Proximity name candidates are report-only and do not enter the asset; Chinese country names come from the complete reviewed GHSL-country table. The immutable input and derived asset are verified by `src/data/manifests/urban-isolation.json`.
+- Caveats: adjacent cities can merge into one urban centre; 2025 populations are modelled grid estimates rather than census counts; and a large or irregular centre's centroid can sit away from its historic centre. Distances are geometry between centres and do not represent travel or economic access.
+- The runtime loads only the compact derived asset when Urban Proximity opens; raw downloads remain outside Git. The method note with the exact licence sentence, package hash and coordinate formula is [docs/data/ghsl-ucdb-r2024a.md](docs/data/ghsl-ucdb-r2024a.md).
 
 ## Solar calculations
 

@@ -27,6 +27,8 @@ import { type SurnameLabelHiddenReason } from './surnameLabelLayout';
 import type { SurnameMapLabel } from '../surnames/surnameData';
 import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
 import type { SurnameDisplayMode } from '../../state/urlState';
+import type { IsolationGlobePresentation } from '../modes/useModePresentation';
+import { messages } from '../../i18n/messages';
 import {
   clearCameraDiagnostic,
   createViewportDiagnostics,
@@ -62,6 +64,7 @@ interface GlobeViewportProps {
   antipodeRelation: AntipodeRelation | null;
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
+  isolation: IsolationGlobePresentation | null;
 }
 
 interface PointerStart {
@@ -85,6 +88,7 @@ export function GlobeViewport({
   antipodeRelation,
   surnameMapLabels,
   surnameDisplayMode,
+  isolation,
 }: GlobeViewportProps) {
   const [supported] = useState(supportsWebGL2);
   const [profile] = useState(detectQualityProfile);
@@ -94,6 +98,9 @@ export function GlobeViewport({
   const [contextLost, setContextLost] = useState(false);
   const [vectorRenderSampleKey, setVectorRenderSampleKey] = useState(0);
   const [vectorState, setVectorState] = useState<VectorGlobeState>('loading');
+  const [fieldRenderedAlpha, setFieldRenderedAlpha] = useState<number | null>(
+    null,
+  );
   const [vectorPaletteVersion, setVectorPaletteVersion] = useState(0);
   const [vectorGeometryId, setVectorGeometryId] = useState('');
   const [vectorDragTransparent, setVectorDragTransparent] = useState(false);
@@ -130,6 +137,7 @@ export function GlobeViewport({
   );
   const setCameraFocusFree = useAppStore((state) => state.setCameraFocusFree);
   const point = useAppStore((state) => state.point);
+  const locale = useAppStore((state) => state.locale);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
   const selectedSurnameMapLabel = useMemo(
     () =>
@@ -453,6 +461,39 @@ export function GlobeViewport({
           ? surnameLabelLayout.visibleRectangles
           : undefined
       }
+      data-isolation-city-id={isolation?.cityId}
+      data-isolation-view={isolation?.view}
+      data-isolation-field-state={
+        isolation?.view === 'field'
+          ? vectorState === 'error'
+            ? 'surface-error'
+            : isolation.field.status
+          : undefined
+      }
+      data-isolation-field-site-count={
+        isolation?.view === 'field' ? isolation.field.sites.length : undefined
+      }
+      data-isolation-field-max-candidates={
+        isolation?.field.table?.maxCandidates
+      }
+      data-isolation-field-rendered-alpha={
+        isolation?.view === 'field' && isolation.field.status === 'ready'
+          ? fieldRenderedAlpha?.toFixed(2)
+          : undefined
+      }
+      data-isolation-competitor-id={isolation?.competitorId}
+      data-isolation-radius-km={
+        isolation?.radiusKm === null
+          ? ''
+          : isolation?.radiusKm === undefined
+            ? undefined
+            : String(Math.round(isolation.radiusKm))
+      }
+      data-isolation-alpha={isolation?.alpha.toFixed(2)}
+      data-isolation-dot-count={
+        isolation ? String(isolation.focalPoints.length) : undefined
+      }
+      data-isolation-arc={isolation?.arcStatus}
       data-sunline-selected-marker-role={
         sunline ? SUNLINE_RENDERING.selectedMarker.role : undefined
       }
@@ -504,6 +545,8 @@ export function GlobeViewport({
           antipodeRelation={antipodeRelation}
           surnameMapLabels={surnameMapLabels}
           surnameDisplayMode={surnameDisplayMode}
+          isolation={isolation}
+          onIsolationFieldRendered={setFieldRenderedAlpha}
           cameraGestureCancelRef={cancelCameraGesture}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}
           onSurnameLabelLayoutChange={setSurnameLabelLayout}
@@ -527,6 +570,11 @@ export function GlobeViewport({
       {contextLost ? (
         <p className={styles.contextStatus} role="status">
           {contextLostLabel}
+        </p>
+      ) : null}
+      {isolation?.view === 'field' && vectorState === 'error' ? (
+        <p className={styles.contextStatus} role="status">
+          {messages[locale].isolationFieldSurfaceError}
         </p>
       ) : null}
       {benchmark.enabled ? (

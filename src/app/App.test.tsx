@@ -25,7 +25,32 @@ vi.mock('../features/globe/GlobeViewport', () => ({
 vi.mock('../features/antipodes/useGeoNamesCityIndex', () => ({
   useGeoNamesCityIndex: (enabled: boolean) =>
     enabled
-      ? { status: 'ready', data: [] }
+      ? {
+          status: 'ready',
+          data: [
+            {
+              id: 1796236,
+              name: { en: 'Shanghai', zh: '上海' },
+              nameZhFallback: false,
+              country: { en: 'China', zh: '中国' },
+              admin1: { en: 'Shanghai', zh: '上海' },
+              countryCode: 'CN',
+              point: { latitude: 31.2304, longitude: 121.4737 },
+              population: 24870895,
+              featureCode: 'PPLA',
+              aliases: [],
+              search: {
+                nameEn: 'shanghai',
+                nameZh: '上海',
+                countryEn: 'china',
+                countryZh: '中国',
+                adminEn: 'shanghai',
+                adminZh: '上海',
+                aliases: [],
+              },
+            },
+          ],
+        }
       : { status: 'idle', data: null, load: () => {} },
 }));
 
@@ -95,7 +120,7 @@ function headerReturnButton() {
   });
 }
 
-describe('App mode failure isolation', () => {
+describe('App mode failure Urban Proximity', () => {
   beforeEach(() => {
     failure.dataCalc = false;
     failure.modeResultMode = null;

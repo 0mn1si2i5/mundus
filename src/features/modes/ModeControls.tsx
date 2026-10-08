@@ -12,6 +12,11 @@ const SunlineControls = lazy(() =>
     default: module.SunlineControls,
   })),
 );
+const IsolationControls = lazy(() =>
+  import('../isolation/IsolationControls').then((module) => ({
+    default: module.IsolationControls,
+  })),
+);
 export function ModeControls({
   locale,
   presentation,
@@ -32,6 +37,11 @@ export function ModeControls({
     case 'surnames':
       // The script toggle lives in the surname result card.
       return null;
+    case 'isolation':
+      controls = (
+        <IsolationControls locale={locale} presentation={presentation} />
+      );
+      break;
     default:
       return assertNever(presentation);
   }

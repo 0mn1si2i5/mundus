@@ -200,6 +200,7 @@ describe('shell mode state', () => {
       point: origin,
       cameraFocusIntent: { side: 'free', target: null },
       sunlinePlaying: false,
+      isolationAlpha: 0.5,
       hoveredCountry: null,
     });
   });
@@ -210,6 +211,17 @@ describe('shell mode state', () => {
 
     expect(useAppStore.getState().activeMode).toBe('sunline');
     expect(useAppStore.getState().sunlinePlaying).toBe(false);
+  });
+
+  it('clamps the Urban Proximity alpha slider value', () => {
+    useAppStore.getState().setIsolationAlpha(0.374);
+    expect(useAppStore.getState().isolationAlpha).toBe(0.37);
+
+    useAppStore.getState().setIsolationAlpha(5);
+    expect(useAppStore.getState().isolationAlpha).toBe(1);
+
+    useAppStore.getState().setIsolationAlpha(Number.NaN);
+    expect(useAppStore.getState().isolationAlpha).toBe(0.5);
   });
 
   it('exitMode returns to the lobby and preserves point and camera intent', () => {

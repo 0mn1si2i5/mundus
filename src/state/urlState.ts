@@ -9,6 +9,10 @@ import {
   formatSunlineTime,
   parseSunlineTime,
 } from '../features/sunline/solar';
+import {
+  ALPHA_DEFAULT,
+  parseAlphaParam,
+} from '../features/isolation/isolationMetric';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
@@ -22,6 +26,8 @@ export const DEFAULT_POINT: GeoPoint = {
 export const DEFAULT_MODE: ModeId = 'antipodes';
 export type SurnameDisplayMode = 'local' | 'latin' | 'chinese';
 export const DEFAULT_SURNAME_DISPLAY_MODE: SurnameDisplayMode = 'local';
+export type IsolationView = 'city' | 'field';
+export const DEFAULT_ISOLATION_VIEW: IsolationView = 'city';
 export type SunlineClockMode = 'live' | 'fixed';
 
 export interface ShareableState {
@@ -31,11 +37,13 @@ export interface ShareableState {
   sunlineTimeMs: number;
   sunlineClockMode: SunlineClockMode;
   surnameDisplayMode: SurnameDisplayMode;
+  isolationAlpha: number;
+  isolationView: IsolationView;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
 
-const modeSchema = z.enum(['antipodes', 'sunline', 'surnames']);
+const modeSchema = z.enum(['antipodes', 'sunline', 'surnames', 'isolation']);
 /** Observations that once shipped; their links open the lobby with a notice. */
 const RETIRED_MODES: ReadonlySet<string> = new Set(['development']);
 const surnameDisplayModeSchema = z.enum(['local', 'latin', 'chinese']);
@@ -88,6 +96,14 @@ export function parseUrlState(
     activeMode === 'sunline' && parsedSunlineTime
       ? parseSunlineTime(parsedSunlineTime)
       : null;
+  const isolationAlpha =
+    activeMode === 'isolation'
+      ? parseAlphaParam(params.get('alpha'))
+      : ALPHA_DEFAULT;
+  const isolationView =
+    activeMode === 'isolation' && params.get('view') === 'field'
+      ? 'field'
+      : DEFAULT_ISOLATION_VIEW;
 
   return {
     activeMode,
@@ -102,6 +118,8 @@ export function parseUrlState(
     surnameDisplayMode: surnameDisplayMode.success
       ? surnameDisplayMode.data
       : DEFAULT_SURNAME_DISPLAY_MODE,
+    isolationAlpha,
+    isolationView,
   };
 }
 
@@ -141,6 +159,18 @@ export function serializeUrlState(state: ShareableState): string {
         'surname',
         state.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
       );
+    }
+    if (
+      state.activeMode === 'isolation' &&
+      state.isolationAlpha !== ALPHA_DEFAULT
+    ) {
+      params.set('alpha', state.isolationAlpha.toFixed(2));
+    }
+    if (
+      state.activeMode === 'isolation' &&
+      state.isolationView !== DEFAULT_ISOLATION_VIEW
+    ) {
+      params.set('view', state.isolationView);
     }
     params.set('v', '2');
   }

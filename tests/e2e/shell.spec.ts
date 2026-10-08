@@ -80,6 +80,7 @@ test('offers the other observations behind a keyboard-friendly More menu', async
   await expect(more).toHaveAttribute('aria-expanded', 'true');
   const menu = nav.getByRole('list', { name: '更多观察' });
   await expect(menu.getByRole('button')).toHaveCount(1);
+  await expect(menu.getByRole('button', { name: '日照线' })).toBeVisible();
 
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
@@ -339,8 +340,27 @@ test('credits every data source with its license in the About dialog', async ({
   );
   await expect(about).toContainText('CC BY-SA 4.0');
   await expect(
-    about.getByRole('link', { name: 'CC BY 4.0 ↗' }),
+    about
+      .getByRole('listitem')
+      .filter({ hasText: '包含 GeoNames 数据' })
+      .getByRole('link', { name: 'CC BY 4.0 ↗', exact: true }),
   ).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/');
+  const ghsl = about.getByRole('listitem').filter({
+    hasText: 'GHSL Urban Centre Database',
+  });
+  await expect(ghsl).toContainText('Mari Rivero, Ines');
+  await expect(ghsl).toContainText(
+    '10.2905/1a338be6-7eaf-480c-9664-3a8ade88cbcd',
+  );
+  await expect(
+    ghsl.getByRole('link', { name: 'GHSL · CC BY 4.0 ↗', exact: true }),
+  ).toHaveAttribute('href', 'https://creativecommons.org/licenses/by/4.0/');
+  await expect(
+    ghsl.getByRole('link', { name: '数据集页面 ↗' }),
+  ).toHaveAttribute(
+    'href',
+    'https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php',
+  );
   await expect(about).not.toContainText('UNDP');
   await expect(
     about.getByRole('link', { name: '来源 ↗' }).first(),
@@ -494,9 +514,10 @@ test('presents the primary observations and keeps the others one step away', asy
 }) => {
   await page.goto('./');
   const list = page.getByRole('list', { name: '观察模式' });
-  await expect(list.getByRole('listitem')).toHaveCount(2);
+  await expect(list.getByRole('listitem')).toHaveCount(3);
   await expect(list.getByRole('button', { name: /地球另一端/ })).toBeVisible();
   await expect(list.getByRole('button', { name: /姓氏观察/ })).toBeVisible();
+  await expect(list.getByRole('button', { name: /城市邻近性/ })).toBeVisible();
   const more = page.getByRole('list', { name: '更多观察' });
   await expect(more.getByRole('listitem')).toHaveCount(1);
   await expect(more.getByRole('button', { name: '日照线' })).toBeVisible();
