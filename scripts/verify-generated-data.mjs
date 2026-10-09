@@ -4,13 +4,18 @@ import { gzipSync } from 'node:zlib';
 
 const assets = [
   {
-    manifest: 'src/data/manifests/natural-earth-110m.json',
-    asset: 'node_modules/world-atlas/countries-110m.json',
-    hashField: 'sha256',
+    manifest: 'src/data/manifests/mundus-countries.json',
+    asset: 'src/data/generated/mundus-countries-110m.json',
+    hashField: 'topologyAssets.110m.sha256',
+  },
+  {
+    manifest: 'src/data/manifests/mundus-countries.json',
+    asset: 'src/data/generated/mundus-countries-50m.json',
+    hashField: 'topologyAssets.50m.sha256',
   },
   {
     manifest: 'src/data/manifests/natural-earth-vector-globe.json',
-    asset: 'node_modules/world-atlas/countries-50m.json',
+    asset: 'src/data/generated/mundus-countries-50m.json',
     hashField: 'sourceAssets.50m.sha256',
   },
   {

@@ -251,7 +251,7 @@ describe('surname label slots', () => {
     const countryIds = Object.keys(generatedSlots.slots) as Array<
       keyof typeof generatedSlots.slots
     >;
-    expect(countryIds).toHaveLength(240);
+    expect(countryIds).toHaveLength(239);
     for (const countryId of countryIds) {
       const first = generatedSlots.slots[countryId]![0]!;
       expect(

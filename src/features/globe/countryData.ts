@@ -3,24 +3,20 @@ import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from 'three';
 import { feature } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
-import atlas from 'world-atlas/countries-110m.json';
+import atlas from '../../data/generated/mundus-countries-110m.json';
 import type { GeoPoint } from './geo';
 import type { CountryRef } from './country';
 
 export type { CountryRef } from './country';
 
-interface AtlasProperties {
-  name: string;
-}
-
-type AtlasTopology = Topology<{
-  countries: GeometryCollection<AtlasProperties>;
-}>;
-
 export interface CountryFeatureProperties {
   countryId: string;
   name: string;
 }
+
+type CountryTopology = Topology<{
+  countries: GeometryCollection<CountryFeatureProperties>;
+}>;
 
 export type CountryFeature = Feature<Geometry, CountryFeatureProperties>;
 
@@ -60,32 +56,13 @@ export const COUNTRY_TEXTURE_STYLE = {
 
 export const COUNTRY_VECTOR_BORDER_COLOR = '#43423a';
 
-const EXCEPTION_COUNTRY_IDS: Readonly<Record<string, string>> = {
-  'N. Cyprus': 'ne-x-northern-cyprus',
-  Somaliland: 'ne-x-somaliland',
-  Kosovo: 'ne-x-kosovo',
-  'Indian Ocean Ter.': 'ne-x-indian-ocean-territories',
-  'Siachen Glacier': 'ne-x-siachen-glacier',
-};
-
 export function getCountryDataset(): CountryDataset {
   const cached = cachedDataset;
   if (cached) return cached;
 
-  const topology = atlas as unknown as AtlasTopology;
-  const raw = feature(
-    topology,
-    topology.objects.countries,
-  ) as unknown as FeatureCollection<Geometry, AtlasProperties>;
   const countries: FeatureCollection<Geometry, CountryFeatureProperties> = {
     type: 'FeatureCollection',
-    features: raw.features.map((country) => ({
-      ...country,
-      properties: {
-        countryId: countryIdFor(country.id, country.properties.name),
-        name: country.properties.name,
-      },
-    })),
+    features: [...countryFeaturesFromTopology(atlas)],
   };
   const index: IndexedCountry[] = countries.features.map((country) => {
     const [[, south], [, north]] = geoBounds(country);
@@ -114,33 +91,19 @@ export function getCountryDataset(): CountryDataset {
   return cachedDataset;
 }
 
-/** Converts a world-atlas topology into country features with stable ids. */
+/**
+ * Reads a generated Mundus country topology; each unit already carries its
+ * stable `countryId` (see scripts/build-mundus-countries.mjs).
+ */
 export function countryFeaturesFromTopology(
-  atlasTopology: unknown,
+  countryTopology: unknown,
 ): readonly CountryFeature[] {
-  const topology = atlasTopology as AtlasTopology;
+  const topology = countryTopology as CountryTopology;
   const raw = feature(
     topology,
     topology.objects.countries,
-  ) as unknown as FeatureCollection<Geometry, AtlasProperties>;
-  return raw.features.map((country) => ({
-    ...country,
-    properties: {
-      countryId: countryIdFor(country.id, country.properties.name),
-      name: country.properties.name,
-    },
-  }));
-}
-
-function countryIdFor(
-  sourceId: string | number | undefined,
-  sourceName: string,
-): string {
-  if (sourceId !== undefined) return `ne-${String(sourceId).padStart(3, '0')}`;
-  const exception = EXCEPTION_COUNTRY_IDS[sourceName];
-  if (!exception)
-    throw new Error(`Missing explicit countryId mapping for ${sourceName}`);
-  return exception;
+  ) as unknown as FeatureCollection<Geometry, CountryFeatureProperties>;
+  return raw.features;
 }
 
 export function createCountryTexture(

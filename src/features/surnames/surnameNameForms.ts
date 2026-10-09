@@ -326,5 +326,4 @@ export const SURNAME_NAME_FORMS: Readonly<Record<string, SurnameNameForms>> = {
   'ne-882|Sefo': { zh: '塞福' },
   'ne-887|Al-Hadi': { zh: '哈迪', local: 'الهادي', script: 'Arabic' },
   'ne-894|Phiri': { zh: '菲里' },
-  'ne-x-kosovo|Krasniqi': { zh: '克拉斯尼奇' },
 };

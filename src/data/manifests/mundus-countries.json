@@ -1,0 +1,52 @@
+{
+  "id": "mundus-countries",
+  "sourceName": "Natural Earth Admin 0 – Countries, 1:10m, China point of view (Mundus boundary view)",
+  "sourceUrl": "https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/",
+  "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+  "licenseName": "Public domain",
+  "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
+  "version": "Natural Earth 5.1.2",
+  "retrievedAt": "2026-10-09",
+  "sha256": "a13bf5f310fde87bc0a5f994f8ce9bd706cc198d8ee37d221e61c2546b945372",
+  "auxiliarySources": [
+    {
+      "sourceName": "Natural Earth Admin 0 – Countries, 1:10m, default view",
+      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries.geojson",
+      "version": "Natural Earth 5.1.2",
+      "sha256": "239eec57ac17f100a11e2536cffc56752c318b50ae765b0918ff7aab4ce8f255",
+      "purpose": "Taiwan as a separate unit, and English unit names shared with the default view"
+    }
+  ],
+  "attribution": "Made with Natural Earth",
+  "redistribution": "allowed",
+  "transformations": [
+    "Start from the China point-of-view admin-0 layer",
+    "Remove the Taiwan islands from China and add Taiwan from the default layer as its own unit",
+    "Merge units without a unique ISO numeric code into their sovereign (IOA→AUS, CSI→AUS, ATC→AUS, CLP→FRA, BRI→BRA, ESB→GBR, WSB→GBR, SCR→CHN); Bir Tawil keeps the explicit id ne-x-bir-tawil",
+    "Prefix ISO 3166-1 numeric codes (ISO_N3_EH) with ne- as stable country ids",
+    "Build a shared-arc topology, simplify by spherical Visvalingam area, drop unpopulated islets below a size threshold while keeping each unit and every islet holding a GeoNames major city, and quantize",
+    "Low detail keeps the reviewed 1:110m unit inventory; high detail keeps every unit"
+  ],
+  "missingValuePolicy": "Points outside every unit are represented as null and displayed as ocean or unknown.",
+  "boundaryPolicy": "Mundus draws boundaries from the Natural Earth China point of view, except that Taiwan is shown as its own unit. Boundaries are a cartographic view and are not a legal authority on territorial status.",
+  "topologyAssets": {
+    "110m": {
+      "path": "src/data/generated/mundus-countries-110m.json",
+      "sha256": "9b69ff70741a75a43c3aa31d2e01c35eea6bea93bc0ab2878f3aca7faea07647",
+      "rawBytes": 290019,
+      "gzipBytes": 106991,
+      "countries": 174,
+      "arcs": 896,
+      "points": 22509
+    },
+    "50m": {
+      "path": "src/data/generated/mundus-countries-50m.json",
+      "sha256": "b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4",
+      "rawBytes": 1068032,
+      "gzipBytes": 387011,
+      "countries": 239,
+      "arcs": 3945,
+      "points": 89269
+    }
+  }
+}

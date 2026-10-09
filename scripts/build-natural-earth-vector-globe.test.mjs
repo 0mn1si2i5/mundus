@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
-import atlas110 from 'world-atlas/countries-110m.json' with { type: 'json' };
-import atlas50 from 'world-atlas/countries-50m.json' with { type: 'json' };
+import atlas110 from '../src/data/generated/mundus-countries-110m.json' with { type: 'json' };
+import atlas50 from '../src/data/generated/mundus-countries-50m.json' with { type: 'json' };
 import {
   buildVectorGlobe,
   topologyToCountries,
@@ -79,14 +79,15 @@ test('production vector assets match the manifest and release budgets', async ()
   const manifest = JSON.parse(
     await readFile('src/data/manifests/natural-earth-vector-globe.json'),
   );
-  assert.equal(
-    manifest.sourceAssets['110m'].sha256,
-    '2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8',
+  const countriesManifest = JSON.parse(
+    await readFile('src/data/manifests/mundus-countries.json'),
   );
-  assert.equal(
-    manifest.sourceAssets['50m'].sha256,
-    '04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394',
-  );
+  for (const detail of ['110m', '50m']) {
+    assert.equal(
+      manifest.sourceAssets[detail].sha256,
+      countriesManifest.topologyAssets[detail].sha256,
+    );
+  }
   for (const detail of ['110m', '50m']) {
     const record = manifest.derivedAssets[detail];
     const bytes = await readFile(record.path);
@@ -140,11 +141,21 @@ test('emitted country areas match independent source feature areas', () => {
       globalFraction < 0.001,
       `${detail} source-area deficit ${globalFraction}`,
     );
-    const largest = deficits.toSorted((a, b) => b.fraction - a.fraction)[0];
+    // Units below 1e-6 sr are close to the 16-bit transport quantum (~190 m),
+    // so the same threshold as the build gate applies. Every unit above
+    // 1e-8 sr (~0.4 km²) must still emit; Vatican City (~110 m across in the
+    // source) collapses entirely under transport and is not drawn.
+    const largest = deficits
+      .filter((item) => item.sourceArea >= 1e-6)
+      .toSorted((a, b) => b.fraction - a.fraction)[0];
     assert.ok(
       largest.fraction < 0.01,
       `${detail} ${largest.countryId} deficit ${largest.fraction}`,
     );
+    for (const item of deficits) {
+      if (item.sourceArea < 1e-8) continue;
+      assert.ok(item.emittedArea > 0, `${detail} ${item.countryId} is empty`);
+    }
     for (const countryId of [
       'ne-010',
       'ne-044',
@@ -186,7 +197,15 @@ test('triangulates the 50m Antarctic polar part regardless of source ring order'
   const antarctica = countries.features.find(
     (country) => country.properties.countryId === 'ne-010',
   );
-  const polarPart = antarctica.geometry.coordinates[2];
+  const parts =
+    antarctica.geometry.type === 'Polygon'
+      ? [antarctica.geometry.coordinates]
+      : antarctica.geometry.coordinates;
+  // The polar part is the one whose rings reach the South Pole seam.
+  const polarPart = parts.find((rings) =>
+    rings.some((ring) => ring.some(([, latitude]) => latitude <= -89.999)),
+  );
+  assert.ok(polarPart, 'Antarctica has no polar part');
   const fixture = {
     type: 'FeatureCollection',
     features: [
@@ -207,18 +226,16 @@ test('triangulates the 50m Antarctic polar part regardless of source ring order'
   );
 });
 
-test('bounds 110m Sudan repair error for its self-intersecting source ring', () => {
-  const result = buildProductionGlobe(atlas110, 2);
-  const source = sourceAreaReport(atlas110).countryArea.get('ne-729');
-  const emitted = emittedAreaByCountry(result).get('ne-729');
-  const sudan = topologyToCountries(atlas110).features.find(
-    (country) => country.properties.countryId === 'ne-729',
-  );
-  assert.ok(countFeatureSelfIntersections(sudan) > 0);
-  assert.ok(
-    Math.abs(source - emitted) / source < 0.0025,
-    `Sudan area error ${Math.abs(source - emitted) / source}`,
-  );
+test('Mundus country rings do not self-intersect at either detail', () => {
+  for (const atlas of [atlas110, atlas50]) {
+    for (const country of topologyToCountries(atlas).features) {
+      assert.equal(
+        countFeatureSelfIntersections(country, { skipAntimeridianSeam: true }),
+        0,
+        `${country.properties.countryId} self-intersects`,
+      );
+    }
+  }
 });
 
 test('keeps country indices stable and representative islands at both resolutions', () => {
@@ -431,7 +448,12 @@ function emittedAreaByCountry(result) {
   return areas;
 }
 
-function countFeatureSelfIntersections(feature) {
+// Segments that jump across the antimeridian (Antarctica's polar seam) are
+// not geographic edges in longitude/latitude space and can be skipped.
+function countFeatureSelfIntersections(
+  feature,
+  { skipAntimeridianSeam = false } = {},
+) {
   const polygons =
     feature.geometry.type === 'Polygon'
       ? [feature.geometry.coordinates]
@@ -453,6 +475,11 @@ function countFeatureSelfIntersections(feature) {
           const b = ring[(first + 1) % ring.length];
           const c = ring[second];
           const d = ring[(second + 1) % ring.length];
+          if (
+            skipAntimeridianSeam &&
+            (Math.abs(a[0] - b[0]) > 180 || Math.abs(c[0] - d[0]) > 180)
+          )
+            continue;
           if (
             orientation(a, b, c) * orientation(a, b, d) < 0 &&
             orientation(c, d, a) * orientation(c, d, b) < 0

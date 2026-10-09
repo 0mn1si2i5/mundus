@@ -205,7 +205,7 @@ test('Surname Atlas displays source-listed observations without rank-one claims'
   await expect(globe).toHaveAttribute('data-vector-state', 'ready', {
     timeout: 10_000,
   });
-  await expect(globe).toHaveAttribute('data-surname-map-label-count', '198');
+  await expect(globe).toHaveAttribute('data-surname-map-label-count', '197');
   await expect
     .poll(async () =>
       Number(await globe.getAttribute('data-surname-map-label-entry-count')),

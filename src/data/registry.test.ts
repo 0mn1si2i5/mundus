@@ -7,7 +7,7 @@ describe('data registry', () => {
     const ids = DATA_MANIFESTS.map((manifest) => manifest.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toEqual([
-      'natural-earth-countries-110m',
+      'mundus-countries',
       'natural-earth-vector-globe',
       'geonames-major-cities',
       'surnames-by-country',
@@ -23,6 +23,36 @@ describe('data registry', () => {
     ).toBe(true);
   });
 
+  it('pins the Mundus country boundary view and its sources', () => {
+    const manifest = DATA_MANIFESTS.find(
+      (candidate) => candidate.id === 'mundus-countries',
+    );
+    expect(manifest).toMatchObject({
+      version: 'Natural Earth 5.1.2',
+      sha256:
+        'a13bf5f310fde87bc0a5f994f8ce9bd706cc198d8ee37d221e61c2546b945372',
+      auxiliarySources: [
+        expect.objectContaining({
+          sha256:
+            '239eec57ac17f100a11e2536cffc56752c318b50ae765b0918ff7aab4ce8f255',
+        }),
+      ],
+      topologyAssets: {
+        '110m': {
+          sha256:
+            '9b69ff70741a75a43c3aa31d2e01c35eea6bea93bc0ab2878f3aca7faea07647',
+          countries: 174,
+        },
+        '50m': {
+          sha256:
+            'b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4',
+          countries: 239,
+        },
+      },
+    });
+    expect(manifest?.boundaryPolicy).toContain('China point of view');
+  });
+
   it('pins both vector resolutions and their transfer and GPU budgets', () => {
     const manifest = DATA_MANIFESTS.find(
       (candidate) => candidate.id === 'natural-earth-vector-globe',
@@ -30,11 +60,11 @@ describe('data registry', () => {
     expect(manifest?.sourceAssets).toMatchObject({
       '110m': {
         sha256:
-          '2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8',
+          '9b69ff70741a75a43c3aa31d2e01c35eea6bea93bc0ab2878f3aca7faea07647',
       },
       '50m': {
         sha256:
-          '04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394',
+          'b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4',
       },
     });
     expect(manifest?.derivedAssets?.['110m']?.gpuBytes).toBeLessThanOrEqual(
@@ -148,11 +178,11 @@ describe('data registry', () => {
       version: expect.stringContaining('v1.2'),
       licenseName: expect.stringMatching(/CC0.*Apache-2\.0/u),
       derivedAssetSha256:
-        'd2ca10f3590387954ef832aeb28fe598e5dd70ce26de7fb5cfafaa22b039e246',
-      recordCount: 288,
-      rawBytes: 93515,
-      gzipBytes: 7226,
-      staticDecodedBytesEstimate: 374060,
+        '8460a04feb0d63a4111247630a029de184aa64d1852236354a46b513f96dffdd',
+      recordCount: 287,
+      rawBytes: 93055,
+      gzipBytes: 7144,
+      staticDecodedBytesEstimate: 372220,
     });
     expect(manifest?.auxiliarySources).toEqual(
       expect.arrayContaining([
@@ -183,18 +213,18 @@ describe('data registry', () => {
     );
     expect(manifest).toMatchObject({
       derivedAssetSha256:
-        '8719111a9732ce745b5e90137ac1cb638a3fe76820a4912c8dfa9417bac4983f',
-      recordCount: 240,
-      rawBytes: 22681,
-      gzipBytes: 5457,
+        'fe4bc705981439cfbab39130594213641b0ff5a9e94afb552d090b804419f1d1',
+      recordCount: 239,
+      rawBytes: 22654,
+      gzipBytes: 5150,
       sourceAssets: {
         '50m': {
           sha256:
-            '04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394',
+            'b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4',
         },
         '110m': {
           sha256:
-            '2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8',
+            '9b69ff70741a75a43c3aa31d2e01c35eea6bea93bc0ab2878f3aca7faea07647',
         },
       },
     });
@@ -207,13 +237,13 @@ describe('data registry', () => {
     );
     expect(manifest).toMatchObject({
       derivedAssetSha256:
-        '97532ab4eab99ebd033be3f69ae2b557781d407a6c6bec6b3481c4f2306b96f9',
-      recordCount: 1111,
-      rawBytes: 690885,
+        '97582dda9203e5e90fe546fee9a8645c81b85306c67c796ea74fd3337e434767',
+      recordCount: 1106,
+      rawBytes: 687308,
       sourceAssets: {
         '50m': {
           sha256:
-            '04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394',
+            'b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4',
         },
       },
     });
@@ -225,9 +255,9 @@ describe('data registry', () => {
     );
     expect(manifest).toMatchObject({
       derivedAssetSha256:
-        '8466509b82b8812c1082297e05bea57661fc97a6408508e7450e7fabdd60eabf',
-      recordCount: 240,
-      rawBytes: 26006,
+        '9eb24c8570a85a1bab0cc07e011560f57bd98f63d9ece9b8d3a300af72921632',
+      recordCount: 239,
+      rawBytes: 25915,
     });
   });
 });

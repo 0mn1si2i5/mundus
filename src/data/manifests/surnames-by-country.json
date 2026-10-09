@@ -7,7 +7,7 @@
   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
   "version": "v1.2 surname CSV plus fixed country-specific manual observations; collected 2026-09-23",
   "retrievedAt": "2026-09-23",
-  "derivedAssetSha256": "d2ca10f3590387954ef832aeb28fe598e5dd70ce26de7fb5cfafaa22b039e246",
+  "derivedAssetSha256": "8460a04feb0d63a4111247630a029de184aa64d1852236354a46b513f96dffdd",
   "auxiliarySources": [
     {
       "sourceName": "Iranian Surname Frequencies community supplement",
@@ -42,7 +42,7 @@
       "distributionUrl": "https://download.geonames.org/export/dump/countryInfo.txt",
       "version": "capture used for ISO2 to Natural Earth numeric joins",
       "sha256": "93bafc525813f22e4711ff9ed6d626343094ce48c26388dc7c49189b3d7d5512",
-      "purpose": "Map source ISO2 codes to the Natural Earth numeric country ids used by the globe."
+      "purpose": "Map source ISO2 codes to the ISO numeric country ids used by the Mundus boundary view."
     }
   ],
   "attribution": "Community-compiled surname records from the v1.2 dataset plus reviewed Sweden, Iran, African, and fixed country-specific observations; underlying Wikipedia list provenance remains CC BY-SA 4.0.",
@@ -50,7 +50,7 @@
   "transformations": [
     "Keep every source country and Rank=1 rows; preserve source-listed unranked rows when a country has no numeric rank, without presenting them as ranked results",
     "Group alternate local and romanized spellings by source Name Group and preserve tied variants as arrays",
-    "Join ISO2 source codes to Natural Earth numeric ids with the pinned GeoNames countryInfo capture",
+    "Join ISO2 source codes to Mundus country ids (ne- plus ISO numeric) with the pinned GeoNames countryInfo capture; Kosovo (XK) rows are not shown because the Mundus boundary view draws Kosovo within Serbia",
     "Keep source count and percent only when present; no year is inferred from the source snapshot",
     "Add one manually reviewed Sweden rank-one record from the pinned Statistics Sweden snapshot; keep its 2012 year and count separate from the community CSV",
     "Generate local transliteration and Chinese presentation forms at runtime when the source record omits them",
@@ -60,11 +60,11 @@
   ],
   "missingValuePolicy": "Missing counts, shares, years, and rank values remain explicit; countries without a source-backed record have no map wordmark.",
   "boundaryPolicy": "A community-compiled source-listed observation, not a unified official global surname ranking or a census comparison.",
-  "recordCount": 288,
-  "rawBytes": 93515,
-  "gzipBytes": 7226,
-  "staticDecodedBytesEstimate": 374060,
-  "runtimeDecodedBytesEstimate": 561090,
+  "recordCount": 287,
+  "rawBytes": 93055,
+  "gzipBytes": 7144,
+  "staticDecodedBytesEstimate": 372220,
+  "runtimeDecodedBytesEstimate": 558330,
   "sourceAssets": {
     "csv": {
       "distributionUrl": "https://raw.githubusercontent.com/sigpwned/popular-names-by-country-dataset/v1.2/common-surnames-by-country.csv",

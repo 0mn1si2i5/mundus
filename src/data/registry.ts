@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import naturalEarthManifest from './manifests/natural-earth-110m.json';
+import mundusCountriesManifest from './manifests/mundus-countries.json';
 import geoNamesMajorCitiesManifest from './manifests/geonames-major-cities.json';
 import naturalEarthVectorManifest from './manifests/natural-earth-vector-globe.json';
 import surnamesManifest from './manifests/surnames-by-country.json';
@@ -73,6 +73,20 @@ const dataManifestObjectSchema = z.object({
   gzipBytes: z.number().int().nonnegative().optional(),
   staticDecodedBytesEstimate: z.number().int().nonnegative().optional(),
   runtimeDecodedBytesEstimate: z.number().int().nonnegative().optional(),
+  topologyAssets: z
+    .record(
+      z.string(),
+      z.object({
+        path: z.string().min(1),
+        sha256: z.string().regex(/^[a-f0-9]{64}$/),
+        rawBytes: z.number().int().positive(),
+        gzipBytes: z.number().int().positive(),
+        countries: z.number().int().positive(),
+        arcs: z.number().int().positive(),
+        points: z.number().int().positive(),
+      }),
+    )
+    .optional(),
   sourceAssets: z
     .record(
       z.string(),
@@ -165,7 +179,7 @@ export const dataManifestSchema = dataManifestObjectSchema.superRefine(
 export type DataManifest = z.infer<typeof dataManifestSchema>;
 
 export const DATA_MANIFESTS: readonly DataManifest[] = [
-  dataManifestSchema.parse(naturalEarthManifest),
+  dataManifestSchema.parse(mundusCountriesManifest),
   dataManifestSchema.parse(naturalEarthVectorManifest),
   dataManifestSchema.parse(geoNamesMajorCitiesManifest),
   dataManifestSchema.parse(surnamesManifest),

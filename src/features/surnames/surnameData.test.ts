@@ -10,10 +10,10 @@ import {
 describe('surname observation data', () => {
   it('keeps exact Natural Earth country joins and explicit source coverage', () => {
     const decoded = decodeSurnameDataset(dataset);
-    expect(decoded.countries).toHaveLength(241);
+    expect(decoded.countries).toHaveLength(239);
     expect(
       decoded.countries.filter((country) => country.records.length > 0),
-    ).toHaveLength(198);
+    ).toHaveLength(197);
     expect(decoded.countriesById.get('ne-156')?.countryIso2).toBe('CN');
     expect(decoded.countriesById.get('ne-008')?.records[0]).toMatchObject({
       rank: null,
@@ -22,7 +22,9 @@ describe('surname observation data', () => {
     expect(decoded.countriesById.get('ne-156')?.sourceUrls).toEqual([
       'https://en.wikipedia.org/wiki/List_of_most_common_surnames_in_Asian_countries',
     ]);
-    expect(decoded.countriesById.get('ne-x-kosovo')?.countryIso2).toBe('XK');
+    // The Mundus boundary view draws Kosovo within Serbia.
+    expect(decoded.countriesById.has('ne-x-kosovo')).toBe(false);
+    expect(decoded.countriesById.get('ne-688')?.countryIso2).toBe('RS');
     expect(decoded.countriesById.get('ne-752')?.records[0]).toMatchObject({
       rank: 1,
       localForms: [{ value: 'Andersson', script: 'Latin' }],
@@ -138,7 +140,7 @@ describe('surname observation data', () => {
     const noSource = decoded.countries.filter(
       (country) => country.coverageStatus === 'no-source',
     );
-    expect(noSource).toHaveLength(43);
+    expect(noSource).toHaveLength(42);
     expect(noSource.every((country) => country.records.length === 0)).toBe(
       true,
     );
@@ -151,15 +153,15 @@ describe('surname observation data', () => {
     const states = Object.values(coverage.countries).map(
       (country) => country.status,
     );
-    expect(states).toHaveLength(240);
-    expect(states.filter((status) => status === 'rank-one')).toHaveLength(74);
+    expect(states).toHaveLength(239);
+    expect(states.filter((status) => status === 'rank-one')).toHaveLength(73);
     expect(states.filter((status) => status === 'source-listed')).toHaveLength(
       54,
     );
     expect(
       states.filter((status) => status === 'manual-observation'),
-    ).toHaveLength(69);
-    expect(states.filter((status) => status === 'no-source')).toHaveLength(43);
+    ).toHaveLength(70);
+    expect(states.filter((status) => status === 'no-source')).toHaveLength(42);
     expect(coverage.sovereignCountryCount).toBe(195);
     expect(Object.values(coverage.sovereignCountries)).toHaveLength(195);
     expect(
@@ -169,17 +171,17 @@ describe('surname observation data', () => {
     ).toBe(true);
   });
 
-  it('keeps sovereign coverage independent from the 240-anchor map inventory', () => {
+  it('keeps sovereign coverage independent from the 239-anchor map inventory', () => {
     const sovereign = Object.values(coverage.sovereignCountries);
     expect(sovereign).toHaveLength(195);
     expect(sovereign.every((country) => country.status !== 'no-source')).toBe(
       true,
     );
-    // Tuvalu is a sovereign data row, but the pinned Natural Earth anchor
-    // inventory has no selectable 50m polygon for it. It must remain data
-    // backed without changing the map-anchor denominator.
+    // Kosovo has no unit in the Mundus boundary view, so it is not part of
+    // the sovereign audit; Tuvalu now has a 50m anchor of its own.
+    expect(coverage.sovereignCountries).not.toHaveProperty('XK');
     expect(coverage.sovereignCountries.TV).toMatchObject({
-      countryId: null,
+      countryId: 'ne-798',
       status: 'manual-observation',
       recordCount: 1,
     });

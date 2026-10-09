@@ -10,29 +10,20 @@ import {
 } from 'three';
 
 const DEG = Math.PI / 180;
-const EXCEPTION_COUNTRY_IDS = {
-  'N. Cyprus': 'ne-x-northern-cyprus',
-  Somaliland: 'ne-x-somaliland',
-  Kosovo: 'ne-x-kosovo',
-  'Indian Ocean Ter.': 'ne-x-indian-ocean-territories',
-  'Siachen Glacier': 'ne-x-siachen-glacier',
-};
+// Palette indices 900–904 are reserved for units without an ISO numeric code.
 const EXCEPTION_COUNTRY_INDICES = {
-  'ne-x-northern-cyprus': 900,
-  'ne-x-somaliland': 901,
-  'ne-x-kosovo': 902,
-  'ne-x-indian-ocean-territories': 903,
-  'ne-x-siachen-glacier': 904,
+  'ne-x-bir-tawil': 900,
 };
 
-export function countryIdFor(sourceId, sourceName) {
-  if (sourceId !== undefined && sourceId !== null) {
+/**
+ * Mundus topologies carry `countryId`; plain GeoJSON inputs (test fixtures)
+ * fall back to a numeric feature id.
+ */
+export function countryIdFor(properties, sourceId) {
+  if (properties?.countryId) return properties.countryId;
+  if (/^\d{1,3}$/.test(String(sourceId ?? '')))
     return `ne-${String(sourceId).padStart(3, '0')}`;
-  }
-  const mapped = EXCEPTION_COUNTRY_IDS[sourceName];
-  if (!mapped)
-    throw new Error(`Missing explicit countryId mapping for ${sourceName}`);
-  return mapped;
+  throw new Error(`Missing countryId for ${String(properties?.name)}`);
 }
 
 export function topologyToCountries(topology) {
@@ -42,7 +33,7 @@ export function topologyToCountries(topology) {
       ...country,
       properties: {
         ...country.properties,
-        countryId: countryIdFor(country.id, country.properties.name),
+        countryId: countryIdFor(country.properties, country.id),
       },
     }))
     .sort((a, b) =>
@@ -239,9 +230,7 @@ function normalizeCountries(collection) {
         ...country,
         properties: {
           ...country.properties,
-          countryId:
-            country.properties.countryId ??
-            countryIdFor(country.id, country.properties.name),
+          countryId: countryIdFor(country.properties, country.id),
         },
       }))
       .sort((a, b) =>
@@ -471,47 +460,23 @@ function sphericalTriangleArea(points) {
   return Math.abs(2 * Math.atan2(determinant, denominator));
 }
 
-function sphericalTriangleCentroid(points) {
-  const center = [0, 0, 0];
-  for (const point of points) {
-    const xyz = lonLatToXyz(point);
-    center[0] += xyz[0];
-    center[1] += xyz[1];
-    center[2] += xyz[2];
-  }
-  const length = Math.hypot(...center);
-  return [
-    Math.atan2(center[1], center[0]) / DEG,
-    Math.asin(center[2] / length) / DEG,
-  ];
-}
-
-function sphericalWeightedPoint(points, weights) {
-  const center = [0, 0, 0];
-  for (let index = 0; index < points.length; index += 1) {
-    const xyz = lonLatToXyz(points[index]);
-    center[0] += xyz[0] * weights[index];
-    center[1] += xyz[1] * weights[index];
-    center[2] += xyz[2] * weights[index];
-  }
-  const length = Math.hypot(...center);
-  return [
-    Math.atan2(center[1], center[0]) / DEG,
-    Math.asin(center[2] / length) / DEG,
-  ];
-}
-
 function refineTriangleContainment(points, contains, countryId, depth = 0) {
-  const runtimePoints = points.map(transportRoundTripPoint);
-  const centroid = sphericalTriangleCentroid(runtimePoints);
+  // Sample exactly what the runtime interpolates: the decoded signed
+  // normalized 16-bit vertex vectors, weighted without renormalization.
+  const runtimeVectors = points.map(transportRoundTripVector);
+  const centroid = weightedVectorPoint(runtimeVectors, [1 / 3, 1 / 3, 1 / 3]);
   if (countryId === 'ne-010' && centroid[1] < -89.9) {
     return [{ points, accepted: true }];
   }
+  // A triangle whose vertices collapse to the same transported position is
+  // invisible at runtime and cannot be sampled meaningfully.
+  const keys = runtimeVectors.map((vector) => vector.join(','));
+  if (new Set(keys).size < 3) return [{ points, accepted: false }];
   const samples = [
     centroid,
-    sphericalWeightedPoint(runtimePoints, [0.6, 0.2, 0.2]),
-    sphericalWeightedPoint(runtimePoints, [0.2, 0.6, 0.2]),
-    sphericalWeightedPoint(runtimePoints, [0.2, 0.2, 0.6]),
+    weightedVectorPoint(runtimeVectors, [0.6, 0.2, 0.2]),
+    weightedVectorPoint(runtimeVectors, [0.2, 0.6, 0.2]),
+    weightedVectorPoint(runtimeVectors, [0.2, 0.2, 0.6]),
   ].map(contains);
   if (samples.every(Boolean)) return [{ points, accepted: true }];
   if (samples.every((sample) => !sample) || depth >= 4) {
@@ -531,11 +496,20 @@ function refineTriangleContainment(points, contains, countryId, depth = 0) {
   );
 }
 
-function transportRoundTripPoint(point) {
-  const xyz = lonLatToXyz(point).map(
+function transportRoundTripVector(point) {
+  return lonLatToXyz(point).map(
     (value) => Math.round(Math.max(-1, Math.min(1, value)) * 32767) / 32767,
   );
-  const length = Math.hypot(xyz[0], xyz[1], xyz[2]);
+}
+
+function weightedVectorPoint(vectors, weights) {
+  const xyz = [0, 0, 0];
+  vectors.forEach((vector, index) => {
+    xyz[0] += vector[0] * weights[index];
+    xyz[1] += vector[1] * weights[index];
+    xyz[2] += vector[2] * weights[index];
+  });
+  const length = Math.hypot(...xyz);
   return [Math.atan2(xyz[1], xyz[0]) / DEG, Math.asin(xyz[2] / length) / DEG];
 }
 

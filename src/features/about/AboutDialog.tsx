@@ -45,7 +45,7 @@ const COPY = {
     credits: [
       {
         name: 'Natural Earth',
-        use: '国家边界与地球矢量底图',
+        use: '国家边界与地球矢量底图。边界采用 Natural Earth 中国视角数据，台湾单独显示；地图边界不构成对领土地位的法律认定。',
         notice: 'Made with Natural Earth · 公共领域数据',
         links: [
           { label: '来源', href: 'https://www.naturalearthdata.com/' },
@@ -134,7 +134,7 @@ const COPY = {
     credits: [
       {
         name: 'Natural Earth',
-        use: 'Country borders and the vector globe',
+        use: 'Country borders and the vector globe. Boundaries follow the Natural Earth China point-of-view layer, with Taiwan shown separately; map boundaries are not a legal statement on territorial status.',
         notice: 'Made with Natural Earth · public domain data',
         links: [
           { label: 'Source', href: 'https://www.naturalearthdata.com/' },

@@ -1,35 +1,35 @@
 {
   "id": "country-label-anchors",
-  "sourceName": "Natural Earth Admin 0 country polygons",
-  "sourceUrl": "https://www.naturalearthdata.com/downloads/",
-  "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
+  "sourceName": "Mundus country boundary view (Natural Earth Admin 0)",
+  "sourceUrl": "https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/",
+  "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
   "licenseName": "Public domain",
   "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
-  "version": "world-atlas 2.0.2; 50m anchors cross-checked against 110m geometry",
-  "retrievedAt": "2026-09-22",
-  "derivedAssetSha256": "8719111a9732ce745b5e90137ac1cb638a3fe76820a4912c8dfa9417bac4983f",
+  "version": "Natural Earth 5.1.2, Mundus boundary view; high-detail anchors cross-checked against low-detail geometry",
+  "retrievedAt": "2026-10-09",
+  "derivedAssetSha256": "fe4bc705981439cfbab39130594213641b0ff5a9e94afb552d090b804419f1d1",
   "sourceAssets": {
     "50m": {
-      "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
-      "sha256": "04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394"
+      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+      "sha256": "b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4"
     },
     "110m": {
-      "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json",
-      "sha256": "2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8"
+      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+      "sha256": "9b69ff70741a75a43c3aa31d2e01c35eea6bea93bc0ab2878f3aca7faea07647"
     }
   },
   "attribution": "Made with Natural Earth",
   "redistribution": "allowed",
   "transformations": [
-    "Compute interior label anchors and sampled boundary clearance from merged 50m country polygons",
-    "Retain only anchors contained by both 50m and 110m geometries when both are present",
+    "Compute interior label anchors and sampled boundary clearance from the high-detail Mundus country polygons",
+    "Retain only anchors contained by both high- and low-detail geometries when both are present",
     "Round coordinates and clearance to six decimal places for deterministic static delivery"
   ],
-  "missingValuePolicy": "Countries without a cross-resolution anchor use the runtime 110m geometry algorithm or an explicit verified fallback.",
-  "boundaryPolicy": "Natural Earth boundaries are cartographic data and are not a legal authority on territorial status.",
-  "recordCount": 240,
-  "rawBytes": 22681,
-  "gzipBytes": 5457,
-  "staticDecodedBytesEstimate": 90724,
-  "runtimeDecodedBytesEstimate": 136086
+  "missingValuePolicy": "Countries without a cross-detail anchor use the runtime low-detail geometry algorithm or an explicit verified fallback.",
+  "boundaryPolicy": "Mundus draws boundaries from the Natural Earth China point of view, except that Taiwan is shown as its own unit. Boundaries are a cartographic view and are not a legal authority on territorial status.",
+  "recordCount": 239,
+  "rawBytes": 22654,
+  "gzipBytes": 5150,
+  "staticDecodedBytesEstimate": 90616,
+  "runtimeDecodedBytesEstimate": 135924
 }

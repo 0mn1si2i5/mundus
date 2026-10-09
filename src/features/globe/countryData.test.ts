@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { geoContains } from 'd3-geo';
-import { feature } from 'topojson-client';
-import type { GeometryCollection, Topology } from 'topojson-specification';
-import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import surnameDataset from '../../data/generated/surnames-by-country.json';
 import labelAnchors from '../../data/generated/country-label-anchors.json';
-import atlas50 from 'world-atlas/countries-50m.json';
+import atlas50 from '../../data/generated/mundus-countries-50m.json';
 import {
+  countryFeaturesFromTopology,
   getBoundedTextureAnisotropy,
   getCountryDataset,
   getCountryHighlightTextureWidth,
@@ -21,7 +19,7 @@ import {
 
 describe('country dataset', () => {
   const dataset = getCountryDataset();
-  const detailedCountries = detailedCountryFeatures();
+  const detailedCountries = countryFeaturesFromTopology(atlas50);
   const anchorsById = labelAnchors.anchors as Record<
     string,
     { point: { latitude: number; longitude: number }; clearanceDegrees: number }
@@ -34,7 +32,43 @@ describe('country dataset', () => {
     expect(dataset.countries.features.length).toBeGreaterThan(170);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.every((id) => id.startsWith('ne-'))).toBe(true);
-    expect(ids).toContain('ne-x-kosovo');
+    expect(ids.filter((id) => id.startsWith('ne-x-'))).toEqual([]);
+  });
+
+  it('follows the Mundus boundary view at both details', () => {
+    const cases: [string, number, number, string | null][] = [
+      ['Taipei', 25.04, 121.56, 'ne-158'],
+      ['Itanagar', 27.1, 93.6, 'ne-156'],
+      ['Aksai Chin', 35.2, 79.5, 'ne-156'],
+      ['Simferopol', 44.95, 34.1, 'ne-804'],
+      ['Pristina', 42.66, 21.17, 'ne-688'],
+      ['North Nicosia', 35.25, 33.36, 'ne-196'],
+      ['Hargeisa', 9.56, 44.06, 'ne-706'],
+    ];
+    const detailed = {
+      findCountry: ({
+        latitude,
+        longitude,
+      }: {
+        latitude: number;
+        longitude: number;
+      }) =>
+        detailedCountries.find((country) =>
+          geoContains(country, [longitude, latitude]),
+        )?.properties ?? null,
+    };
+    for (const source of [dataset, detailed]) {
+      for (const [name, latitude, longitude, countryId] of cases) {
+        expect(
+          source.findCountry({ latitude, longitude })?.countryId ?? null,
+          name,
+        ).toBe(countryId);
+      }
+    }
+    expect(
+      detailedCountries.find((country) => geoContains(country, [33.75, 21.85]))
+        ?.properties.countryId,
+    ).toBe('ne-x-bir-tawil');
   });
 
   it('resolves representative land points and preserves ocean as null', () => {
@@ -65,9 +99,8 @@ describe('country dataset', () => {
           );
           expect(fallback.clearanceDegrees, countryId).toBeGreaterThan(0);
         } else {
-          // Tuvalu is present in the surname asset but absent from both the
-          // runtime 110m picking geometry and the reviewed 50m anchor asset.
-          // Keep its side-panel record without inventing an ocean position.
+          // Tuvalu is absent from the runtime 110m picking geometry and has
+          // no verified fallback; its 50m anchor serves the surname runtime.
           expect(countryId).toBe('ne-798');
         }
         continue;
@@ -155,32 +188,6 @@ describe('country dataset', () => {
     expect(getCountryLabelWorldWidth(35)).toBeLessThanOrEqual(0.34);
   });
 });
-
-function detailedCountryFeatures(): Feature<Geometry, { countryId: string }>[] {
-  const topology = atlas50 as unknown as Topology<{
-    countries: GeometryCollection<{ name: string }>;
-  }>;
-  const exceptions: Record<string, string> = {
-    'N. Cyprus': 'ne-x-northern-cyprus',
-    Somaliland: 'ne-x-somaliland',
-    Kosovo: 'ne-x-kosovo',
-    'Indian Ocean Ter.': 'ne-x-indian-ocean-territories',
-    'Siachen Glacier': 'ne-x-siachen-glacier',
-  };
-  const countries = feature(
-    topology,
-    topology.objects.countries,
-  ) as unknown as FeatureCollection<Geometry, { name: string }>;
-  return countries.features.map((country) => ({
-    ...country,
-    properties: {
-      countryId:
-        country.id !== undefined
-          ? `ne-${String(country.id).padStart(3, '0')}`
-          : exceptions[country.properties.name]!,
-    },
-  }));
-}
 
 function destinationPoint(
   point: { latitude: number; longitude: number },

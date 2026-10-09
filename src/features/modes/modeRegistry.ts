@@ -51,7 +51,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
       en: 'Choose a point and pass through Earth to its antipode.',
     },
     cameraPolicy: 'preserve',
-    resources: ['natural-earth-countries-110m'],
+    resources: ['mundus-countries'],
     stateSchema: z.object({
       point: z.object({
         latitude: z.number().min(-90).max(90),
@@ -74,7 +74,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
       en: 'Switch the surface wordmark between local script, Latin transliteration, and Chinese.',
     },
     cameraPolicy: 'preserve',
-    resources: ['natural-earth-countries-110m', 'surnames-by-country'],
+    resources: ['mundus-countries', 'surnames-by-country'],
     stateSchema: z.object({
       point: z.object({
         latitude: z.number().min(-90).max(90),
@@ -97,7 +97,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
       en: 'Adjust α to change qualifying-centre distance, then explore relative proximity across the globe.',
     },
     cameraPolicy: 'preserve',
-    resources: ['natural-earth-countries-110m', 'urban-isolation'],
+    resources: ['mundus-countries', 'urban-isolation'],
     stateSchema: z.object({
       point: z.object({
         latitude: z.number().min(-90).max(90),

@@ -1,24 +1,24 @@
 {
   "id": "surname-label-slots",
-  "sourceName": "Natural Earth country label anchors",
-  "sourceUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
+  "sourceName": "Mundus country label anchors",
+  "sourceUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
   "licenseName": "Natural Earth public domain; derived metadata in Mundus",
   "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
-  "version": "world-atlas 2.0.2 / slot schema 8 (centred candidates per wordmark shape)",
-  "retrievedAt": "2026-10-07",
+  "version": "Natural Earth 5.1.2, Mundus boundary view / slot schema 8 (centred candidates per wordmark shape)",
+  "retrievedAt": "2026-10-09",
   "sourceAssets": {
     "50m": {
-      "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
-      "sha256": "04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394"
+      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+      "sha256": "b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4"
     }
   },
-  "derivedAssetSha256": "97532ab4eab99ebd033be3f69ae2b557781d407a6c6bec6b3481c4f2306b96f9",
-  "recordCount": 1111,
-  "rawBytes": 690885,
-  "gzipBytes": 78034,
-  "staticDecodedBytesEstimate": 2763540,
-  "runtimeDecodedBytesEstimate": 4145310,
-  "attribution": "Candidate wordmark slots derived from the pinned Natural Earth country geometry; parallel-latitude envelopes by default, axis-aligned straight envelopes for elongated countries, adjacent-land rejection, and bounded isolated-island overflow are applied before display.",
+  "derivedAssetSha256": "97582dda9203e5e90fe546fee9a8645c81b85306c67c796ea74fd3337e434767",
+  "recordCount": 1106,
+  "rawBytes": 687308,
+  "gzipBytes": 75851,
+  "staticDecodedBytesEstimate": 2749232,
+  "runtimeDecodedBytesEstimate": 4123848,
+  "attribution": "Candidate wordmark slots derived from the pinned Mundus country geometry (Natural Earth); parallel-latitude envelopes by default, axis-aligned straight envelopes for elongated countries, adjacent-land rejection, and bounded isolated-island overflow are applied before display.",
   "redistribution": "allowed",
   "transformations": [
     "Rank every interior center of a fixed 5x5 grid by a dense long-envelope fit and hill-climb the best center toward the widest clear area",

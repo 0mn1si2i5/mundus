@@ -10,23 +10,21 @@ import {
 import { encodeCompressedAsset } from './natural-earth-vector-asset.mjs';
 import { publishAssetSet } from './publish-asset-set.mjs';
 
+const countriesManifest = JSON.parse(
+  await readFile('src/data/manifests/mundus-countries.json', 'utf8'),
+);
+
 const definitions = {
   '110m': {
-    sourcePath: 'node_modules/world-atlas/countries-110m.json',
-    sourceUrl:
-      'https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json',
-    sourceSha256:
-      '2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8',
+    sourcePath: countriesManifest.topologyAssets['110m'].path,
+    sourceSha256: countriesManifest.topologyAssets['110m'].sha256,
     derivedPath: 'src/data/generated/natural-earth-vector-globe-110m.mvg',
     maxEdgeDegrees: 2,
     gpuBudget: 8 * 1024 * 1024,
   },
   '50m': {
-    sourcePath: 'node_modules/world-atlas/countries-50m.json',
-    sourceUrl:
-      'https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json',
-    sourceSha256:
-      '04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394',
+    sourcePath: countriesManifest.topologyAssets['50m'].path,
+    sourceSha256: countriesManifest.topologyAssets['50m'].sha256,
     derivedPath: 'src/data/generated/natural-earth-vector-globe-50m.mvg',
     maxEdgeDegrees: 1,
     gpuBudget: 24 * 1024 * 1024,
@@ -170,7 +168,7 @@ for (const [detail, definition] of Object.entries(definitions)) {
   }
   pendingWrites.push([definition.derivedPath, encoded]);
   sourceAssets[detail] = {
-    distributionUrl: definition.sourceUrl,
+    distributionUrl: countriesManifest.distributionUrl,
     sha256: sourceHash,
   };
   derivedAssets[detail] = {
@@ -213,18 +211,18 @@ for (const [detail, definition] of Object.entries(definitions)) {
 
 const manifest = {
   id: 'natural-earth-vector-globe',
-  sourceName: 'Natural Earth Admin 0 - Countries, 1:110m and 1:50m',
-  sourceUrl: 'https://www.naturalearthdata.com/downloads/',
-  distributionUrl: definitions['110m'].sourceUrl,
+  sourceName: `${countriesManifest.sourceName}, low and high detail`,
+  sourceUrl: countriesManifest.sourceUrl,
+  distributionUrl: countriesManifest.distributionUrl,
   licenseName: 'Public domain',
   licenseUrl: 'https://www.naturalearthdata.com/about/terms-of-use/',
-  version: 'Natural Earth 4.1.0 / world-atlas 2.0.2 / vector format 2',
-  retrievedAt: '2026-07-21',
+  version: `${countriesManifest.version} / Mundus boundary view / vector format 2`,
+  retrievedAt: countriesManifest.retrievedAt,
   sha256: definitions['110m'].sourceSha256,
   attribution: 'Made with Natural Earth',
   redistribution: 'allowed',
   transformations: [
-    'Convert quantized TopoJSON country polygons to one merged spherical surface',
+    'Convert the quantized Mundus country topologies (src/data/manifests/mundus-countries.json) to one merged spherical surface',
     'Classify projected rings by area and containment, triangulate each polygon in a local gnomonic projection, and subdivide spherical edges',
     'Generate one coastline and one internal shared-boundary geometry from TopoJSON topology',
     'Assign stable ISO-numeric and explicit exception palette indices',
@@ -232,8 +230,7 @@ const manifest = {
   ],
   missingValuePolicy:
     'The palette carries no data values: countries use the base land color unless hovered or selected.',
-  boundaryPolicy:
-    'Natural Earth boundaries are a cartographic view and are not a legal authority on territorial status.',
+  boundaryPolicy: countriesManifest.boundaryPolicy,
   sourceAssets,
   derivedAssets,
 };
