@@ -13,7 +13,6 @@ const countriesManifest = JSON.parse(
   await readFile('src/data/manifests/mundus-countries.json', 'utf8'),
 );
 const ATLAS_PATH = countriesManifest.topologyAssets['50m'].path;
-const ATLAS_URL = countriesManifest.distributionUrl;
 const ATLAS_SHA256 = countriesManifest.topologyAssets['50m'].sha256;
 // Test the country-scale ceiling first. Only candidates that hit a land
 // collision need the bounded binary refinement, which keeps the global build
@@ -300,7 +299,7 @@ const output = {
   schemaVersion: 3,
   sourceName:
     'Mundus country boundary view (Natural Earth) with spherical surname envelopes',
-  sourceUrl: ATLAS_URL,
+  sourcePath: ATLAS_PATH,
   sourceSha256: ATLAS_SHA256,
   sourceAsset: 'src/data/generated/country-label-anchors.json',
   candidatePolicy: {

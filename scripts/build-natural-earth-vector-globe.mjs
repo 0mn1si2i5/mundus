@@ -168,7 +168,7 @@ for (const [detail, definition] of Object.entries(definitions)) {
   }
   pendingWrites.push([definition.derivedPath, encoded]);
   sourceAssets[detail] = {
-    distributionUrl: countriesManifest.distributionUrl,
+    path: definition.sourcePath,
     sha256: sourceHash,
   };
   derivedAssets[detail] = {
@@ -213,12 +213,10 @@ const manifest = {
   id: 'natural-earth-vector-globe',
   sourceName: `${countriesManifest.sourceName}, low and high detail`,
   sourceUrl: countriesManifest.sourceUrl,
-  distributionUrl: countriesManifest.distributionUrl,
   licenseName: 'Public domain',
   licenseUrl: 'https://www.naturalearthdata.com/about/terms-of-use/',
   version: `${countriesManifest.version} / Mundus boundary view / vector format 2`,
   retrievedAt: countriesManifest.retrievedAt,
-  sha256: definitions['110m'].sourceSha256,
   attribution: 'Made with Natural Earth',
   redistribution: 'allowed',
   transformations: [

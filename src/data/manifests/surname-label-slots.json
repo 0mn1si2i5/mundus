@@ -8,16 +8,16 @@
   "retrievedAt": "2026-10-09",
   "sourceAssets": {
     "50m": {
-      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+      "path": "src/data/generated/mundus-countries-50m.json",
       "sha256": "b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4"
     }
   },
-  "derivedAssetSha256": "97582dda9203e5e90fe546fee9a8645c81b85306c67c796ea74fd3337e434767",
+  "derivedAssetSha256": "74f895d06453724ff155d615f4aec0a28b715585aa5f1efc77d6949d9bb0af33",
   "recordCount": 1106,
-  "rawBytes": 687308,
-  "gzipBytes": 75851,
-  "staticDecodedBytesEstimate": 2749232,
-  "runtimeDecodedBytesEstimate": 4123848,
+  "rawBytes": 687239,
+  "gzipBytes": 75759,
+  "staticDecodedBytesEstimate": 2748956,
+  "runtimeDecodedBytesEstimate": 4123434,
   "attribution": "Candidate wordmark slots derived from the pinned Mundus country geometry (Natural Earth); parallel-latitude envelopes by default, axis-aligned straight envelopes for elongated countries, adjacent-land rejection, and bounded isolated-island overflow are applied before display.",
   "redistribution": "allowed",
   "transformations": [

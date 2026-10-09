@@ -83,10 +83,12 @@ test('production vector assets match the manifest and release budgets', async ()
     await readFile('src/data/manifests/mundus-countries.json'),
   );
   for (const detail of ['110m', '50m']) {
-    assert.equal(
-      manifest.sourceAssets[detail].sha256,
-      countriesManifest.topologyAssets[detail].sha256,
-    );
+    // The immediate source is the generated topology in this repository;
+    // its upstream URL and hash live in mundus-countries.json.
+    assert.deepEqual(manifest.sourceAssets[detail], {
+      path: countriesManifest.topologyAssets[detail].path,
+      sha256: countriesManifest.topologyAssets[detail].sha256,
+    });
   }
   for (const detail of ['110m', '50m']) {
     const record = manifest.derivedAssets[detail];

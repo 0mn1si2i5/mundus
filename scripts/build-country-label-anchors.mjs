@@ -11,7 +11,6 @@ const SOURCES = Object.fromEntries(
     detail,
     {
       path: countriesManifest.topologyAssets[detail].path,
-      url: countriesManifest.distributionUrl,
       sha256: countriesManifest.topologyAssets[detail].sha256,
     },
   ]),
@@ -99,7 +98,7 @@ const output = {
     Object.entries(SOURCES).map(([detail, source]) => [
       detail,
       {
-        distributionUrl: source.url,
+        path: source.path,
         sha256: source.sha256,
       },
     ]),

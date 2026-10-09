@@ -7,14 +7,14 @@
   "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
   "version": "Natural Earth 5.1.2, Mundus boundary view; high-detail anchors cross-checked against low-detail geometry",
   "retrievedAt": "2026-10-09",
-  "derivedAssetSha256": "fe4bc705981439cfbab39130594213641b0ff5a9e94afb552d090b804419f1d1",
+  "derivedAssetSha256": "ce1077dc8e85b6de82705af5ec1f530f3d975dbbe9b0db82fa67f9117602f996",
   "sourceAssets": {
     "50m": {
-      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+      "path": "src/data/generated/mundus-countries-50m.json",
       "sha256": "b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4"
     },
     "110m": {
-      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+      "path": "src/data/generated/mundus-countries-110m.json",
       "sha256": "9b69ff70741a75a43c3aa31d2e01c35eea6bea93bc0ab2878f3aca7faea07647"
     }
   },
@@ -28,8 +28,8 @@
   "missingValuePolicy": "Countries without a cross-detail anchor use the runtime low-detail geometry algorithm or an explicit verified fallback.",
   "boundaryPolicy": "Mundus draws boundaries from the Natural Earth China point of view, except that Taiwan is shown as its own unit. Boundaries are a cartographic view and are not a legal authority on territorial status.",
   "recordCount": 239,
-  "rawBytes": 22654,
-  "gzipBytes": 5150,
-  "staticDecodedBytesEstimate": 90616,
-  "runtimeDecodedBytesEstimate": 135924
+  "rawBytes": 22493,
+  "gzipBytes": 5077,
+  "staticDecodedBytesEstimate": 89972,
+  "runtimeDecodedBytesEstimate": 134958
 }

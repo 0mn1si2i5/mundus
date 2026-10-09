@@ -90,10 +90,23 @@ const dataManifestObjectSchema = z.object({
   sourceAssets: z
     .record(
       z.string(),
-      z.object({
-        distributionUrl: z.url(),
-        sha256: z.string().regex(/^[a-f0-9]{64}$/),
-      }),
+      // An upstream download (distributionUrl) or a generated asset in this
+      // repository (path); either way the hash identifies exactly that file.
+      z
+        .object({
+          distributionUrl: z.url().optional(),
+          path: z.string().min(1).optional(),
+          sha256: z.string().regex(/^[a-f0-9]{64}$/),
+        })
+        .refine(
+          (source) =>
+            (source.distributionUrl === undefined) !==
+            (source.path === undefined),
+          {
+            message:
+              'Source asset needs exactly one of distributionUrl or path',
+          },
+        ),
     )
     .optional(),
   derivedAssets: z

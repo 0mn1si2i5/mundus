@@ -213,10 +213,10 @@ describe('data registry', () => {
     );
     expect(manifest).toMatchObject({
       derivedAssetSha256:
-        'fe4bc705981439cfbab39130594213641b0ff5a9e94afb552d090b804419f1d1',
+        'ce1077dc8e85b6de82705af5ec1f530f3d975dbbe9b0db82fa67f9117602f996',
       recordCount: 239,
-      rawBytes: 22654,
-      gzipBytes: 5150,
+      rawBytes: 22493,
+      gzipBytes: 5077,
       sourceAssets: {
         '50m': {
           sha256:
@@ -237,9 +237,9 @@ describe('data registry', () => {
     );
     expect(manifest).toMatchObject({
       derivedAssetSha256:
-        '97582dda9203e5e90fe546fee9a8645c81b85306c67c796ea74fd3337e434767',
+        '74f895d06453724ff155d615f4aec0a28b715585aa5f1efc77d6949d9bb0af33',
       recordCount: 1106,
-      rawBytes: 687308,
+      rawBytes: 687239,
       sourceAssets: {
         '50m': {
           sha256:

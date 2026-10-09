@@ -2,12 +2,10 @@
   "id": "natural-earth-vector-globe",
   "sourceName": "Natural Earth Admin 0 – Countries, 1:10m, China point of view (Mundus boundary view), low and high detail",
   "sourceUrl": "https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/",
-  "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
   "licenseName": "Public domain",
   "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
   "version": "Natural Earth 5.1.2 / Mundus boundary view / vector format 2",
   "retrievedAt": "2026-10-09",
-  "sha256": "9b69ff70741a75a43c3aa31d2e01c35eea6bea93bc0ab2878f3aca7faea07647",
   "attribution": "Made with Natural Earth",
   "redistribution": "allowed",
   "transformations": [
@@ -21,11 +19,11 @@
   "boundaryPolicy": "Mundus draws boundaries from the Natural Earth China point of view, except that Taiwan is shown as its own unit. Boundaries are a cartographic view and are not a legal authority on territorial status.",
   "sourceAssets": {
     "110m": {
-      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+      "path": "src/data/generated/mundus-countries-110m.json",
       "sha256": "9b69ff70741a75a43c3aa31d2e01c35eea6bea93bc0ab2878f3aca7faea07647"
     },
     "50m": {
-      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+      "path": "src/data/generated/mundus-countries-50m.json",
       "sha256": "b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4"
     }
   },
