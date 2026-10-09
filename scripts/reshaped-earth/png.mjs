@@ -127,7 +127,7 @@ export function decodeRgbPng(input) {
     if (storedCrc !== actualCrc) throw new Error(`PNG CRC mismatch in ${type}`);
     offset = crcOffset + 4;
     if (type === 'IHDR') {
-      if (width !== undefined || length !== 13)
+      if (offset !== 33 || width !== undefined || length !== 13)
         throw new Error('PNG must contain exactly one IHDR');
       const view = new DataView(
         payload.buffer,
@@ -148,6 +148,8 @@ export function decodeRgbPng(input) {
         throw new Error('Only 8-bit RGB non-interlaced PNGs are supported');
       }
     } else if (type === 'IDAT') {
+      if (width === undefined || sawIend)
+        throw new Error('PNG IDAT appeared before IHDR or after IEND');
       idat.push(payload);
     } else if (type === 'IEND') {
       if (length !== 0) throw new Error('Invalid PNG IEND');
@@ -161,6 +163,7 @@ export function decodeRgbPng(input) {
   }
   if (width === undefined || !idat.length || !sawIend)
     throw new Error('Incomplete PNG');
+  if (offset !== bytes.length) throw new Error('PNG data found after IEND');
   const scanlineStride = width * 3 + 1;
   const expectedLength = scanlineStride * height;
   const inflated = inflateSync(Buffer.concat(idat));

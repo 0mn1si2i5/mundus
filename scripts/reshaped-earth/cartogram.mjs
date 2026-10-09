@@ -106,8 +106,11 @@ export function fftRadix2(
   return { real, imag, imaginary: imag };
 }
 
-export function ifftRadix2(spectrum) {
-  const result = fftRadix2(spectrum, true);
+export function ifftRadix2(spectrum, imaginary) {
+  const result =
+    imaginary === undefined
+      ? fftRadix2(spectrum, true)
+      : fftRadix2(spectrum, imaginary, true);
   return result.real;
 }
 
