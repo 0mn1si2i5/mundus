@@ -51,11 +51,49 @@ function summarize(values, unassigned, validTotal) {
 }
 
 /** Aggregate one source sample per fine-grid cell. Labels use 0 for ocean. */
+function nearestLabel(labels, index, width, height, radius) {
+  if (!(radius > 0) || !Number.isInteger(width) || !Number.isInteger(height))
+    return 0;
+  const x = index % width;
+  const y = Math.floor(index / width);
+  let selected = 0;
+  let selectedDistance = Infinity;
+  for (let dy = -radius; dy <= radius; dy += 1) {
+    for (let dx = -radius; dx <= radius; dx += 1) {
+      if ((dx === 0 && dy === 0) || dx * dx + dy * dy > radius * radius)
+        continue;
+      const candidateX = x + dx;
+      const candidateY = y + dy;
+      if (
+        candidateX < 0 ||
+        candidateX >= width ||
+        candidateY < 0 ||
+        candidateY >= height
+      )
+        continue;
+      const unit = Number(labels[candidateY * width + candidateX]);
+      if (!Number.isInteger(unit) || unit <= 0) continue;
+      const distance = dx * dx + dy * dy;
+      if (
+        distance < selectedDistance ||
+        (distance === selectedDistance && unit < selected)
+      ) {
+        selected = unit;
+        selectedDistance = distance;
+      }
+    }
+  }
+  return selected;
+}
+
 export function aggregateFineValues({
   labels,
   values: sourceValues,
   unitCount,
   nodata = DEFAULT_NODATA,
+  width,
+  height,
+  oceanRadius = 0,
 } = {}) {
   validateUnitCount(unitCount);
   if (!labels || !sourceValues || labels.length !== sourceValues.length)
@@ -69,8 +107,10 @@ export function aggregateFineValues({
     if (!Number.isFinite(value))
       throw new RangeError(`non-finite source value at index ${index}`);
     validTotal += value;
-    if (!add(values, hasValue, Number(labels[index]), value))
-      unassigned += value;
+    let unit = Number(labels[index]);
+    if (unit <= 0)
+      unit = nearestLabel(labels, index, width, height, oceanRadius);
+    if (!add(values, hasValue, unit, value)) unassigned += value;
   }
   const output = finalize(values, hasValue);
   return {

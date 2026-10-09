@@ -18,6 +18,20 @@ test('fine aggregation preserves zero and reports missing as null', () => {
   assertConservation(result);
 });
 
+test('fine aggregation can assign coastal ocean samples to nearest labelled cell', () => {
+  const result = aggregateFineValues({
+    labels: [1, 0, 2],
+    values: [4, 3, 5],
+    unitCount: 2,
+    width: 3,
+    height: 1,
+    oceanRadius: 1,
+  });
+  assert.deepEqual(result.values, [7, 5]);
+  assert.equal(result.unassigned, 0);
+  assertConservation(result);
+});
+
 test('coarse values are apportioned by labelled sub-cell area', () => {
   const result = aggregateCoarseValues({
     coarseWidth: 2,
