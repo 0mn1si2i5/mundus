@@ -1,6 +1,6 @@
 # Urban Proximity — design contract
 
-Status: implemented, pending owner review (2026-10-08). This document
+Status: implemented and deployed from `main` (2026-10-08). This document
 records the product question, data, metric, interaction and acceptance
 decisions. The step-by-step execution packet is handed to the executor
 separately and is not stored in the repository (see `AGENTS.md` §8).
@@ -31,7 +31,7 @@ Proximity Distance (metric). Mode id: `isolation`.
 | Decision            | Value                                                                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Source              | GHSL Urban Centre Database **GHS-UCDB R2024A** (European Commission, Joint Research Centre)                              |
-| Licence             | CC BY 4.0 — must be confirmed on the official dataset page before any data is committed (§8 gate)                        |
+| Licence             | CC BY 4.0 — confirmed on the official dataset page before the committed snapshot                                         |
 | City definition     | GHSL **urban centre**: contiguous high-density grid cells, one consistent global definition (not city proper, not metro) |
 | Population          | total population for the **2025** epoch                                                                                  |
 | Point               | urban-centre centroid in WGS84 degrees                                                                                   |
@@ -184,8 +184,8 @@ download URL, SHA-256, licence, citation/DOI, epoch and both thresholds.
 
 ## 6. Interaction
 
-- Entry: tier `more` (under "更多观察"), beside Sunline. Promotion to a primary
-  tab is a separate owner decision after review.
+- Entry: tier `primary`, alongside Other Side and Surname Atlas. Sunline remains
+  under "更多观察".
 - City view selection: the shared selected point maps to the **nearest focal city**. When
   that city is more than 50 km from the point, the card says "离所选位置最近的
   数据集城市（相距 X km）". Choosing a city from the ranking moves the selected
@@ -260,7 +260,7 @@ Data (build tests):
 
 Product (browser tests, desktop and Pixel 7):
 
-- entering via More;
+- entering via the primary observation switcher and lobby;
 - lazy loading;
 - choosing a ranked city;
 - moving α changes competitor, ring and arc diagnostics at a known breakpoint;
