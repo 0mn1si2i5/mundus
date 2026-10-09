@@ -465,10 +465,22 @@ export function jacobianAt(map, x, y, step) {
 export function summarizeAreaErrors(actualByUnit, targetByUnit, options = {}) {
   const threshold = options.minimumShare ?? 0;
   const errors = [];
-  for (const [id, target] of Object.entries(targetByUnit)) {
-    const share = Number(options.shares?.[id] ?? 1);
+  const entries =
+    targetByUnit instanceof Map
+      ? targetByUnit.entries()
+      : Object.entries(targetByUnit ?? {});
+  const getActual =
+    actualByUnit instanceof Map
+      ? (id) => actualByUnit.get(id)
+      : (id) => actualByUnit?.[id];
+  const getShare =
+    options.shares instanceof Map
+      ? (id) => options.shares.get(id)
+      : (id) => options.shares?.[id];
+  for (const [id, target] of entries) {
+    const share = Number(getShare(id) ?? 1);
     if (share < threshold) continue;
-    const actual = actualByUnit[id];
+    const actual = getActual(id);
     if (actual == null || target == null) continue;
     errors.push(areaRelativeError(Number(actual), Number(target)));
   }
