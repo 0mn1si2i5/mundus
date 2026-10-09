@@ -3,18 +3,18 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { geoContains } from 'd3-geo';
 import { feature } from 'topojson-client';
 
-const SOURCES = {
-  '50m': {
-    path: 'node_modules/world-atlas/countries-50m.json',
-    url: 'https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json',
-    sha256: '04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394',
-  },
-  '110m': {
-    path: 'node_modules/world-atlas/countries-110m.json',
-    url: 'https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json',
-    sha256: '2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8',
-  },
-};
+const countriesManifest = JSON.parse(
+  await readFile('src/data/manifests/mundus-countries.json', 'utf8'),
+);
+const SOURCES = Object.fromEntries(
+  ['50m', '110m'].map((detail) => [
+    detail,
+    {
+      path: countriesManifest.topologyAssets[detail].path,
+      sha256: countriesManifest.topologyAssets[detail].sha256,
+    },
+  ]),
+);
 
 const { computeCountryLabelAnchor, getCountryLabelClearance } =
   await import('../src/features/globe/countryLabel.ts');
@@ -92,13 +92,13 @@ for (const [countryId, highResolution] of byDetail['50m']) {
 
 const output = {
   schemaVersion: 1,
-  sourceName: 'Natural Earth Admin 0 country polygons',
+  sourceName: 'Mundus country boundary view (Natural Earth Admin 0)',
   sourceDetail: '50m anchors cross-checked against 110m picking geometry',
   sourceAssets: Object.fromEntries(
     Object.entries(SOURCES).map(([detail, source]) => [
       detail,
       {
-        distributionUrl: source.url,
+        path: source.path,
         sha256: source.sha256,
       },
     ]),
@@ -121,7 +121,7 @@ function topologyFeatures(topology) {
   const merged = new Map();
   for (const country of feature(topology, topology.objects.countries)
     .features) {
-    const countryId = countryIdFor(country.id, country.properties.name);
+    const countryId = country.properties.countryId;
     const normalized = {
       ...country,
       properties: { ...country.properties, countryId },
@@ -146,22 +146,6 @@ function asPolygons(geometry) {
   if (geometry.type === 'Polygon') return [geometry.coordinates];
   if (geometry.type === 'MultiPolygon') return geometry.coordinates;
   return [];
-}
-
-function countryIdFor(sourceId, sourceName) {
-  if (sourceId !== undefined && sourceId !== null) {
-    return `ne-${String(sourceId).padStart(3, '0')}`;
-  }
-  const exception = {
-    'N. Cyprus': 'ne-x-northern-cyprus',
-    Somaliland: 'ne-x-somaliland',
-    Kosovo: 'ne-x-kosovo',
-    'Indian Ocean Ter.': 'ne-x-indian-ocean-territories',
-    'Siachen Glacier': 'ne-x-siachen-glacier',
-  }[sourceName];
-  if (!exception)
-    throw new Error(`Missing countryId mapping for ${sourceName}`);
-  return exception;
 }
 
 function sha256(bytes) {

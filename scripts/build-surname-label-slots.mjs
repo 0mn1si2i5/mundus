@@ -9,11 +9,11 @@ import {
 } from 'd3-geo';
 import { feature } from 'topojson-client';
 
-const ATLAS_PATH = 'node_modules/world-atlas/countries-50m.json';
-const ATLAS_URL =
-  'https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json';
-const ATLAS_SHA256 =
-  '04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394';
+const countriesManifest = JSON.parse(
+  await readFile('src/data/manifests/mundus-countries.json', 'utf8'),
+);
+const ATLAS_PATH = countriesManifest.topologyAssets['50m'].path;
+const ATLAS_SHA256 = countriesManifest.topologyAssets['50m'].sha256;
 // Test the country-scale ceiling first. Only candidates that hit a land
 // collision need the bounded binary refinement, which keeps the global build
 // predictable while avoiding the old single-midpoint under-sizing.
@@ -297,8 +297,9 @@ for (const countryId of countriesToBuild) {
 
 const output = {
   schemaVersion: 3,
-  sourceName: 'Natural Earth country geometry with spherical surname envelopes',
-  sourceUrl: ATLAS_URL,
+  sourceName:
+    'Mundus country boundary view (Natural Earth) with spherical surname envelopes',
+  sourcePath: ATLAS_PATH,
   sourceSha256: ATLAS_SHA256,
   sourceAsset: 'src/data/generated/country-label-anchors.json',
   candidatePolicy: {
@@ -899,7 +900,7 @@ function topologyFeatures(topology) {
   const merged = new Map();
   for (const country of feature(topology, topology.objects.countries)
     .features) {
-    const countryId = countryIdFor(country.id, country.properties.name);
+    const countryId = country.properties.countryId;
     const normalized = {
       ...country,
       properties: { ...country.properties, countryId },
@@ -925,20 +926,6 @@ function asPolygons(geometry) {
     : geometry.type === 'MultiPolygon'
       ? geometry.coordinates
       : [];
-}
-function countryIdFor(sourceId, sourceName) {
-  if (sourceId !== undefined && sourceId !== null)
-    return `ne-${String(sourceId).padStart(3, '0')}`;
-  const exception = {
-    'N. Cyprus': 'ne-x-northern-cyprus',
-    Somaliland: 'ne-x-somaliland',
-    Kosovo: 'ne-x-kosovo',
-    'Indian Ocean Ter.': 'ne-x-indian-ocean-territories',
-    'Siachen Glacier': 'ne-x-siachen-glacier',
-  }[sourceName];
-  if (!exception)
-    throw new Error(`Missing countryId mapping for ${sourceName}`);
-  return exception;
 }
 function clamp(value, minimum, maximum) {
   return Math.max(minimum, Math.min(maximum, value));

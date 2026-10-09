@@ -368,7 +368,8 @@ for (const countryIso2 of [...sourceCountryCodes].sort()) {
   const numeric = countryCodes.get(countryIso2);
   if (!numeric)
     throw new Error(`Missing countryInfo numeric code for ${countryIso2}`);
-  const countryId = numeric === '000' ? 'ne-x-kosovo' : `ne-${numeric}`;
+  const countryId = mundusCountryId(countryIso2, numeric);
+  if (!countryId) continue;
   const sourceRegion = wikipediaCountryRegions.get(countryIso2);
   if (!sourceRegion) {
     throw new Error(`Missing Wikipedia source region for ${countryIso2}`);
@@ -398,7 +399,8 @@ for (const supplement of supplementalRankOneCountries) {
       `Missing countryInfo numeric code for ${supplement.countryIso2}`,
     );
   }
-  const countryId = numeric === '000' ? 'ne-x-kosovo' : `ne-${numeric}`;
+  const countryId = mundusCountryId(supplement.countryIso2, numeric);
+  if (!countryId) continue;
   if (countries[countryId]) {
     throw new Error(`Supplement duplicates generated country ${countryId}`);
   }
@@ -414,7 +416,8 @@ for (const [countryIso2, surname] of africaSourceListed) {
   const numeric = countryCodes.get(countryIso2);
   if (!numeric)
     throw new Error(`Missing countryInfo numeric code for ${countryIso2}`);
-  const countryId = numeric === '000' ? 'ne-x-kosovo' : `ne-${numeric}`;
+  const countryId = mundusCountryId(countryIso2, numeric);
+  if (!countryId) continue;
   if (countries[countryId]?.records.length) continue;
   countries[countryId] = {
     countryIso2,
@@ -439,7 +442,8 @@ for (const [countryIso2, surname] of manualObservations) {
   const numeric = countryCodes.get(countryIso2);
   if (!numeric)
     throw new Error(`Missing countryInfo numeric code for ${countryIso2}`);
-  const countryId = numeric === '000' ? 'ne-x-kosovo' : `ne-${numeric}`;
+  const countryId = mundusCountryId(countryIso2, numeric);
+  if (!countryId) continue;
   if (countries[countryId]?.records.length) continue;
   countries[countryId] = {
     countryIso2,
@@ -504,6 +508,15 @@ for (const countryId of Object.keys(anchorInventory)) {
   };
 }
 
+const unknownUnits = Object.keys(countries).filter(
+  (countryId) => !anchorInventory[countryId],
+);
+if (unknownUnits.length) {
+  throw new Error(
+    `Surname records without a Mundus unit anchor: ${unknownUnits.join(', ')}`,
+  );
+}
+
 const output = {
   schemaVersion: 1,
   sourceSnapshot: `sigpwned/popular-names-by-country-dataset v1.2; source lists collected during the week of 2023-07-08; Sweden supplemented from Statistics Sweden 2012 surname ranking (Wayback capture 2013-09-21, SHA-256 ${SWEDEN_SOURCE_SHA256}); Iran supplemented from farbodbj/iranian-surname-frequencies commit 9fb2fdccb62445b52e933d4d7929a52e01bd6011; Africa source-listed observations from Pulse Nigeria article captured 2026-09-23; remaining sovereign-country observations are fixed, unranked manual observations reviewed 2026-09-23`,
@@ -547,18 +560,23 @@ async function loadBytes(path, url, expectedSha256, fallbackPath) {
   return bytes;
 }
 
+/**
+ * Maps a source country to its Mundus boundary-view unit. The Mundus view
+ * draws Kosovo within Serbia, so Kosovo source rows (GeoNames numeric 000)
+ * have no unit of their own and are not shown.
+ */
+function mundusCountryId(countryIso2, numeric) {
+  if (countryIso2 === 'XK') return null;
+  if (numeric === '000') {
+    throw new Error(`No Mundus unit for ${countryIso2} (numeric 000)`);
+  }
+  return `ne-${numeric}`;
+}
+
 function countryIsoForAnchor(countryId, numericToIso) {
   const numeric = countryId.match(/^ne-(\d{3})$/)?.[1];
   if (numeric && numericToIso.has(numeric)) return numericToIso.get(numeric);
-  return (
-    {
-      'ne-x-kosovo': 'XK',
-      'ne-x-northern-cyprus': 'CY',
-      'ne-x-somaliland': 'SO',
-      'ne-x-indian-ocean-territories': 'IO',
-      'ne-x-siachen-glacier': 'PK',
-    }[countryId] ?? 'ZZ'
-  );
+  return 'ZZ';
 }
 
 async function fetchBytes(url) {

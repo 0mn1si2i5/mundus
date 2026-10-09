@@ -1,393 +1,391 @@
 {
   "id": "natural-earth-vector-globe",
-  "sourceName": "Natural Earth Admin 0 - Countries, 1:110m and 1:50m",
-  "sourceUrl": "https://www.naturalearthdata.com/downloads/",
-  "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json",
+  "sourceName": "Natural Earth Admin 0 – Countries, 1:10m, China point of view (Mundus boundary view), low and high detail",
+  "sourceUrl": "https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/",
   "licenseName": "Public domain",
   "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
-  "version": "Natural Earth 4.1.0 / world-atlas 2.0.2 / vector format 2",
-  "retrievedAt": "2026-07-21",
-  "sha256": "2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8",
+  "version": "Natural Earth 5.1.2 / Mundus boundary view / vector format 2",
+  "retrievedAt": "2026-10-09",
   "attribution": "Made with Natural Earth",
   "redistribution": "allowed",
   "transformations": [
-    "Convert quantized TopoJSON country polygons to one merged spherical surface",
+    "Convert the quantized Mundus country topologies (src/data/manifests/mundus-countries.json) to one merged spherical surface",
     "Classify projected rings by area and containment, triangulate each polygon in a local gnomonic projection, and subdivide spherical edges",
     "Generate one coastline and one internal shared-boundary geometry from TopoJSON topology",
     "Assign stable ISO-numeric and explicit exception palette indices",
     "Quantize positions to signed normalized 16-bit and encode buffers with meshoptimizer 1.1.1"
   ],
   "missingValuePolicy": "The palette carries no data values: countries use the base land color unless hovered or selected.",
-  "boundaryPolicy": "Natural Earth boundaries are a cartographic view and are not a legal authority on territorial status.",
+  "boundaryPolicy": "Mundus draws boundaries from the Natural Earth China point of view, except that Taiwan is shown as its own unit. Boundaries are a cartographic view and are not a legal authority on territorial status.",
   "sourceAssets": {
     "110m": {
-      "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json",
-      "sha256": "2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8"
+      "path": "src/data/generated/mundus-countries-110m.json",
+      "sha256": "9b69ff70741a75a43c3aa31d2e01c35eea6bea93bc0ab2878f3aca7faea07647"
     },
     "50m": {
-      "distributionUrl": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
-      "sha256": "04342cdc1e3016bcd7db1630de95684d67b79fe3c8c460321e87aef469502394"
+      "path": "src/data/generated/mundus-countries-50m.json",
+      "sha256": "b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4"
     }
   },
   "derivedAssets": {
     "110m": {
       "path": "src/data/generated/natural-earth-vector-globe-110m.mvg",
-      "sha256": "7d58a14dc5a35dd8ff9fe7c56a37bbfaf6182975cab2b29b76769d06bffefcce",
-      "rawBytes": 270280,
-      "gzipBytes": 203267,
-      "gpuBytes": 793168,
-      "runtimeGpuBytes": 793168,
+      "sha256": "ed26d054a7c3242c47ba7e71ca58ff804f76fcfc7f4038907c4874b7ae6a27ef",
+      "rawBytes": 474152,
+      "gzipBytes": 341224,
+      "gpuBytes": 1526414,
+      "runtimeGpuBytes": 1526414,
       "paletteBytes": 3620,
-      "countries": 177,
-      "vertices": 24662,
-      "triangles": 37922,
-      "coastlineVertices": 10038,
-      "borderVertices": 5444,
-      "droppedDegenerateTriangles": 52,
-      "droppedOutsideTriangles": 304,
+      "countries": 174,
+      "vertices": 41758,
+      "triangles": 55195,
+      "coastlineVertices": 33466,
+      "borderVertices": 9892,
+      "droppedDegenerateTriangles": 15777,
+      "droppedOutsideTriangles": 1649,
       "maxEdgeDegrees": 2,
       "containmentSamplesPerTriangle": 4,
-      "candidateAreaSteradians": 3.628140553359825,
-      "acceptedAreaSteradians": 3.627989167685745,
-      "droppedOutsideAreaSteradians": 0.0001513856740808097,
-      "droppedOutsideAreaFraction": 0.000041725416051100775,
+      "candidateAreaSteradians": 3.606929251033414,
+      "acceptedAreaSteradians": 3.606928292147636,
+      "droppedOutsideAreaSteradians": 9.588857612337768e-7,
+      "droppedOutsideAreaFraction": 2.6584545869843394e-7,
       "representativeDroppedAreaFractions": {
         "ne-010": 0,
-        "ne-044": 0,
+        "ne-044": 0.0000062665063533846585,
         "ne-192": 0,
         "ne-214": 0,
         "ne-242": 0,
-        "ne-360": 0,
-        "ne-392": 0.0000018771117176690214,
-        "ne-643": 6.402646957578714e-8,
-        "ne-840": 0
+        "ne-360": 2.8949212864226973e-8,
+        "ne-392": 0,
+        "ne-643": 4.985267078490827e-8,
+        "ne-840": 1.0043110527543617e-9
       },
-      "sourceCountryFeatureAreaSteradians": 3.627901532233424,
-      "sourceLandUnionAreaSteradians": 3.6279015322334236,
-      "emittedAreaSteradians": 3.627989167685745,
-      "sourceAreaDeficitFraction": 0.000024155962211908443,
+      "sourceCountryFeatureAreaSteradians": 3.6069292510561075,
+      "sourceLandUnionAreaSteradians": 3.6069292510561115,
+      "emittedAreaSteradians": 3.606928292147636,
+      "sourceAreaDeficitFraction": 2.658517549277609e-7,
       "largestPartDeficits": [
         {
-          "countryId": "ne-729",
-          "partIndex": 0,
-          "sourceAreaSteradians": 0.04575754607105671,
-          "acceptedAreaSteradians": 0.04584570178603478,
-          "deficitFraction": 0.0019265831004392725
+          "countryId": "ne-410",
+          "partIndex": 2,
+          "sourceAreaSteradians": 0.0000097154516559668,
+          "acceptedAreaSteradians": 0.00000970252248106467,
+          "deficitFraction": 0.0013307847498977591
         },
         {
-          "countryId": "ne-643",
-          "partIndex": 10,
-          "sourceAreaSteradians": 0.0001870389098951545,
-          "acceptedAreaSteradians": 0.0001870122132072719,
-          "deficitFraction": 0.00014273333766521407
+          "countryId": "ne-704",
+          "partIndex": 2,
+          "sourceAreaSteradians": 0.000013771499682997808,
+          "acceptedAreaSteradians": 0.000013764390083962653,
+          "deficitFraction": 0.0005162545255642683
         },
         {
-          "countryId": "ne-188",
-          "partIndex": 0,
-          "sourceAreaSteradians": 0.0013318459483843,
-          "acceptedAreaSteradians": 0.0013318325920496602,
-          "deficitFraction": 0.000010028438090790944
-        },
-        {
-          "countryId": "ne-688",
-          "partIndex": 0,
-          "sourceAreaSteradians": 0.0018781387120529846,
-          "acceptedAreaSteradians": 0.0018781333808937407,
-          "deficitFraction": 0.0000028385332828000123
-        },
-        {
-          "countryId": "ne-392",
-          "partIndex": 0,
-          "sourceAreaSteradians": 0.007250036598631593,
-          "acceptedAreaSteradians": 0.007250017897072717,
-          "deficitFraction": 0.000002579512340506805
-        },
-        {
-          "countryId": "ne-516",
-          "partIndex": 0,
-          "sourceAreaSteradians": 0.02037725958822302,
-          "acceptedAreaSteradians": 0.020377212900144638,
-          "deficitFraction": 0.0000022911853372826873
-        },
-        {
-          "countryId": "ne-826",
+          "countryId": "ne-620",
           "partIndex": 1,
-          "sourceAreaSteradians": 0.005841105931098716,
-          "acceptedAreaSteradians": 0.005841094697960829,
-          "deficitFraction": 0.0000019231183305673914
+          "sourceAreaSteradians": 0.00001855803537092271,
+          "acceptedAreaSteradians": 0.000018550047969329613,
+          "deficitFraction": 0.000430401248486279
         },
         {
           "countryId": "ne-124",
-          "partIndex": 0,
-          "sourceAreaSteradians": 0.20690093079015906,
-          "acceptedAreaSteradians": 0.20690057167977552,
-          "deficitFraction": 0.0000017356634509546302
+          "partIndex": 50,
+          "sourceAreaSteradians": 0.000010358639857921896,
+          "acceptedAreaSteradians": 0.000010354354830001017,
+          "deficitFraction": 0.0004136670431303835
         },
         {
-          "countryId": "ne-450",
-          "partIndex": 0,
-          "sourceAreaSteradians": 0.014561820717820313,
-          "acceptedAreaSteradians": 0.014561812780721299,
-          "deficitFraction": 5.450622671639817e-7
+          "countryId": "ne-300",
+          "partIndex": 6,
+          "sourceAreaSteradians": 0.000014738237555599085,
+          "acceptedAreaSteradians": 0.000014732155491030918,
+          "deficitFraction": 0.00041267244778913373
         },
         {
-          "countryId": "ne-466",
+          "countryId": "ne-156",
+          "partIndex": 2,
+          "sourceAreaSteradians": 0.00001075608290720016,
+          "acceptedAreaSteradians": 0.000010752485033439246,
+          "deficitFraction": 0.0003344966557021869
+        },
+        {
+          "countryId": "ne-044",
+          "partIndex": 2,
+          "sourceAreaSteradians": 0.000004772715941584149,
+          "acceptedAreaSteradians": 0.000004771395175617342,
+          "deficitFraction": 0.0002767325738578423
+        },
+        {
+          "countryId": "ne-275",
           "partIndex": 0,
-          "sourceAreaSteradians": 0.030538713975959995,
-          "acceptedAreaSteradians": 0.030538697392493742,
-          "deficitFraction": 5.430309300532296e-7
+          "sourceAreaSteradians": 0.000008365471606367235,
+          "acceptedAreaSteradians": 0.000008363273358290598,
+          "deficitFraction": 0.00026277634783483146
+        },
+        {
+          "countryId": "ne-528",
+          "partIndex": 2,
+          "sourceAreaSteradians": 0.000006659043693546692,
+          "acceptedAreaSteradians": 0.000006657556265314371,
+          "deficitFraction": 0.00022336964596924647
+        },
+        {
+          "countryId": "ne-250",
+          "partIndex": 5,
+          "sourceAreaSteradians": 0.000009439845717723336,
+          "acceptedAreaSteradians": 0.00000943797393432938,
+          "deficitFraction": 0.0001982853798596877
         }
       ],
       "largestCountryDeficits": [
         {
-          "countryId": "ne-729",
-          "sourceAreaSteradians": 0.04575754607105671,
-          "emittedAreaSteradians": 0.04584570178603479,
-          "deficitFraction": 0.001926583100439424,
-          "sourceSelfIntersections": 2
-        },
-        {
-          "countryId": "ne-188",
-          "sourceAreaSteradians": 0.0013318459483843,
-          "emittedAreaSteradians": 0.0013318325920496602,
-          "deficitFraction": 0.000010028438090790944,
+          "countryId": "ne-275",
+          "sourceAreaSteradians": 0.00015416001836081564,
+          "emittedAreaSteradians": 0.00015415782011276937,
+          "deficitFraction": 0.000014259521175723338,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-688",
-          "sourceAreaSteradians": 0.0018781387120529846,
-          "emittedAreaSteradians": 0.0018781333808937407,
-          "deficitFraction": 0.0000028385332828000123,
+          "countryId": "ne-044",
+          "sourceAreaSteradians": 0.00021076590894021196,
+          "emittedAreaSteradians": 0.00021076458817423436,
+          "deficitFraction": 0.0000062665066862020436,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-516",
-          "sourceAreaSteradians": 0.02037725958822302,
-          "emittedAreaSteradians": 0.020377212900144635,
-          "deficitFraction": 0.0000022911853374529477,
+          "countryId": "ne-410",
+          "sourceAreaSteradians": 0.002379877884762812,
+          "emittedAreaSteradians": 0.0023798649555879597,
+          "deficitFraction": 0.00000543270515476679,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-392",
-          "sourceAreaSteradians": 0.009962943972753296,
-          "emittedAreaSteradians": 0.00996292527119447,
-          "deficitFraction": 0.0000018771117128633529,
+          "countryId": "ne-376",
+          "sourceAreaSteradians": 0.0005191904458961657,
+          "emittedAreaSteradians": 0.0005191877009618804,
+          "deficitFraction": 0.000005286950688311844,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-826",
-          "sourceAreaSteradians": 0.006133030838658526,
-          "emittedAreaSteradians": 0.006133019605520651,
-          "deficitFraction": 0.0000018315802040212475,
+          "countryId": "ne-780",
+          "sourceAreaSteradians": 0.00013162107810893217,
+          "emittedAreaSteradians": 0.0001316204638942282,
+          "deficitFraction": 0.0000046665375546058596,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-124",
-          "sourceAreaSteradians": 0.2459823375765877,
-          "emittedAreaSteradians": 0.24598197846620443,
-          "deficitFraction": 0.0000014599031247583222,
+          "countryId": "ne-620",
+          "sourceAreaSteradians": 0.00220951276654813,
+          "emittedAreaSteradians": 0.0022095047791465122,
+          "deficitFraction": 0.00000361500586855524,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-450",
-          "sourceAreaSteradians": 0.014561820717820313,
-          "emittedAreaSteradians": 0.014561812780721299,
-          "deficitFraction": 5.450622671639817e-7,
+          "countryId": "ne-156",
+          "sourceAreaSteradians": 0.23272852250549247,
+          "emittedAreaSteradians": 0.2327278197183529,
+          "deficitFraction": 0.000003019772273724965,
           "sourceSelfIntersections": 0
         },
         {
           "countryId": "ne-466",
-          "sourceAreaSteradians": 0.030538713975959995,
-          "emittedAreaSteradians": 0.030538697392493742,
-          "deficitFraction": 5.430309300532296e-7,
+          "sourceAreaSteradians": 0.03097595743862356,
+          "emittedAreaSteradians": 0.030975869368852806,
+          "deficitFraction": 0.0000028431654107361316,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-792",
-          "sourceAreaSteradians": 0.019663900661442784,
-          "emittedAreaSteradians": 0.01966389457924895,
-          "deficitFraction": 3.093075956851641e-7,
+          "countryId": "ne-384",
+          "sourceAreaSteradians": 0.007926636157263862,
+          "emittedAreaSteradians": 0.007926614815188675,
+          "deficitFraction": 0.0000026924504624092903,
+          "sourceSelfIntersections": 0
+        },
+        {
+          "countryId": "ne-188",
+          "sourceAreaSteradians": 0.0012673263973526966,
+          "emittedAreaSteradians": 0.001267323203484429,
+          "deficitFraction": 0.0000025201623466433787,
           "sourceSelfIntersections": 0
         }
       ]
     },
     "50m": {
       "path": "src/data/generated/natural-earth-vector-globe-50m.mvg",
-      "sha256": "fa3cd1703aaa78ef9e05e0e20972e5afbb7bbf04b6617af735713fd09fc5bc52",
-      "rawBytes": 2055260,
-      "gzipBytes": 1346186,
-      "gpuBytes": 8950732,
-      "runtimeGpuBytes": 8950732,
+      "sha256": "e915e6915244205d8f4a078565966d06c1c98ca044f75782e90eab622ed3bc1b",
+      "rawBytes": 1824887,
+      "gzipBytes": 1261484,
+      "gpuBytes": 7945026,
+      "runtimeGpuBytes": 7945026,
       "paletteBytes": 3620,
-      "countries": 240,
-      "vertices": 207224,
-      "triangles": 300478,
-      "coastlineVertices": 118824,
-      "borderVertices": 38504,
-      "droppedDegenerateTriangles": 7972,
-      "droppedOutsideTriangles": 10679,
+      "countries": 239,
+      "vertices": 172905,
+      "triangles": 237102,
+      "coastlineVertices": 140840,
+      "borderVertices": 30148,
+      "droppedDegenerateTriangles": 21528,
+      "droppedOutsideTriangles": 2962,
       "maxEdgeDegrees": 1,
       "containmentSamplesPerTriangle": 4,
-      "candidateAreaSteradians": 3.612531650033417,
-      "acceptedAreaSteradians": 3.612526268965851,
-      "droppedOutsideAreaSteradians": 0.000005381067593592778,
-      "droppedOutsideAreaFraction": 0.0000014895558336611394,
+      "candidateAreaSteradians": 3.613763919506977,
+      "acceptedAreaSteradians": 3.6137578579263923,
+      "droppedOutsideAreaSteradians": 0.000006061580601582682,
+      "droppedOutsideAreaFraction": 0.0000016773593230212059,
       "representativeDroppedAreaFractions": {
-        "ne-010": 4.662618614714003e-8,
-        "ne-044": 0,
-        "ne-192": 0,
-        "ne-214": 8.525327302579577e-7,
-        "ne-242": 0.000005253894697358697,
-        "ne-360": 9.764449634141324e-7,
-        "ne-392": 2.5776083060955474e-8,
-        "ne-643": 3.844713698920509e-7,
-        "ne-840": 8.556222096839958e-7
+        "ne-010": 9.977376150413326e-7,
+        "ne-044": 0.000023949285996264567,
+        "ne-192": 0.0000053393078423634035,
+        "ne-214": 0,
+        "ne-242": 0,
+        "ne-360": 0,
+        "ne-392": 3.3578570891976297e-7,
+        "ne-643": 1.5539279774342094e-7,
+        "ne-840": 0.000003432530782526869
       },
-      "sourceCountryFeatureAreaSteradians": 3.6125316501704288,
-      "sourceLandUnionAreaSteradians": 3.6125316501704274,
-      "emittedAreaSteradians": 3.612526268965851,
-      "sourceAreaDeficitFraction": 0.0000014895937528139863,
+      "sourceCountryFeatureAreaSteradians": 3.613763919523072,
+      "sourceLandUnionAreaSteradians": 3.6137639195230697,
+      "emittedAreaSteradians": 3.6137578579263923,
+      "sourceAreaDeficitFraction": 0.0000016773637721490326,
       "largestPartDeficits": [
         {
-          "countryId": "ne-554",
-          "partIndex": 12,
-          "sourceAreaSteradians": 5.4476493286772566e-8,
-          "acceptedAreaSteradians": 5.060175217618483e-8,
-          "deficitFraction": 0.07112684530170668
+          "countryId": "ne-336",
+          "partIndex": 0,
+          "sourceAreaSteradians": 3.4720960731951316e-10,
+          "acceptedAreaSteradians": 0,
+          "deficitFraction": 1
         },
         {
-          "countryId": "ne-296",
-          "partIndex": 10,
-          "sourceAreaSteradians": 6.082945669933204e-8,
-          "acceptedAreaSteradians": 5.960431690689377e-8,
-          "deficitFraction": 0.02014056772681515
+          "countryId": "ne-581",
+          "partIndex": 0,
+          "sourceAreaSteradians": 1.7529944525254058e-7,
+          "acceptedAreaSteradians": 1.688521346875062e-7,
+          "deficitFraction": 0.03677884180264369
         },
         {
-          "countryId": "ne-242",
-          "partIndex": 19,
-          "sourceAreaSteradians": 7.036323502849243e-8,
-          "acceptedAreaSteradians": 6.947256730901879e-8,
-          "deficitFraction": 0.012658140563221355
-        },
-        {
-          "countryId": "ne-x-indian-ocean-territories",
+          "countryId": "ne-446",
           "partIndex": 1,
-          "sourceAreaSteradians": 1.833117512687021e-7,
-          "acceptedAreaSteradians": 1.8145032462683295e-7,
-          "deficitFraction": 0.010154431611646319
+          "sourceAreaSteradians": 2.5193133502056673e-7,
+          "acceptedAreaSteradians": 2.4736897050237666e-7,
+          "deficitFraction": 0.018109555597034463
         },
         {
-          "countryId": "ne-356",
-          "partIndex": 12,
-          "sourceAreaSteradians": 2.166088290674826e-7,
-          "acceptedAreaSteradians": 2.1494536031529733e-7,
-          "deficitFraction": 0.007679598100163493
+          "countryId": "ne-798",
+          "partIndex": 0,
+          "sourceAreaSteradians": 2.154830254201127e-7,
+          "acceptedAreaSteradians": 2.1452522242999806e-7,
+          "deficitFraction": 0.004444911557405909
+        },
+        {
+          "countryId": "ne-152",
+          "partIndex": 49,
+          "sourceAreaSteradians": 0.000006741526806177778,
+          "acceptedAreaSteradians": 0.000006727778770960967,
+          "deficitFraction": 0.0020393058741844388
+        },
+        {
+          "countryId": "ne-086",
+          "partIndex": 0,
+          "sourceAreaSteradians": 7.79709748905112e-7,
+          "acceptedAreaSteradians": 7.782631812741959e-7,
+          "deficitFraction": 0.0018552642607681138
         },
         {
           "countryId": "ne-446",
           "partIndex": 0,
-          "sourceAreaSteradians": 5.621802835712196e-7,
-          "acceptedAreaSteradians": 5.582156483712023e-7,
-          "deficitFraction": 0.007052248746313539
+          "sourceAreaSteradians": 4.900225841553731e-7,
+          "acceptedAreaSteradians": 4.891219933697261e-7,
+          "deficitFraction": 0.0018378556718957636
         },
         {
-          "countryId": "ne-643",
-          "partIndex": 11,
-          "sourceAreaSteradians": 0.0000012577252444972205,
-          "acceptedAreaSteradians": 0.0000012512592945600812,
-          "deficitFraction": 0.0051409876405272776
+          "countryId": "ne-048",
+          "partIndex": 2,
+          "sourceAreaSteradians": 7.917437838619268e-7,
+          "acceptedAreaSteradians": 7.908038037711829e-7,
+          "deficitFraction": 0.0011872276232583279
         },
         {
-          "countryId": "ne-010",
-          "partIndex": 1,
-          "sourceAreaSteradians": 0.0000010745764581573497,
-          "acceptedAreaSteradians": 0.0000010709624176672205,
-          "deficitFraction": 0.003363223214778464
-        },
-        {
-          "countryId": "ne-296",
-          "partIndex": 12,
-          "sourceAreaSteradians": 1.261781836246325e-7,
-          "acceptedAreaSteradians": 1.2582240347658174e-7,
-          "deficitFraction": 0.0028196645238542815
+          "countryId": "ne-090",
+          "partIndex": 0,
+          "sourceAreaSteradians": 0.000016918831468380627,
+          "acceptedAreaSteradians": 0.000016901817604104746,
+          "deficitFraction": 0.0010056169841089573
         },
         {
           "countryId": "ne-840",
-          "partIndex": 122,
-          "sourceAreaSteradians": 6.555113957551153e-7,
-          "acceptedAreaSteradians": 6.538929678114747e-7,
-          "deficitFraction": 0.0024689547033370056
+          "partIndex": 215,
+          "sourceAreaSteradians": 0.0000020259023836962037,
+          "acceptedAreaSteradians": 0.0000020242934916699286,
+          "deficitFraction": 0.0007941606857383577
         }
       ],
       "largestCountryDeficits": [
         {
+          "countryId": "ne-336",
+          "sourceAreaSteradians": 3.4720960731951316e-10,
+          "emittedAreaSteradians": 0,
+          "deficitFraction": 1,
+          "sourceSelfIntersections": 0
+        },
+        {
+          "countryId": "ne-581",
+          "sourceAreaSteradians": 1.7529944525254058e-7,
+          "emittedAreaSteradians": 1.6885213468750614e-7,
+          "deficitFraction": 0.03677884180264399,
+          "sourceSelfIntersections": 0
+        },
+        {
           "countryId": "ne-446",
-          "sourceAreaSteradians": 5.621802835712196e-7,
-          "emittedAreaSteradians": 5.582156483712024e-7,
-          "deficitFraction": 0.007052248746313351,
+          "sourceAreaSteradians": 7.419539191759398e-7,
+          "emittedAreaSteradians": 7.364909638721034e-7,
+          "deficitFraction": 0.007362930719341578,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-574",
-          "sourceAreaSteradians": 0.0000010226688578484928,
-          "emittedAreaSteradians": 0.0000010218239934411852,
-          "deficitFraction": 0.0008261368289683255,
+          "countryId": "ne-798",
+          "sourceAreaSteradians": 2.154830254201127e-7,
+          "emittedAreaSteradians": 2.1452522242999808e-7,
+          "deficitFraction": 0.004444911557405786,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-x-indian-ocean-territories",
-          "sourceAreaSteradians": 0.000003509868293458709,
-          "emittedAreaSteradians": 0.0000035080068668293425,
-          "deficitFraction": 0.0005303408771308444,
+          "countryId": "ne-086",
+          "sourceAreaSteradians": 7.79709748905112e-7,
+          "emittedAreaSteradians": 7.782631812741959e-7,
+          "deficitFraction": 0.0018552642607681138,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-x-siachen-glacier",
-          "sourceAreaSteradians": 0.00005242880173514104,
-          "emittedAreaSteradians": 0.00005240603857649503,
-          "deficitFraction": 0.00043417278085050923,
+          "countryId": "ne-702",
+          "sourceAreaSteradians": 0.000012417334695008172,
+          "emittedAreaSteradians": 0.000012408973351256918,
+          "deficitFraction": 0.0006733605847489152,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-296",
-          "sourceAreaSteradians": 0.000023194830400599285,
-          "emittedAreaSteradians": 0.00002319142409699236,
-          "deficitFraction": 0.00014685615493173476,
+          "countryId": "ne-x-bir-tawil",
+          "sourceAreaSteradians": 0.00004996348103664767,
+          "emittedAreaSteradians": 0.00004995923089007528,
+          "deficitFraction": 0.00008506506120484627,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-020",
-          "sourceAreaSteradians": 0.000010860392844024388,
-          "emittedAreaSteradians": 0.000010859547259576842,
-          "deficitFraction": 0.00007785947153941616,
+          "countryId": "ne-048",
+          "sourceAreaSteradians": 0.00001535475038462779,
+          "emittedAreaSteradians": 0.00001535381040450547,
+          "deficitFraction": 0.00006121754497950793,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-670",
-          "sourceAreaSteradians": 0.000007696531275175886,
-          "emittedAreaSteradians": 0.00000769597272831329,
-          "deficitFraction": 0.0000725712457504723,
+          "countryId": "ne-084",
+          "sourceAreaSteradians": 0.0005480211498414447,
+          "emittedAreaSteradians": 0.0005480015583816282,
+          "deficitFraction": 0.00003574945934514395,
           "sourceSelfIntersections": 0
         },
         {
-          "countryId": "ne-784",
-          "sourceAreaSteradians": 0.001755734796033596,
-          "emittedAreaSteradians": 0.0017556682912248257,
-          "deficitFraction": 0.000037878618639046714,
-          "sourceSelfIntersections": 0
-        },
-        {
-          "countryId": "ne-x-somaliland",
-          "sourceAreaSteradians": 0.004150892892892063,
-          "emittedAreaSteradians": 0.004150785204052548,
-          "deficitFraction": 0.00002594353607615504,
-          "sourceSelfIntersections": 0
-        },
-        {
-          "countryId": "ne-860",
-          "sourceAreaSteradians": 0.011022042502229417,
-          "emittedAreaSteradians": 0.011021824800862135,
-          "deficitFraction": 0.000019751454164525213,
+          "countryId": "ne-090",
+          "sourceAreaSteradians": 0.0006565469553104272,
+          "emittedAreaSteradians": 0.0006565268958393997,
+          "deficitFraction": 0.00003055298766559678,
           "sourceSelfIntersections": 0
         }
       ]

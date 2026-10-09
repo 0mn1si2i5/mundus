@@ -1,4 +1,4 @@
-import { geoArea, geoCentroid, geoContains, geoDistance } from 'd3-geo';
+import { geoArea, geoCentroid, geoContains } from 'd3-geo';
 import type { Feature, Geometry, Polygon } from 'geojson';
 import type { CountryFeature } from './countryData';
 import type { GeoPoint } from './geo';
@@ -6,8 +6,6 @@ import generatedAnchors from '../../data/generated/country-label-anchors.json' w
 
 const RAD_TO_DEG = 180 / Math.PI;
 const GRID_STEPS = 12;
-const EDGE_SAMPLES = 2;
-const EDGE_SAMPLE_MAX_DEGREES = 1.5;
 const LABEL_SURFACE_RADIUS = 1.012;
 const LABEL_HEIGHT_RATIO = 0.34;
 const LABEL_CLEARANCE_SAFETY = 0.42;
@@ -50,8 +48,8 @@ export function getCountryLabelAngularFootprintDegrees(width: number): number {
 
 export const COUNTRY_LABEL_HEIGHT_RATIO = LABEL_HEIGHT_RATIO;
 
-// The 110m world-atlas snapshot omits these two small countries, while the
-// 50m Natural Earth asset contains them. Keep verified interior points so a
+// The 110m Mundus country topology omits these two small countries, while the
+// 50m topology contains them. Keep verified interior points so a
 // future country selection can still place a surname label without bundling a
 // second GeoJSON dataset into the CPU picking path.
 const FALLBACK_LABEL_ANCHORS: Readonly<Record<string, CountryLabelAnchor>> = {
@@ -232,40 +230,79 @@ function boundaryClearance(
   point: GeoPoint,
   coordinates: PolygonCoordinates,
 ): number {
+  const target = unitVector(point.longitude, point.latitude);
   let minimum = Number.POSITIVE_INFINITY;
   for (const ring of coordinates) {
     for (let index = 0; index < ring.length - 1; index += 1) {
       const start = ring[index];
       const end = ring[index + 1];
       if (!start || !end) continue;
-      const startLongitude = start[0] ?? 0;
-      const endLongitude = unwrapLongitude(end[0] ?? 0, startLongitude);
-      const segmentDegrees =
-        geoDistance(
-          [startLongitude, start[1] ?? 0],
-          [endLongitude, end[1] ?? 0],
-        ) * RAD_TO_DEG;
-      const sampleCount = Math.max(
-        EDGE_SAMPLES,
-        Math.min(24, Math.ceil(segmentDegrees / EDGE_SAMPLE_MAX_DEGREES)),
+      minimum = Math.min(
+        minimum,
+        greatCircleSegmentDistance(
+          target,
+          unitVector(start[0] ?? 0, start[1] ?? 0),
+          unitVector(end[0] ?? 0, end[1] ?? 0),
+        ),
       );
-      for (let sample = 0; sample <= sampleCount; sample += 1) {
-        const ratio = sample / sampleCount;
-        const longitude =
-          startLongitude + (endLongitude - startLongitude) * ratio;
-        const latitude =
-          (start[1] ?? 0) + ((end[1] ?? 0) - (start[1] ?? 0)) * ratio;
-        minimum = Math.min(
-          minimum,
-          geoDistance(
-            [point.longitude, point.latitude],
-            [longitude, latitude],
-          ) * RAD_TO_DEG,
-        );
-      }
     }
   }
-  return Number.isFinite(minimum) ? minimum : 0;
+  return Number.isFinite(minimum) ? minimum * RAD_TO_DEG : 0;
+}
+
+type Vector3 = readonly [number, number, number];
+
+function unitVector(longitude: number, latitude: number): Vector3 {
+  const lambda = longitude / RAD_TO_DEG;
+  const phi = latitude / RAD_TO_DEG;
+  return [
+    Math.cos(phi) * Math.cos(lambda),
+    Math.cos(phi) * Math.sin(lambda),
+    Math.sin(phi),
+  ];
+}
+
+function dot(a: Vector3, b: Vector3): number {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+function cross(a: Vector3, b: Vector3): Vector3 {
+  return [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0],
+  ];
+}
+
+function angle(a: Vector3, b: Vector3): number {
+  return Math.atan2(Math.hypot(...cross(a, b)), dot(a, b));
+}
+
+/**
+ * Exact angular distance (radians) from a point to the minor great-circle
+ * arc between two boundary vertices, matching d3-geo's spherical edges.
+ */
+function greatCircleSegmentDistance(
+  point: Vector3,
+  start: Vector3,
+  end: Vector3,
+): number {
+  const endpoints = Math.min(angle(point, start), angle(point, end));
+  const normal = cross(start, end);
+  const length = Math.hypot(...normal);
+  if (length < 1e-12) return endpoints;
+  const unitNormal: Vector3 = [
+    normal[0] / length,
+    normal[1] / length,
+    normal[2] / length,
+  ];
+  // The point's projection onto the great circle lies within the arc when
+  // the point is between the planes through each endpoint and the normal.
+  const inside =
+    dot(cross(start, point), unitNormal) >= 0 &&
+    dot(cross(point, end), unitNormal) >= 0;
+  if (!inside) return endpoints;
+  return Math.min(endpoints, Math.abs(Math.asin(dot(point, unitNormal))));
 }
 
 function uniquePoints(points: readonly GeoPoint[]): GeoPoint[] {

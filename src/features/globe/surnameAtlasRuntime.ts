@@ -1,4 +1,4 @@
-import detailedAtlas from 'world-atlas/countries-50m.json';
+import detailedAtlas from '../../data/generated/mundus-countries-50m.json';
 import { countryFeaturesFromTopology } from './countryData';
 
 /**
@@ -6,7 +6,7 @@ import { countryFeaturesFromTopology } from './countryData';
  * topology and the generated slot table are large and no other observation
  * needs them, so they stay out of the always-loaded globe chunks.
  *
- * The slot table is generated against Natural Earth 50m geometry; runtime
+ * The slot table is generated against the Mundus 50m country geometry; runtime
  * land tests use the same geometry instead of the coarser 110m picking set.
  */
 export const surnameCountries = countryFeaturesFromTopology(detailedAtlas);

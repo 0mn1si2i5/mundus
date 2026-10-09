@@ -10,25 +10,46 @@ Where the product shows attribution: every notice below appears in the
 away, and the desktop layout keeps a compact credit line ("Data: Natural Earth
 · GeoNames · community surname data · GHSL") on screen with a link to it.
 
-## Natural Earth countries, 1:110m
+## Mundus country boundaries (Natural Earth), low and high detail
 
-- Source: [Natural Earth Admin 0 – Countries](https://www.naturalearthdata.com/downloads/110m-cultural-vectors/110m-admin-0-countries/)
-- Distribution: `world-atlas` 2.0.2, derived from Natural Earth 4.1.0
+- Source: [Natural Earth Admin 0 – Countries, 1:10m](https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/),
+  version 5.1.2: the China point-of-view layer
+  (`ne_10m_admin_0_countries_chn`) plus the default layer
+  (`ne_10m_admin_0_countries`), both pinned by SHA-256
 - Terms: [public domain](https://www.naturalearthdata.com/about/terms-of-use/); redistribution allowed
-- Use: country geometry, country/ocean picking, borders, and globe textures
-- Transformation: convert quantized TopoJSON to GeoJSON in the browser, assign
-  stable internal identifiers, and rasterize land and borders to an
-  equirectangular texture
+- Use: every observation's country geometry, country/ocean picking, borders,
+  labels, and the vector globe
+- Boundary view: Mundus draws boundaries from the China point of view, except
+  that Taiwan is kept as its own unit (its islands are removed from China and
+  Taiwan is taken from the default layer). Areas the default layer splits off
+  under de facto control (for example Kosovo, Northern Cyprus, Somaliland, and
+  Siachen) therefore belong to the unit the China view assigns them to.
+  English unit names follow the default layer so wording does not change with
+  the boundary view.
+- Identifiers: `ne-` plus the ISO 3166-1 numeric code (`ISO_N3_EH`); units that
+  share or lack a code are merged into their sovereign (Australian and British
+  external territories, Clipperton, the Brazilian Island, Scarborough Shoal),
+  and Bir Tawil keeps the explicit id `ne-x-bir-tawil`
+- Transformation (`pnpm data:countries`): build one shared-arc topology,
+  simplify by spherical Visvalingam area (4% of vertices at low detail, 17% at
+  high detail), drop unpopulated islets below a size threshold while keeping
+  each unit's largest polygon and every islet holding a GeoNames major city,
+  fill small holes together with their enclaves, restore full detail wherever
+  simplification would make a ring cross itself, and quantize to 10⁶ steps.
+  Low detail keeps the reviewed 174-unit inventory of the former 1:110m
+  distribution; high detail keeps all 239 units.
 - Attribution shown in the product: **Made with Natural Earth**
 
-The pinned distribution SHA-256 is recorded in
-`src/data/manifests/natural-earth-110m.json`. Boundaries are a cartographic view
-and are not a legal authority on territorial status.
+Source hashes, output hashes, sizes, and vertex counts are recorded in
+`src/data/manifests/mundus-countries.json`. Of the 6,953 GeoNames major cities,
+both details place more on land than the former `world-atlas` 1:110m and 1:50m
+files did. Boundaries are a cartographic view and are not a legal authority on
+territorial status.
 
 ## Natural Earth vector globe, 1:110m and 1:50m
 
-- Source: the same Natural Earth 4.1.0 Admin 0 countries distributed by
-  `world-atlas` 2.0.2
+- Source: the Mundus country boundaries above, at low (110m) and high (50m)
+  detail
 - Terms: public domain; redistribution allowed
 - Quality policy: low quality lazily requests 110m; medium and high quality
   lazily request 50m; the existing raster sphere remains visible while loading
@@ -45,27 +66,26 @@ and are not a legal authority on territorial status.
 
 The exact 110m/50m source hashes, generated `.mvg` hashes, raw/gzip/GPU sizes,
 geometry counts, and edge limits are recorded in
-`src/data/manifests/natural-earth-vector-globe.json`. The 50m asset is 2,055,260
-bytes raw and 1,346,186 bytes at the verifier's gzip level; its measured runtime
-GPU buffer and palette allocation is 8,950,732 bytes. Four interior samples per
+`src/data/manifests/natural-earth-vector-globe.json`. The 50m asset is 1,824,887
+bytes raw and 1,261,484 bytes at the verifier's gzip level; its measured runtime
+GPU buffer and palette allocation is 7,945,026 bytes. Four interior samples per
 triangle plus adaptive boundary subdivision limit dropped candidate area to
-0.00417% at 110m and 0.000149% at 50m, with hard global and representative-country
-gates. Hover and selection changes update a small RGBA palette only; the
-palette carries no data values.
+0.000027% at 110m and 0.00017% at 50m, with hard global and
+representative-country gates. Hover and selection changes update a small RGBA
+palette only; the palette carries no data values.
 
 Coverage is also checked independently against `d3.geoArea` on source country
 features, not against converter candidate triangles. For this snapshot the 50m
-country-feature sum and TopoJSON land union both equal `3.612531650 sr` within
+country-feature sum and TopoJSON land union both equal `3.613763920 sr` within
 floating-point precision; they are recorded separately because other datasets
-may contain overlaps or disputes. The emitted 50m surface is `3.612526269 sr`,
-an absolute relative difference of `0.000149%`. The converter classifies projected
+may contain overlaps or disputes. The emitted 50m surface is `3.613757858 sr`,
+an absolute relative difference of `0.00017%`. The converter classifies projected
 rings by area and containment rather than trusting source ring order; this is
 required for the polar Antarctica part whose seam ring precedes its coastline.
-Before this correction, the 50m emitted surface was only `3.315518543 sr` and
-Antarctica emitted `0.004730775 sr` versus its `0.301957940 sr` source area.
-The decoded 110m source contains four self-intersecting country rings (Fiji,
-Sudan, Russia, and Antarctica); these are explicitly reported and use a narrow
-0.25% repair ceiling, while valid material countries retain a 0.1% ceiling.
+The country build removes ring crossings introduced by simplification, so no
+source country ring self-intersects; the converter still reports any and would
+apply its narrow 0.25% repair ceiling, while valid countries keep a 0.1%
+ceiling.
 
 ## GeoNames major cities
 
@@ -235,11 +255,17 @@ identity. Raw sources are never committed. Then run:
 pnpm data:verify
 ```
 
-to verify the committed generated snapshots and the installed, pinned
-`world-atlas` runtime assets by SHA-256. Rebuild both vector assets with:
+to verify the committed generated snapshots, including the Mundus country
+topologies, by SHA-256. Rebuild the country topologies from the pinned Natural
+Earth sources, then the assets derived from them, with:
 
 ```bash
+pnpm data:countries
 pnpm data:vector-globe
+pnpm data:label-anchors
+pnpm data:surnames
+pnpm data:label-slots
+pnpm data:surname-coverage
 ```
 
 `pnpm test` separately exercises the

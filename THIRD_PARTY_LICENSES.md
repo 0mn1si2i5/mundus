@@ -36,7 +36,7 @@ license.
 
 - `ieee754@1.2.1`
 
-### ISC (8 resolved package versions)
+### ISC (7 resolved package versions)
 
 - `d3-array@3.2.4`
 - `d3-geo@3.1.1`
@@ -45,7 +45,6 @@ license.
 - `potpack@1.0.2`
 - `topojson-client@3.1.0`
 - `which@2.0.2`
-- `world-atlas@2.0.2`
 
 ### MIT (58 resolved package versions)
 
@@ -112,7 +111,7 @@ license.
 
 | Material                        | Version                                                  | Terms                                                                                                                                              | Attribution                                                                   |
 | ------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Natural Earth Admin 0 countries | 4.1.0 through `world-atlas` 2.0.2                        | Public domain                                                                                                                                      | Made with Natural Earth                                                       |
+| Natural Earth Admin 0 countries | 5.1.2, 1:10m China view with Taiwan from default view    | Public domain                                                                                                                                      | Made with Natural Earth                                                       |
 | GeoNames major-city snapshot    | Captured 2026-08-01T09:39:05.688Z                        | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | Contains GeoNames data, licensed under CC BY 4.0                              |
 | Community surname observation   | Popular Names by Country v1.2                            | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) plus upstream [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) provenance | Community-compiled source-listed surname records; see `DATA_SOURCES.md`       |
 | Iranian surname supplement      | `farbodbj/iranian-surname-frequencies` commit `9fb2fdcc` | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0)                                                                                          | Iran rank-one record from a community frequency sample; see `DATA_SOURCES.md` |
@@ -134,6 +133,12 @@ attribution above; the large raw rolling downloads are not redistributed.
   generator with the OpenCC `t` to `cn` dictionaries. It is not imported by the
   application runtime or production bundle. npm declares `MIT AND Apache-2.0`;
   source and notices are at <https://github.com/nk2028/opencc-js>.
+- `topojson-server@3.0.1` and `topojson-simplify@3.0.3`, pinned in
+  `pnpm-lock.yaml`, are used only by `scripts/build-mundus-countries.mjs` to
+  build and simplify the country topologies. They are ISC licensed and are not
+  imported by the application runtime; source and notices are at
+  <https://github.com/topojson/topojson-server> and
+  <https://github.com/topojson/topojson-simplify>.
 
 `meshoptimizer@1.1.1` is also used at runtime to decode the lazy Natural Earth
 vector globe buffers. It is MIT licensed; its exact bundled notice is emitted
