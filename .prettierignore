@@ -7,3 +7,6 @@ pnpm-lock.yaml
 src/data/generated
 docs/superpowers
 .worktrees
+.claude/settings.local.json
+output
+tmp

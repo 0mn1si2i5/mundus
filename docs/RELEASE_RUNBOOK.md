@@ -1,4 +1,4 @@
-# V1 release runbook
+# GitHub Pages release runbook
 
 Status: current Pages build, deploy and rollback procedure. Release identity
 and authorization gates are recorded in `AGENTS.md`.
@@ -30,7 +30,8 @@ product-owner approval.
 - The deployment job alone receives `pages: write` and `id-token: write`.
 - The live-smoke job uses the URL returned by `actions/deploy-pages` and checks
   HTTP success, the expected title, loaded resources, and a completed frame
-  sample from the initial Other Side canvas on desktop and mobile viewports.
+  sample from the lobby canvas on desktop and mobile viewports. This proves
+  hosting and initial rendering, not complete mode or manual acceptance.
 
 The workflow pins Node.js 22.23.1, pnpm 11.7.0, and immutable commits for the
 official GitHub and pnpm actions. Production source maps are prohibited. The

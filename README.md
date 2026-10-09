@@ -7,15 +7,14 @@ different scientific lenses. It is designed as a small digital museum exhibit:
 direct enough to explore, explicit about its methods, and careful about the
 limits of its data.
 
-The current implementation includes four observation modes. **V1.1.0 Parchment Atlas**
-ships:
+The current implementation includes four observation modes. Other Side, Surname
+Atlas and Urban Proximity are the primary observations; Sunline remains under
+More observations:
 
 - **Other Side** calculates exact antipodal endpoints and shows the nearest
   eligible major city to each endpoint in the bundled GeoNames snapshot. These
   are represented major-city results, not nearest settlements, boundaries, or
   built areas.
-- **Sunline** visualizes the day-night boundary and estimates solar position,
-  sunrise, and sunset in UTC for educational use.
 - **Surname Atlas** places one surname wordmark on every country that has a
   country-specific source record: the rank-one surname where a numeric rank
   exists, otherwise a source-listed or manually compiled common surname, each
@@ -28,19 +27,15 @@ ships:
 - **Urban Proximity** shows the distance to the nearest GHSL urban centre that
   meets a visible population threshold α, with a ranked list and step chart.
   Distances are great-circle distances between urban-centre points, not travel
-  accessibility.
+  accessibility. Its global field view partitions land by distance divided
+  by each centre's current proximity distance, with a centre for each region.
+- **Sunline** visualizes the day-night boundary and estimates solar position,
+  sunrise, and sunset in UTC for educational use.
 
-The verified public site is <https://0mn1si2i5.github.io/mundus/>. The V1.1
-product implementation entered protected `main` at
-`1a9c44700e2154186708772a7773fd8972a7aaf2` and passed CI, Pages deployment,
-live smoke, and desktop/mobile manual verification on 2026-08-02. It uses a
-parchment exhibition presentation, a draggable Other Side cross-section,
-bilingual city search, bilateral city relations, and a Natural Earth vector
-globe.
-
-Tag `v1.0.0` and the existing GitHub Release remain at
-`a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`; no V1.1 tag or GitHub Release has
-been created.
+The public site is <https://0mn1si2i5.github.io/mundus/>. Deployment evidence
+and known verification limits are recorded in [Implementation status](docs/IMPLEMENTATION.md).
+The site follows `main`; formal versioned snapshots are listed in
+[GitHub Releases](https://github.com/0mn1si2i5/mundus/releases).
 
 ## Run locally
 
@@ -93,8 +88,19 @@ src/
   styles/        Global tokens and base styles
   test/          Unit-test setup
 tests/e2e/       Real-browser release checks
+tests/release/   Live deployment smoke tests
+scripts/         Offline data builds and release verification
 docs/            Product decisions and implementation evidence
+.github/         CI and GitHub Pages workflows
 ```
+
+Mundus is a static browser application with one shared 3D globe and no backend
+or database. Its architecture and mode contracts are in
+[Project plan](docs/PROJECT_PLAN.md). Generated data under `src/data/generated/`
+includes both runtime assets and immutable inputs for offline rebuilding;
+these are tracked release inputs. Raw downloads, research images, and local
+test evidence belong outside the checkout. Dependencies and regenerable
+build/test outputs are ignored by Git.
 
 Security issues should be reported privately according to
 [SECURITY.md](SECURITY.md).
