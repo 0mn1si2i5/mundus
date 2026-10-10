@@ -17,9 +17,10 @@ export const SOURCES = {
     licence: 'CC BY 4.0',
     licenceUrl: cc,
     bytes: 482351880,
-    sha256: null,
+    sha256: '579fb7477b33d9be61e9562b170ea108a670b85ef6fe23b61a22d17200929636',
     retrievedAt: '2026-10-10',
-    selection: 'Single population-count band, epoch 2020; nodata -200.',
+    selection:
+      'Single float64 population-count band, epoch 2020; this published file has no nodata tag and declares 100% valid cells. Preserve its shifted 30-arcsecond affine grid and map by pixel centres.',
   },
   gdp: {
     id: 'kummu-gdp-v4',
@@ -32,7 +33,7 @@ export const SOURCES = {
     licenceUrl: cc,
     bytes: 184157771,
     md5: '25b38c030acb6c528bfb9c72970c2876',
-    sha256: null,
+    sha256: '3e11f274d342a0af6a81385ca749b6712aea0f0102f353f05c6edbc6c02ef366',
     retrievedAt: '2026-10-10',
     selection:
       'Band whose GDAL description is 2020; 2021 international dollars (PPP), as explicitly stated by v4 metadata.',
@@ -47,7 +48,8 @@ export const SOURCES = {
     licence: 'CC BY 4.0',
     licenceUrl: cc,
     bytes: 1329127164,
-    sha256: null,
+    supportsResume: false,
+    sha256: '1ac433fcb3ad1fa3b4fffd3bfa0f740d13eff66db2571c955bc08ecf98973433',
     retrievedAt: '2026-10-10',
     selection:
       'Twelve months; CO2 oil, coal, gas and cement calcination; exclude bunkers and cement carbonation; inspect variable units before conversion to tonnes CO2/year.',
@@ -91,6 +93,8 @@ export const SOURCES = {
     licence: 'Public domain',
     licenceUrl: pd,
     retrievedAt: '2026-10-10',
+    selection:
+      'Full-detail China boundary view combined through the existing mundusCountryFeatures boundary policy.',
   },
   default: {
     ...countrySources.default,
@@ -101,5 +105,7 @@ export const SOURCES = {
     licence: 'Public domain',
     licenceUrl: pd,
     retrievedAt: '2026-10-10',
+    selection:
+      'Full-detail default boundary view combined through the existing mundusCountryFeatures boundary policy.',
   },
 };

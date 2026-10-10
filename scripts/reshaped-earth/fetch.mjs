@@ -53,6 +53,9 @@ export async function fetchSource(key, { capture = false } = {}) {
   if (!exists) {
     console.log(`Downloading ${key}: ${source.fileName}`);
     const partial = `${path}.partial`;
+    const partialSize = (await stat(partial).catch(() => null))?.size ?? 0;
+    if (partialSize > (source.bytes ?? Infinity))
+      throw new Error(`${key}: partial file exceeds reviewed source size`);
     // curl honours the host's proxy configuration. No automatic retry loop:
     // an unavailable source is reported for a deliberate, bounded retry.
     await run(
@@ -66,6 +69,9 @@ export async function fetchSource(key, { capture = false } = {}) {
         '900',
         '--max-filesize',
         String(source.bytes ?? 100_000_000),
+        ...(partialSize && source.supportsResume !== false
+          ? ['--continue-at', '-']
+          : []),
         '--output',
         partial,
         source.downloadUrl ?? source.url,

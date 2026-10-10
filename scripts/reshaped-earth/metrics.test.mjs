@@ -10,6 +10,7 @@ import {
   geographicGridFromTags,
   openGeoTiffReader,
   selectYearBand,
+  sumMonthlyCo2Slice,
 } from './metrics.mjs';
 
 const run = promisify(execFile);
@@ -76,6 +77,27 @@ test('GDP sample selection uses the unique 2020 description and rejects ambiguou
   assert.throws(() => selectYearBand(['2019', '2021']), /found 0/);
   assert.throws(() => selectYearBand(['2020', 'year 2020']), /found 2/);
   assert.throws(() => selectYearBand(['20201']), /found 0/);
+});
+
+test('published endpoint/shifted geographic pixel edges retain their affine centres', () => {
+  const grid = geographicGridFromTags({
+    width: 43202,
+    height: 21384,
+    tiepoint: [0, 0, 0, -180.00791593130032, 89.0995831776456, 0],
+    pixelScale: [0.00833333330032682, 0.008333333299795073, 0],
+  });
+  assert.equal(grid.west, -180.00791593130032);
+  assert.equal(grid.dx, 0.00833333330032682);
+  assert.throws(
+    () =>
+      geographicGridFromTags({
+        width: 43200,
+        height: 21600,
+        tiepoint: [0, 0, 0, -181, 90, 0],
+        pixelScale: [1 / 120, 1 / 120, 0],
+      }),
+    /bounds/,
+  );
 });
 
 test('GeoTIFF affine tags preserve both signed axes and nonzero tiepoint indices', () => {
@@ -310,7 +332,7 @@ test('excluded units stay null and excluded source mass remains explicit in cons
   assert.equal(result.diagnostics.relativeError, 0);
 });
 
-test('source rows, parent mappings, invalid DN and pending CO2 reader fail visibly', async (t) => {
+test('source rows, parent mappings, invalid DN and CO2 latitude ordering fail visibly', async (t) => {
   const labelPath = await fixture(t, [1]);
   const options = {
     key: 'lights',
@@ -336,8 +358,25 @@ test('source rows, parent mappings, invalid DN and pending CO2 reader fail visib
     }),
     /lacks a parent/,
   );
-  await assert.rejects(
-    aggregateMetric({ ...options, key: 'co2' }),
-    /CO2 variable metadata is pending/,
+  assert.deepEqual(
+    Array.from(
+      sumMonthlyCo2Slice({
+        slices: [Float64Array.from([1000, 2000, 3000, 4000])],
+        width: 2,
+        rows: 2,
+        months: 1,
+      }),
+    ),
+    [3, 4, 1, 2],
+  );
+  assert.throws(
+    () =>
+      sumMonthlyCo2Slice({
+        slices: [Float64Array.from([1, -1])],
+        width: 2,
+        rows: 1,
+        months: 1,
+      }),
+    /Invalid CO2 value/,
   );
 });

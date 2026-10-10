@@ -68,6 +68,11 @@ function polygons(geometry) {
 }
 
 function unwrappedRing(ring) {
+  if (ring instanceof Float64Array)
+    ring = Array.from({ length: ring.length / 2 }, (_, i) => [
+      ring[i * 2],
+      ring[i * 2 + 1],
+    ]);
   if (!ring.length) return [];
   const output = [[ring[0][0], ring[0][1]]];
   let previous = ring[0][0];
@@ -85,6 +90,39 @@ function unwrappedRing(ring) {
   if (Math.abs(output.at(-1)[0] - output[0][0]) > 180)
     return ring.map(([x, y]) => [x, y]);
   return output;
+}
+
+/** Retain full precision while releasing the millions of parsed point arrays. */
+export function compactClassificationFeatures(features) {
+  const packPolygon = (polygon) =>
+    polygon.map((ring) => {
+      if (ring instanceof Float64Array) return ring;
+      const packed = new Float64Array(ring.length * 2);
+      for (let i = 0; i < ring.length; i += 1) {
+        packed[i * 2] = ring[i][0];
+        packed[i * 2 + 1] = ring[i][1];
+      }
+      return packed;
+    });
+  return features.map((feature) => ({
+    ...feature,
+    geometry: {
+      type: feature.geometry.type,
+      coordinates:
+        feature.geometry.type === 'Polygon'
+          ? packPolygon(feature.geometry.coordinates)
+          : feature.geometry.coordinates.map(packPolygon),
+    },
+  }));
+}
+
+/** Apply the existing country's boundary view before compacting its rings. */
+export function prepareCountryInputs(chn, defaultView) {
+  const countries = mundusCountryFeatures(chn, defaultView);
+  return {
+    countries: compactClassificationFeatures(countries),
+    a3CountryIds: countryA3Map(chn, defaultView, countries),
+  };
 }
 
 /**

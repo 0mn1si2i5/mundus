@@ -8,12 +8,38 @@ import { promisify } from 'node:util';
 import {
   buildUnits,
   cellAreaKm2,
+  compactClassificationFeatures,
   rasterizeFeatures,
   readLabelStripes,
   resolveClassification,
 } from './units.mjs';
 
 const run = promisify(execFile);
+
+test('packed full-precision rings preserve scanline labels, holes and seams', () => {
+  const features = [
+    country('ne-001', [ring(-4, -4, 4, 4), ring(-2, -2, 2, 2)]),
+    country('ne-002', [
+      [
+        [179, -1],
+        [-179, -1],
+        [-179, 1],
+        [179, 1],
+        [179, -1],
+      ],
+    ]),
+  ];
+  for (const options of [
+    { width: 64, height: 32, bounds: [-5, -5, 5, 5] },
+    { width: 720, height: 360 },
+  ]) {
+    assert.deepEqual(
+      rasterizeFeatures(compactClassificationFeatures(features), options),
+      rasterizeFeatures(features, options),
+    );
+  }
+  assert.ok(Array.isArray(features[0].geometry.coordinates[0]));
+});
 
 function ring(west, south, east, north) {
   return [

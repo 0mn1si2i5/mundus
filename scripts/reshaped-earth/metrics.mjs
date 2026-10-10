@@ -6,10 +6,11 @@ const DEG = Math.PI / 180;
 const CONFIG = {
   population: { year: 2020, unit: 'persons', oceanRadius: 2 },
   gdp: { year: 2020, unit: '2021 international dollars (PPP)', oceanRadius: 0 },
+  co2: { year: 2020, unit: 't CO2 / year', oceanRadius: 0 },
   lights: { year: 2020, unit: 'relative DN index', oceanRadius: 0 },
 };
 
-function checkGrid(width, height, bounds) {
+function checkGrid(width, height, bounds, allowPixelOverhang = false) {
   if (
     !Number.isInteger(width) ||
     width < 1 ||
@@ -24,13 +25,18 @@ function checkGrid(width, height, bounds) {
   )
     throw new RangeError('raster bounds must be [west, south, east, north]');
   const [west, south, east, north] = bounds;
+  // Some published geographic rasters include endpoint samples at -180 and
+  // +180. Their pixel edges extend up to one pixel beyond the globe; preserve the
+  // signed affine coordinates and wrap their centres during aggregation.
+  const padX = allowPixelOverhang ? ((east - west) / width) * 1.05 : 0;
+  const padY = allowPixelOverhang ? ((north - south) / height) * 1.05 : 0;
   if (
     !(west < east) ||
     !(south < north) ||
-    west < -180 - 1e-7 ||
-    east > 180 + 1e-7 ||
-    south < -90 - 1e-7 ||
-    north > 90 + 1e-7
+    west < -180 - padX - 1e-7 ||
+    east > 180 + padX + 1e-7 ||
+    south < -90 - padY - 1e-7 ||
+    north > 90 + padY + 1e-7
   )
     throw new RangeError('raster bounds exceed geographic coordinates');
   return {
@@ -142,12 +148,17 @@ export function geographicGridFromTags({
     x0 -= rx / 2;
     y0 -= ry / 2;
   }
-  const grid = checkGrid(width, height, [
-    Math.min(x0, x0 + width * rx),
-    Math.min(y0, y0 + height * ry),
-    Math.max(x0, x0 + width * rx),
-    Math.max(y0, y0 + height * ry),
-  ]);
+  const grid = checkGrid(
+    width,
+    height,
+    [
+      Math.min(x0, x0 + width * rx),
+      Math.min(y0, y0 + height * ry),
+      Math.max(x0, x0 + width * rx),
+      Math.max(y0, y0 + height * ry),
+    ],
+    true,
+  );
   return { ...grid, rx, ry, x0, y0, affine: [x0, rx, 0, y0, 0, ry] };
 }
 
@@ -156,10 +167,14 @@ export function geographicGridFromTags({
  * sample descriptions, select 2020, then decode ONE sample in row stripes.
  * Reversed affine axes are normalized. Rotated/projected inputs fail visibly.
  */
-export async function openGeoTiffReader(path, { key, stripeRows = 16 } = {}) {
-  if (!CONFIG[key]) throw new Error(`No approved GeoTIFF reader for ${key}`);
+export async function openGeoTiffReader(path, { key, stripeRows } = {}) {
+  if (!['population', 'gdp', 'lights'].includes(key))
+    throw new Error(`No approved GeoTIFF reader for ${key}`);
   if (!path) throw new TypeError('GeoTIFF path is required');
-  if (!Number.isInteger(stripeRows) || stripeRows < 1)
+  if (
+    stripeRows !== undefined &&
+    (!Number.isInteger(stripeRows) || stripeRows < 1)
+  )
     throw new RangeError('stripeRows must be a positive integer');
   const { fromFile } = await import('geotiff');
   const tiff = await fromFile(path);
@@ -167,6 +182,9 @@ export async function openGeoTiffReader(path, { key, stripeRows = 16 } = {}) {
     const image = await tiff.getImage(0);
     const width = image.getWidth();
     const height = image.getHeight();
+    // Read each compressed tile once. A 256-row float64 population stripe
+    // occupies about 84 MiB, instead of repeatedly decoding a tile 16 times.
+    stripeRows ??= image.isTiled ? Math.min(256, image.getTileHeight()) : 16;
     const samples = image.getSamplesPerPixel();
     const geoKeys = image.getGeoKeys();
     if (
@@ -213,6 +231,7 @@ export async function openGeoTiffReader(path, { key, stripeRows = 16 } = {}) {
       offset,
       rasterPixelIsPoint: point,
       affine,
+      stripeRows,
       datasetMetadata,
       bandMetadata: chosen,
     };
@@ -250,6 +269,165 @@ export async function openGeoTiffReader(path, { key, stripeRows = 16 } = {}) {
     await tiff.close();
     throw error;
   }
+}
+
+/**
+ * GridFED v2025.1 is a netCDF4/HDF5 file. Read only the reviewed fossil and
+ * cement-calcination groups, summing twelve kg/month samples into tonnes/year
+ * while yielding north-to-south 0.1-degree stripes. Bunkers and carbonation
+ * remain deliberately excluded by the variable allow-list.
+ */
+export async function openGridFedReader(path, { stripeRows = 8 } = {}) {
+  if (!path) throw new TypeError('GridFED path is required');
+  if (!Number.isInteger(stripeRows) || stripeRows < 1)
+    throw new RangeError('stripeRows must be a positive integer');
+  const h5 = await import('h5wasm/node');
+  await h5.ready;
+  const file = new h5.File(path, 'r');
+  const expected = ['OIL', 'GAS', 'COAL', 'CEMENT'];
+  try {
+    const lat = file.get('lat');
+    const lon = file.get('lon');
+    const time = file.get('time');
+    if (
+      !lat ||
+      !lon ||
+      !time ||
+      lat.shape?.[0] !== 1800 ||
+      lon.shape?.[0] !== 3600 ||
+      time.shape?.[0] !== 12
+    )
+      throw new Error('GridFED dimensions are not 12×1800×3600');
+    const latUnits = lat.attrs?.units?.value;
+    const timeUnits = time.attrs?.units?.value;
+    const latValues = lat.value ?? lat.slice();
+    const lonValues = lon.value ?? lon.slice();
+    const timeValues = time.value ?? time.slice();
+    const closeTo = (actual, expected, tolerance = 2e-5) =>
+      Number.isFinite(actual) &&
+      Math.abs(Number(actual) - expected) <= tolerance;
+    if (
+      latUnits !== 'Degrees_N' ||
+      timeUnits !== 'days since 2020-01-01' ||
+      !closeTo(latValues[0], -89.95) ||
+      !closeTo(latValues[1799], 89.95) ||
+      !closeTo(lonValues[0], -179.95) ||
+      !closeTo(lonValues[3599], 179.95) ||
+      !closeTo(timeValues[0], 0) ||
+      !closeTo(timeValues[11], 335) ||
+      Array.from(latValues).some(
+        (value, i) => !closeTo(value, -89.95 + i * 0.1),
+      ) ||
+      Array.from(lonValues).some(
+        (value, i) => !closeTo(value, -179.95 + i * 0.1),
+      ) ||
+      Array.from(timeValues).some(
+        (value, i) =>
+          value !== [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335][i],
+      )
+    )
+      throw new Error('GridFED coordinate metadata mismatch');
+    const datasets = expected.map((name) => file.get(`CO2/${name}`));
+    for (const [name, dataset] of expected.map((name, i) => [
+      name,
+      datasets[i],
+    ])) {
+      const units = dataset?.attrs?.units?.value;
+      if (
+        !dataset ||
+        JSON.stringify(dataset.shape) !== '[12,1800,3600]' ||
+        units !== 'kg CO2 cell-1 month-1'
+      )
+        throw new Error(`GridFED ${name} metadata mismatch`);
+    }
+    const metadata = {
+      ...CONFIG.co2,
+      key: 'co2',
+      width: 3600,
+      height: 1800,
+      bounds: [-180, -90, 180, 90],
+      variables: expected,
+      sourceUnits: 'kg CO2 cell-1 month-1',
+      excludedVariables: [
+        'BUNKER_AVIATION',
+        'BUNKER_SHIPPING',
+        'CEMENT_CARBONATION',
+      ],
+      conversion:
+        'sum 12 months and OIL/GAS/COAL/CEMENT then divide kg by 1000',
+      stripeRows,
+    };
+    return {
+      width: 3600,
+      height: 1800,
+      bounds: [-180, -90, 180, 90],
+      metadata,
+      close: () => file.close(),
+      async *rows() {
+        for (let northRow = 0; northRow < 1800; northRow += stripeRows) {
+          const count = Math.min(stripeRows, 1800 - northRow);
+          const latStart = 1800 - northRow - count;
+          const latEnd = 1800 - northRow;
+          const sum = new Float64Array(count * 3600);
+          for (const dataset of datasets) {
+            const values = dataset.slice([[0, 12], [latStart, latEnd], []]);
+            if (values.length !== 12 * count * 3600)
+              throw new Error('GridFED slice length mismatch');
+            const partial = sumMonthlyCo2Slice({
+              slices: [values],
+              width: 3600,
+              rows: count,
+            });
+            for (let i = 0; i < sum.length; i += 1) sum[i] += partial[i];
+          }
+          // GridFED stores latitude south→north. The aggregation contract is
+          // north→south so that row indices align with GeoTIFF readers and the
+          // 30″ classification raster.
+          for (let row = 0; row < count; row += 1)
+            yield {
+              row: northRow + row,
+              values: sum.subarray(row * 3600, (row + 1) * 3600),
+            };
+        }
+      },
+    };
+  } catch (error) {
+    file.close();
+    throw error;
+  }
+}
+
+/** Sum GridFED monthly kg values into tonnes, reversing south→north rows. */
+export function sumMonthlyCo2Slice({ slices, width, rows, months = 12 } = {}) {
+  if (
+    !Array.isArray(slices) ||
+    slices.length === 0 ||
+    !Number.isInteger(width) ||
+    width < 1 ||
+    !Number.isInteger(rows) ||
+    rows < 1 ||
+    !Number.isInteger(months) ||
+    months < 1
+  )
+    throw new RangeError('CO2 slice dimensions are invalid');
+  const result = new Float64Array(width * rows);
+  for (const values of slices) {
+    if (!values || values.length !== months * rows * width)
+      throw new Error('CO2 slice length mismatch');
+    for (let month = 0; month < months; month += 1)
+      for (let southRow = 0; southRow < rows; southRow += 1) {
+        const northRow = rows - 1 - southRow;
+        const source = (month * rows + southRow) * width;
+        const target = northRow * width;
+        for (let x = 0; x < width; x += 1) {
+          const value = Number(values[source + x]);
+          if (!Number.isFinite(value) || value < 0)
+            throw new Error(`Invalid CO2 value ${value}`);
+          result[target + x] += value / 1000;
+        }
+      }
+  }
+  return result;
 }
 
 async function* sourceRows(reader, grid) {
@@ -392,26 +570,27 @@ export async function aggregateMetric({
   scale,
   offset,
   oceanRadius = CONFIG[key]?.oceanRadius ?? 0,
-  stripeRows = 16,
+  stripeRows,
   onProgress,
   enforcePopulationChecks = false,
+  enforceCo2Checks = false,
 } = {}) {
-  if (!CONFIG[key])
-    throw new Error(
-      `No approved reader for ${key}; CO2 variable metadata is pending`,
-    );
+  if (!CONFIG[key]) throw new Error(`No approved reader for ${key}`);
   if (!labelPath) throw new TypeError('aggregateMetric requires labelPath');
   const target = checkGrid(width, height, bounds);
   if (!Number.isInteger(oceanRadius) || oceanRadius < 0 || oceanRadius > 2)
     throw new RangeError('coastal search radius must be 0–2 pixels');
   const supplied = Boolean(reader);
-  reader ??= await openGeoTiffReader(path, { key, stripeRows });
+  reader ??= await (key === 'co2'
+    ? openGridFedReader(path, { stripeRows })
+    : openGeoTiffReader(path, { key, stripeRows }));
   let window;
   try {
     const source = checkGrid(
       sourceWidth ?? reader.width,
       sourceHeight ?? reader.height,
       sourceBounds ?? reader.bounds ?? bounds,
+      true,
     );
     const alignment = gridAlignment(source, target);
     if (key === 'population' && !alignment.fine)
@@ -697,6 +876,14 @@ export async function aggregateMetric({
           `Population global total ${total.value} differs from official 2020 scale by more than 2%`,
         );
     }
+    if (
+      enforceCo2Checks &&
+      key === 'co2' &&
+      !(Math.abs(total.value / 34.3e9 - 1) <= 0.05)
+    )
+      throw new Error(
+        `CO2 global total ${total.value} differs from 2020 fossil-emission scale by more than 5%`,
+      );
     return {
       values,
       countryValues,

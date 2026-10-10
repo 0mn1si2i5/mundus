@@ -10,8 +10,8 @@ import { buildUnits } from './reshaped-earth/units.mjs';
 import { aggregateMetric } from './reshaped-earth/metrics.mjs';
 
 // Source capture and classification are independently resumable. Production
-// publication is deliberately unavailable until the remaining CO2 reader and
-// all eight encoded-field acceptance results have been verified. This script
+// publication is deliberately unavailable until all eight encoded-field
+// acceptance results have been verified. This script
 // must never synthesize substitute numbers or publish placeholder geometry.
 const phase = process.argv.find((arg) => arg.startsWith('--phase='))?.slice(8);
 if (process.argv.includes('--capture')) {
@@ -63,7 +63,7 @@ if (process.argv.includes('--capture')) {
     `${JSON.stringify(metrics, null, 2)}\n`,
   );
   throw new Error(
-    'Production publication pending: inspect complete GridFED 2020 archive, implement its metadata-validated CO2 reader, then validate all eight encoded cartograms. No generated asset changed.',
+    'Production publication pending: all eight encoded cartograms must pass acceptance. The GridFED reader is available; no generated asset changed.',
   );
 } else {
   throw new Error(

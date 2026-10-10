@@ -6,6 +6,7 @@ import {
   computeUnitAreas,
   createCartogram,
   createDiffusionSolver,
+  createGsm2018Solver,
   dct,
   densityInMappedSpace,
   fft2d,
@@ -132,6 +133,178 @@ test('mixed FFT/DCT heat evolution and both gradients match an analytic eigenmod
       );
     }
   assert.ok(solver.evaluate(1).maxSpeed < field.maxSpeed);
+});
+
+test('GSM2018 uses a linear density path and a time-independent analytic Poisson flux', () => {
+  const width = 16;
+  const height = 8;
+  const density = Float64Array.from({ length: width * height }, (_, i) => {
+    const theta = (2 * Math.PI * ((i % width) + 0.5)) / width;
+    const phi = (Math.PI * (Math.floor(i / width) + 0.5)) / height;
+    return 2 * (1 + 0.3 * Math.cos(theta) * Math.cos(phi));
+  });
+  const solver = createGsm2018Solver({ width, height, density, blurSigma: 0 });
+  const squaredFrequency = 1 + Math.PI ** 2 / 4;
+  const velocity = new Float64Array(2);
+  for (const time of [0, 0.25, 0.5, 1]) {
+    const field = solver.evaluate(time);
+    for (let y = 0; y < height; y += 1)
+      for (let x = 0; x < width; x += 1) {
+        const theta = (2 * Math.PI * (x + 0.5)) / width;
+        const phi = (Math.PI * (y + 0.5)) / height;
+        const i = y * width + x;
+        const rho = 1 + (1 - time) * 0.3 * Math.cos(theta) * Math.cos(phi);
+        const fluxX =
+          (0.3 * Math.sin(theta) * Math.cos(phi)) /
+          (2 * Math.PI * squaredFrequency);
+        const fluxY =
+          (0.3 * Math.PI * Math.cos(theta) * Math.sin(phi)) /
+          (4 * squaredFrequency);
+        close(field.densityAtCell(i), rho, 1e-12);
+        close(solver.fluxX[i], fluxX, 1e-12);
+        close(solver.fluxY[i], fluxY, 1e-12);
+        field.sample((x + 0.5) / width, (y + 0.5) / height, velocity);
+        close(velocity[0], fluxX / rho, 1e-12);
+        close(velocity[1], fluxY / rho, 1e-12);
+      }
+  }
+  assert.equal(solver.spectralEvaluations, 2);
+  assert.equal(solver.evaluations, 4);
+  assert.throws(() => solver.evaluate(1.01), /GSM2018 time/);
+});
+
+test('GSM2018 uniform density is identity and mapped-space correction reaches 2:1 without folds', () => {
+  const flat = createCartogram({
+    width: 8,
+    height: 4,
+    density: new Float64Array(32).fill(3),
+    algorithm: 'gsm2018',
+  });
+  assert.equal(flat.diagnostics.finalTime, 1);
+  assert.equal(flat.diagnostics.acceptedSteps, 0);
+  assert.deepEqual(flat.forward(0.25, 0.5), [0.25, 0.5]);
+  const width = 64;
+  const height = 32;
+  const density = Float64Array.from({ length: width * height }, (_, i) =>
+    i % width < width / 2 ? 2 : 1,
+  );
+  const ids = Uint8Array.from(density, (value) => (value === 2 ? 1 : 2));
+  let map = createCartogram({ width, height, density, algorithm: 'gsm2018' });
+  assert.equal(map.diagnostics.algorithm, 'gsm2018-fast-flow');
+  assert.equal(map.diagnostics.densityPath, 'linear-to-mean');
+  assert.equal(map.diagnostics.finalTime, 1);
+  assert.equal(map.diagnostics.spectralEvaluations, 2);
+  assert.ok(map.diagnostics.acceptedSteps > 0);
+  const initialAreas = computeUnitAreas(map, ids);
+  const initialError = areaRelativeError(
+    initialAreas.get(1) / initialAreas.get(2),
+    2,
+  );
+  // Gaussian blur changes the first-round mass around a block boundary. The
+  // planned outer correction works in deformed space using ORIGINAL density,
+  // retains the ±2% target, and halves blur rather than relaxing acceptance.
+  for (const blurSigma of [0.25, 0.125]) {
+    const remapped = densityInMappedSpace(map, density);
+    const correction = createCartogram({
+      width,
+      height,
+      density: remapped.density,
+      algorithm: 'gsm2018',
+      blurSigma,
+    });
+    map = composeCartograms(map, correction);
+  }
+  const areas = computeUnitAreas(map, ids);
+  const finalError = areaRelativeError(areas.get(1) / areas.get(2), 2);
+  assert.ok(finalError < 0.02);
+  assert.ok(finalError < initialError);
+  assert.equal(map.diagnostics.algorithm, 'composed-gsm2018-fast-flow');
+  assert.equal(map.diagnostics.rounds.length, 3);
+  const orientation = measureTriangleOrientation(map);
+  assert.equal(orientation.nonPositive, 0);
+  assert.ok(orientation.totalAreaRelativeError < 1e-6);
+  for (let y = 0; y <= height; y += 1) {
+    const left = map.forward(0, y / height);
+    const right = map.forward(1, y / height);
+    close(right[0] - left[0], 1, 1e-12);
+    close(right[1], left[1], 1e-12);
+    const beforeSeam = map.forward(1 - 1e-8, y / height);
+    const afterSeam = map.forward(1e-8, y / height);
+    assert.ok(Math.abs(beforeSeam[0] - afterSeam[0] - 1) < 1e-7);
+  }
+});
+
+test('GSM2018 bounded integration rejects large predictor steps and is deterministic', () => {
+  const width = 16;
+  const height = 8;
+  const density = Float64Array.from(
+    { length: width * height },
+    (_, i) => 1 + 0.6 * Math.sin((2 * Math.PI * (i % width)) / width),
+  );
+  const options = {
+    width,
+    height,
+    density,
+    algorithm: 'gsm2018',
+    initialStep: 1,
+  };
+  const first = createCartogram(options);
+  const second = createCartogram(options);
+  assert.ok(first.diagnostics.rejectedSteps > 0);
+  assert.equal(measureTriangleOrientation(first).positive, true);
+  assert.deepEqual(first.forwardGrid, second.forwardGrid);
+  assert.throws(
+    () => createCartogram({ ...options, maxSteps: 1 }),
+    /failed to converge/,
+  );
+  assert.throws(
+    () => createCartogram({ ...options, maxTime: 0.5 }),
+    /step budget/,
+  );
+  assert.throws(
+    () => createCartogram({ ...options, algorithm: 'unknown' }),
+    /algorithm/,
+  );
+  assert.throws(
+    () =>
+      createCartogram({
+        ...options,
+        onProgress() {
+          throw new Error('resource limit');
+        },
+      }),
+    /resource limit/,
+  );
+});
+
+test('GSM2018 two-dimensional flow reaches t=1, preserves reflecting poles and has an exact triangle inverse', () => {
+  const width = 32;
+  const height = 16;
+  const density = Float64Array.from({ length: width * height }, (_, i) => {
+    const x = ((i % width) + 0.5) / width;
+    const y = (Math.floor(i / width) + 0.5) / height;
+    return 1 + 0.7 * Math.sin(2 * Math.PI * x) * Math.cos(Math.PI * y);
+  });
+  const progress = [];
+  const map = createCartogram({
+    width,
+    height,
+    density,
+    algorithm: 'gsm2018',
+    onProgress: (value) => progress.push(value),
+  });
+  assert.equal(progress.at(-1).time, 1);
+  assert.equal(progress.length, map.diagnostics.acceptedSteps);
+  assert.ok(progress.every((value) => value.algorithm === 'gsm2018'));
+  assert.equal(measureTriangleOrientation(map).positive, true);
+  for (let x = 0; x <= width; x += 1) {
+    close(map.forward(x / width, 0)[1], 0);
+    close(map.forward(x / width, 1)[1], 1);
+  }
+  const inverse = rasterizeInverseMap(map, { width, height });
+  assert.equal(inverse.missingSamples, 0);
+  const roundTrip = measureRoundTrip(map);
+  assert.ok(roundTrip.maxDegrees < 1e-6);
 });
 
 test('uniform density remains identity and every mesh triangle has positive area', () => {

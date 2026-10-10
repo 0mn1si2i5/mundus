@@ -1,9 +1,9 @@
 /**
- * Density-equalizing diffusion flow on a cylindrical equal-area grid.
- * x is periodic (FFT); y is reflecting (cell-centred DCT-II). Spectral heat
- * evolution is analytic, rho_k(t) = rho_k(0) exp(-|k|^2 t), and the flow is
- * v = -grad(rho)/rho. This is the diffusion formulation, rather than the
- * different linear-density fast flow in Gastner, Seguy & More (2018).
+ * Density-equalizing flows on a cylindrical equal-area grid: x is periodic
+ * (FFT); y is reflecting (cell-centred DCT-II). `diffusion` uses analytic heat
+ * evolution rho_k(t)=rho_k(0) exp(-|k|^2 t), v=-grad(rho)/rho. `gsm2018` uses
+ * Gastner, Seguy & More's linear density path rho(t)=(1-t)rho0+t*rhoMean,
+ * with a time-independent flux solving div(J)=rho0-rhoMean and v=J/rho(t).
  * No runtime renderer or third-party numerical library is used here.
  */
 
@@ -297,7 +297,7 @@ function wrap01(value) {
  * sin(k theta) = (-1)^j cos((N-k) theta) at the DCT's sample centres.
  * The returned velocity components are in normalised coordinates / time.
  */
-export function createDiffusionSolver({
+function createSpectralSolver({
   width,
   height,
   density,
@@ -375,7 +375,7 @@ export function createDiffusionSolver({
     (_, y) => ((Math.PI * y) / domainHeight) ** 2,
   );
   let evaluations = 0;
-  function evaluate(time) {
+  function reconstruct(time, poisson = false) {
     if (!Number.isFinite(time) || time < 0)
       throw new RangeError('diffusion time must be finite and non-negative');
     const decayX = Float64Array.from(kxSquared, (k) => Math.exp(-k * time));
@@ -383,7 +383,12 @@ export function createDiffusionSolver({
     for (let x = 0; x < width; x += 1) {
       for (let y = 0; y < height; y += 1) {
         const i = y * width + x;
-        const decay = decayX[x] * decayY[y];
+        const squaredFrequency = kxSquared[x] + kySquared[y];
+        const decay = poisson
+          ? squaredFrequency > 0
+            ? 1 / squaredFrequency
+            : 0
+          : decayX[x] * decayY[y];
         cr[y] = spectrumReal[i] * decay;
         ci[y] = spectrumImag[i] * decay;
       }
@@ -442,12 +447,12 @@ export function createDiffusionSolver({
         rho[i] = real[i];
         minimumDensity = Math.min(minimumDensity, rho[i]);
         maximumDensity = Math.max(maximumDensity, rho[i]);
-        if (!(rho[i] > 0))
+        if (!poisson && !(rho[i] > 0))
           throw new Error(
             `Spectral density became non-positive at t=${time}, cell ${i}; increase blur or the density floor`,
           );
-        vx[i] = -xr[x] / rho[i];
-        vy[i] = -gradYReal[i] / rho[i];
+        vx[i] = poisson ? -xr[x] : -xr[x] / rho[i];
+        vy[i] = poisson ? -gradYReal[i] : -gradYReal[i] / rho[i];
         maxSpeed = Math.max(maxSpeed, Math.hypot(vx[i], vy[i]));
       }
     }
@@ -459,7 +464,101 @@ export function createDiffusionSolver({
     height,
     mean: floorMean,
     flooredCells,
-    evaluate,
+    evaluate: (time) => reconstruct(time),
+    evaluateFlux: () => reconstruct(0, true),
+    get evaluations() {
+      return evaluations;
+    },
+  };
+}
+
+export function createDiffusionSolver(options = {}) {
+  const solver = createSpectralSolver(options);
+  return {
+    width: solver.width,
+    height: solver.height,
+    mean: solver.mean,
+    flooredCells: solver.flooredCells,
+    evaluate: solver.evaluate,
+    get evaluations() {
+      return solver.evaluations;
+    },
+  };
+}
+
+function sampleScalar(values, width, height, x, y) {
+  const px = wrap01(x) * width - 0.5;
+  const baseX = Math.floor(px);
+  const x0 = ((baseX % width) + width) % width;
+  const x1 = (x0 + 1) % width;
+  const fx = px - baseX;
+  const py = clamp01(y) * height - 0.5;
+  const baseY = Math.floor(py);
+  const y0 = Math.min(height - 1, Math.max(0, baseY));
+  const y1 = Math.min(height - 1, Math.max(0, baseY + 1));
+  const fy = py - baseY;
+  return (
+    (1 - fy) *
+      ((1 - fx) * values[y0 * width + x0] + fx * values[y0 * width + x1]) +
+    fy * ((1 - fx) * values[y1 * width + x0] + fx * values[y1 * width + x1])
+  );
+}
+
+/**
+ * GSM2018 fast flow on the mixed periodic/reflecting domain. The flux is
+ * J=-grad(phi), phi_k=rho0_k/|k|^2 for every nonzero mode; the zero mode is 0.
+ * Thus div(J)=rho0-1 and d(rho)/dt+div(J)=0 throughout t in [0,1]. The density
+ * has mean 1 after normalization. Only the initial density and two flux arrays
+ * survive spectral preparation. Each time field samples J and rho separately
+ * before division, without running another FFT or allocating world arrays.
+ */
+export function createGsm2018Solver(options = {}) {
+  const spectral = createSpectralSolver(options);
+  const { width, height, mean, flooredCells } = spectral;
+  const {
+    rho: initialDensity,
+    minimumDensity: initialMinimum,
+    maximumDensity: initialMaximum,
+  } = spectral.evaluate(0);
+  const { vx: fluxX, vy: fluxY } = spectral.evaluateFlux();
+  const spectralEvaluations = spectral.evaluations;
+  const flux = { vx: fluxX, vy: fluxY };
+  let maxFlux = 0;
+  for (let i = 0; i < initialDensity.length; i += 1)
+    maxFlux = Math.max(maxFlux, Math.hypot(fluxX[i], fluxY[i]));
+  let evaluations = 0;
+  return {
+    width,
+    height,
+    mean,
+    flooredCells,
+    initialDensity,
+    fluxX,
+    fluxY,
+    spectralEvaluations,
+    evaluate(time) {
+      if (!Number.isFinite(time) || time < 0 || time > 1)
+        throw new RangeError('GSM2018 time must be in [0, 1]');
+      const minimumDensity = (1 - time) * initialMinimum + time;
+      const maximumDensity = (1 - time) * initialMaximum + time;
+      evaluations += 1;
+      return {
+        time,
+        minimumDensity,
+        maximumDensity,
+        maxSpeed: maxFlux / minimumDensity,
+        densityAtCell: (index) => (1 - time) * initialDensity[index] + time,
+        sample(x, y, output) {
+          sampleVelocity(flux, width, height, x, y, output);
+          const rho =
+            (1 - time) * sampleScalar(initialDensity, width, height, x, y) +
+            time;
+          output[0] /= rho;
+          output[1] /= rho;
+          return output;
+        },
+      };
+    },
     get evaluations() {
       return evaluations;
     },
@@ -467,6 +566,7 @@ export function createDiffusionSolver({
 }
 
 function sampleVelocity(field, width, height, x, y, output) {
+  if (field.sample) return field.sample(x, y, output);
   const px = wrap01(x) * width - 0.5;
   const x0 = ((Math.floor(px) % width) + width) % width;
   const x1 = (x0 + 1) % width;
@@ -668,7 +768,11 @@ export function createCartogram({
   domainWidth = TAU,
   domainHeight = 2,
   zeroDensityFloor = 0.01,
+  algorithm = 'diffusion',
 } = {}) {
+  if (!['diffusion', 'gsm2018'].includes(algorithm))
+    throw new RangeError('cartogram algorithm must be diffusion or gsm2018');
+  const linearFlow = algorithm === 'gsm2018';
   if (
     !Number.isFinite(tolerance) ||
     !Number.isFinite(speedTolerance) ||
@@ -678,13 +782,14 @@ export function createCartogram({
     !Number.isInteger(maxSteps) ||
     !(maxSteps > 0) ||
     !(maxTime > 0) ||
+    (linearFlow && maxTime < 1) ||
     (initialStep !== undefined &&
       (!Number.isFinite(initialStep) || initialStep <= 0))
   )
     throw new RangeError(
       'invalid diffusion integration tolerance or step budget',
     );
-  const solver = createDiffusionSolver({
+  const solver = (linearFlow ? createGsm2018Solver : createDiffusionSolver)({
     width,
     height,
     density,
@@ -696,24 +801,28 @@ export function createCartogram({
   let grid = identityNodes(width, height);
   let candidate = new Float64Array(grid.length);
   let field = solver.evaluate(0);
-  let time = 0;
+  let time = linearFlow && field.maxSpeed === 0 ? 1 : 0;
+  const limit = linearFlow ? 1 : maxTime;
   let step =
     initialStep ??
-    0.2 /
-      (((Math.PI * height) / domainHeight) ** 2 +
-        ((Math.PI * width) / domainWidth) ** 2);
+    (linearFlow
+      ? 0.01
+      : 0.2 /
+        (((Math.PI * height) / domainHeight) ** 2 +
+          ((Math.PI * width) / domainWidth) ** 2));
   let accepted = 0;
   let rejected = 0;
   let maximumLocalError = 0;
   const velocity = new Float64Array(2);
   const predictedVelocity = new Float64Array(2);
-  while (field.maxSpeed > speedTolerance) {
-    if (accepted + rejected >= maxSteps || time >= maxTime)
+  while (linearFlow ? time < 1 : field.maxSpeed > speedTolerance) {
+    if (accepted + rejected >= maxSteps || time >= limit)
       throw new Error(
-        `Diffusion flow failed to converge: t=${time}, maxSpeed=${field.maxSpeed}, accepted=${accepted}, rejected=${rejected}`,
+        `${linearFlow ? 'GSM2018' : 'Diffusion'} flow failed to converge: t=${time}, maxSpeed=${field.maxSpeed}, accepted=${accepted}, rejected=${rejected}`,
       );
-    step = Math.min(step, maxTime - time);
-    const nextField = solver.evaluate(time + step);
+    step = Math.min(step, limit - time);
+    const nextTime = Math.min(limit, time + step);
+    const nextField = solver.evaluate(nextTime);
     let error = 0;
     let boundaryValid = true;
     for (let y = 0; y <= height; y += 1) {
@@ -753,18 +862,26 @@ export function createCartogram({
         0.1,
         Math.min(0.5, 0.8 * Math.sqrt(tolerance / Math.max(error, EPSILON))),
       );
-      if (step < 1e-16)
+      if (step < 1e-12 || time + step === time)
         throw new Error(
-          'Diffusion flow step underflow while preventing mesh folding',
+          `${linearFlow ? 'GSM2018' : 'Diffusion'} flow step underflow while preventing mesh folding`,
         );
       continue;
     }
     [grid, candidate] = [candidate, grid];
-    time += step;
+    time = nextTime;
     field = nextField;
     accepted += 1;
     maximumLocalError = Math.max(maximumLocalError, error);
-    onProgress?.({ time, step, accepted, rejected, maxSpeed: field.maxSpeed });
+    onProgress?.({
+      phase: 'integration',
+      algorithm,
+      time,
+      step,
+      accepted,
+      rejected,
+      maxSpeed: field.maxSpeed,
+    });
     step *= Math.max(
       0.5,
       Math.min(2, 0.9 * Math.sqrt(tolerance / Math.max(error, 1e-30))),
@@ -775,7 +892,8 @@ export function createCartogram({
     height,
     forwardGrid: grid,
     diagnostics: {
-      algorithm: 'spectral-diffusion-flow',
+      algorithm: linearFlow ? 'gsm2018-fast-flow' : 'spectral-diffusion-flow',
+      densityPath: linearFlow ? 'linear-to-mean' : 'analytic-heat-diffusion',
       boundaryX: 'periodic-FFT',
       boundaryY: 'reflecting-DCT-II',
       blurSigma,
@@ -783,9 +901,15 @@ export function createCartogram({
       speedTolerance,
       acceptedSteps: accepted,
       rejectedSteps: rejected,
-      spectralEvaluations: solver.evaluations,
+      spectralEvaluations: linearFlow
+        ? solver.spectralEvaluations
+        : solver.evaluations,
+      velocityEvaluations: solver.evaluations,
       finalTime: time,
       finalMaxSpeed: field.maxSpeed,
+      speedMeasure: linearFlow
+        ? 'flux-over-min-density-upper-bound'
+        : 'cell-maximum',
       maximumLocalError,
       flooredCells: solver.flooredCells,
     },
@@ -902,16 +1026,23 @@ export function composeCartograms(first, correction) {
     grid[i] = p[0];
     grid[i + 1] = p[1];
   }
+  const rounds = [
+    ...(first.diagnostics.rounds ?? [first.diagnostics]),
+    ...(correction.diagnostics.rounds ?? [correction.diagnostics]),
+  ];
   const map = cartogramFromForwardGrid({
     width: first.width,
     height: first.height,
     forwardGrid: grid,
     diagnostics: {
-      algorithm: 'composed-spectral-diffusion-flow',
-      rounds: [
-        ...(first.diagnostics.rounds ?? [first.diagnostics]),
-        correction.diagnostics,
-      ],
+      algorithm: rounds.every(
+        (round) => round.algorithm === 'gsm2018-fast-flow',
+      )
+        ? 'composed-gsm2018-fast-flow'
+        : rounds.every((round) => round.algorithm === 'spectral-diffusion-flow')
+          ? 'composed-spectral-diffusion-flow'
+          : 'composed-density-equalizing-flow',
+      rounds,
     },
   });
   const orientation = measureTriangleOrientation(map);
