@@ -1,5 +1,13 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, rm, readdir } from 'node:fs/promises';
+import {
+  mkdtemp,
+  writeFile,
+  rm,
+  readdir,
+  mkdir,
+  rename,
+  readFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -7,6 +15,7 @@ import {
   assertProductionFields,
   buildIdRasters,
   publishProductionAssets,
+  publishVerifiedAssets,
 } from './publication.mjs';
 import { decodeRgbPng } from './png.mjs';
 
@@ -119,6 +128,112 @@ test('country publication preserves classified coastal ownership without publish
     assert.ok(assets['ids-country.png'].length <= 900_000);
   } finally {
     await rm(directory, { recursive: true });
+  }
+});
+
+test('publication keeps the atomic swap on the target filesystem', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'mundus-publication-swap-'));
+  const cacheDir = await mkdtemp(join(tmpdir(), 'mundus-publication-cache-'));
+  try {
+    const target = join(root, 'generated');
+    const prepared = join(root, 'prepared');
+    const manifestPath = join(root, 'manifest.json');
+    const manifestBuilding = `${manifestPath}.building`;
+    await mkdir(target);
+    await mkdir(prepared);
+    await writeFile(join(target, 'asset.txt'), 'old asset');
+    await writeFile(join(prepared, 'asset.txt'), 'new asset');
+    await writeFile(manifestPath, 'old manifest');
+    await writeFile(manifestBuilding, 'new manifest');
+    const renames = [];
+    const result = await publishVerifiedAssets({
+      target,
+      prepared,
+      manifestPath,
+      manifestBuilding,
+      cacheDir,
+      timestamp: 123,
+      operations: {
+        async rename(from, to) {
+          renames.push([from, to]);
+          if (from.startsWith(cacheDir) || to.startsWith(cacheDir)) {
+            const error = new Error('cross-filesystem rename');
+            error.code = 'EXDEV';
+            throw error;
+          }
+          return rename(from, to);
+        },
+      },
+    });
+    assert.equal(
+      await readFile(join(target, 'asset.txt'), 'utf8'),
+      'new asset',
+    );
+    assert.equal(await readFile(manifestPath, 'utf8'), 'new manifest');
+    assert.equal(
+      await readFile(join(result.retainedBackup, 'asset.txt'), 'utf8'),
+      'old asset',
+    );
+    assert.ok(
+      renames.every(
+        ([from, to]) => !from.startsWith(cacheDir) && !to.startsWith(cacheDir),
+      ),
+    );
+    assert.deepEqual(await readdir(root), ['generated', 'manifest.json']);
+  } finally {
+    await Promise.all([
+      rm(root, { recursive: true, force: true }),
+      rm(cacheDir, { recursive: true, force: true }),
+    ]);
+  }
+});
+
+test('publication restores the old candidate when manifest swap fails', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'mundus-publication-rollback-'));
+  const cacheDir = await mkdtemp(join(tmpdir(), 'mundus-publication-cache-'));
+  try {
+    const target = join(root, 'generated');
+    const prepared = join(root, 'prepared');
+    const manifestPath = join(root, 'manifest.json');
+    const manifestBuilding = `${manifestPath}.building`;
+    await mkdir(target);
+    await mkdir(prepared);
+    await writeFile(join(target, 'asset.txt'), 'old asset');
+    await writeFile(join(prepared, 'asset.txt'), 'new asset');
+    await writeFile(manifestPath, 'old manifest');
+    await writeFile(manifestBuilding, 'new manifest');
+    await assert.rejects(
+      publishVerifiedAssets({
+        target,
+        prepared,
+        manifestPath,
+        manifestBuilding,
+        cacheDir,
+        timestamp: 456,
+        operations: {
+          async rename(from, to) {
+            if (from === manifestBuilding) {
+              const error = new Error('manifest swap failed');
+              error.code = 'EIO';
+              throw error;
+            }
+            return rename(from, to);
+          },
+        },
+      }),
+      /manifest swap failed/u,
+    );
+    assert.equal(
+      await readFile(join(target, 'asset.txt'), 'utf8'),
+      'old asset',
+    );
+    assert.equal(await readFile(manifestPath, 'utf8'), 'old manifest');
+    assert.deepEqual(await readdir(root), ['generated', 'manifest.json']);
+  } finally {
+    await Promise.all([
+      rm(root, { recursive: true, force: true }),
+      rm(cacheDir, { recursive: true, force: true }),
+    ]);
   }
 });
 

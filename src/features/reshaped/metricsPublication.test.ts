@@ -1,16 +1,21 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
 afterEach(() => {
-  vi.doUnmock('../../data/manifests/reshaped-earth.json');
+  vi.doUnmock('./publishedMetrics');
   vi.resetModules();
+});
+
+it('keeps the lightweight runtime registry aligned with the accepted publication', async () => {
+  const { default: manifest } =
+    await import('../../data/manifests/reshaped-earth.json');
+  const { RESHAPED_METRIC_IDS } = await import('./metrics');
+  expect(RESHAPED_METRIC_IDS).toEqual(manifest.publishedMetrics);
 });
 
 it('uses three published measures without renumbering padding bits or exposing GDP URLs', async () => {
   vi.resetModules();
-  vi.doMock('../../data/manifests/reshaped-earth.json', () => ({
-    default: {
-      publishedMetrics: ['population', 'co2', 'lights'],
-    },
+  vi.doMock('./publishedMetrics', () => ({
+    RESHAPED_PUBLISHED_METRIC_IDS: ['population', 'co2', 'lights'],
   }));
   const metrics = await import('./metrics');
   expect(metrics.RESHAPED_METRIC_IDS).toEqual(['population', 'co2', 'lights']);

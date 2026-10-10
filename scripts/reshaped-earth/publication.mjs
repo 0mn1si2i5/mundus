@@ -1,13 +1,14 @@
 import {
   readFile,
   writeFile,
-  mkdir,
   mkdtemp,
   rename,
   copyFile,
+  cp,
+  rm,
   stat,
 } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { execFileSync } from 'node:child_process';
@@ -96,6 +97,91 @@ export function assertProductionFields(
     )
       throw new Error(`Unverified deterministic rebuild ${key}`);
   }
+}
+
+/**
+ * Replace the already verified candidate while keeping every rename on the
+ * filesystem that owns its destination. The cache copy is retained for
+ * recovery and inspection, but is never part of the atomic swap.
+ */
+export async function publishVerifiedAssets({
+  target,
+  prepared,
+  manifestPath,
+  manifestBuilding,
+  cacheDir,
+  timestamp = Date.now(),
+  operations = {},
+}) {
+  const move = operations.rename ?? rename;
+  const copyDirectory = operations.cp ?? cp;
+  const copy = operations.copyFile ?? copyFile;
+  const remove = operations.rm ?? rm;
+  const has = operations.exists ?? exists;
+  const publicationParent = dirname(target);
+  const retainedBackup = join(cacheDir, `previous-generated-${timestamp}`);
+  const manifestBackup = `${retainedBackup}-manifest.json`;
+  const localBackup = join(
+    publicationParent,
+    `.reshaped-earth-previous-${timestamp}`,
+  );
+  const failedCandidate = join(
+    publicationParent,
+    `.reshaped-earth-failed-${timestamp}`,
+  );
+  const hadTarget = await has(target);
+  const hadManifest = await has(manifestPath);
+
+  // A retained cache copy may cross filesystems; it is deliberately made
+  // before mutating the live directory. The local backup below is the one
+  // used for the atomic rollback.
+  if (hadTarget)
+    await copyDirectory(target, retainedBackup, {
+      recursive: true,
+      errorOnExist: true,
+      force: false,
+    });
+  if (hadManifest) await copy(manifestPath, manifestBackup);
+
+  let movedPrevious = false;
+  let candidatePublished = false;
+  try {
+    if (hadTarget) {
+      await move(target, localBackup);
+      movedPrevious = true;
+    }
+    await move(prepared, target);
+    candidatePublished = true;
+    await move(manifestBuilding, manifestPath);
+  } catch (error) {
+    let recoveryError;
+    try {
+      // If the failure happened before the first rename, leave the live
+      // directory untouched. Otherwise move the candidate aside before
+      // restoring the same-filesystem backup.
+      if (candidatePublished && (await has(target)))
+        await move(target, failedCandidate);
+      if (movedPrevious) await move(localBackup, target);
+      else if (candidatePublished)
+        await remove(target, { recursive: true, force: true });
+      if (hadManifest) await copy(manifestBackup, manifestPath);
+      else await remove(manifestPath, { force: true });
+      await remove(manifestBuilding, { force: true });
+      await remove(prepared, { recursive: true, force: true });
+    } catch (rollbackError) {
+      recoveryError = rollbackError;
+    }
+    if (recoveryError) {
+      error.recoveryRequired = true;
+      error.recoveryError = recoveryError;
+      throw error;
+    }
+    await remove(failedCandidate, { recursive: true, force: true });
+    await remove(localBackup, { recursive: true, force: true });
+    throw error;
+  }
+  await remove(localBackup, { recursive: true, force: true });
+  return { retainedBackup, manifestBackup };
 }
 
 export async function publishProductionAssets({
@@ -315,14 +401,12 @@ export async function publishProductionAssets({
   // Replace only the fully verified candidate. Retain the previous directory
   // and manifest outside the worktree, including on a publication failure.
   const target = resolve('src/data/generated/reshaped-earth');
-  await mkdir(resolve('tmp'), { recursive: true });
-  const prepared = await mkdtemp(resolve('tmp/reshaped-earth-publication-'));
+  const prepared = await mkdtemp(
+    join(dirname(target), '.reshaped-earth-publication-'),
+  );
   for (const name of Object.keys(derivedAssets))
     await copyFile(join(stage, name), join(prepared, name));
-  const backup = join(cacheDir, `previous-generated-${Date.now()}`);
   const manifestPath = resolve('src/data/manifests/reshaped-earth.json');
-  const manifestBackup = `${backup}-manifest.json`;
-  if (await exists(manifestPath)) await copyFile(manifestPath, manifestBackup);
   await writeFile(
     `${manifestPath}.building`,
     await format(JSON.stringify(manifest), {
@@ -330,22 +414,17 @@ export async function publishProductionAssets({
       filepath: manifestPath,
     }),
   );
-  if (await exists(target)) await rename(target, backup);
-  try {
-    await rename(prepared, target);
-    await rename(`${manifestPath}.building`, manifestPath);
-  } catch (error) {
-    if (await exists(target))
-      await rename(target, `${backup}-failed-candidate`);
-    if (await exists(backup)) await rename(backup, target);
-    if (await exists(manifestBackup))
-      await copyFile(manifestBackup, manifestPath);
-    throw error;
-  }
+  const { retainedBackup } = await publishVerifiedAssets({
+    target,
+    prepared,
+    manifestPath,
+    manifestBuilding: `${manifestPath}.building`,
+    cacheDir,
+  });
   console.log(
     JSON.stringify({
       published: target,
-      previousGeneratedRetained: backup,
+      previousGeneratedRetained: retainedBackup,
       cacheAllocatedBytes: cacheBudget(),
     }),
   );

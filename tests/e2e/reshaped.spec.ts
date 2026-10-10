@@ -172,7 +172,16 @@ test('the lobby makes no Reshaped Earth chunk or data requests until entry', asy
   page,
 }) => {
   const requests: string[] = [];
+  const javascript: Promise<string>[] = [];
+  const manifest = JSON.parse(
+    await readFile('src/data/manifests/reshaped-earth.json', 'utf8'),
+  );
+  const publicationMarker = manifest.derivedAssets['units.json'].sha256;
   page.on('request', (request) => requests.push(request.url()));
+  page.on('response', (response) => {
+    if (new URL(response.url()).pathname.endsWith('.js'))
+      javascript.push(response.text());
+  });
   await page.goto('./');
   await expect(
     page.getByRole('heading', { name: '选择一种观察' }),
@@ -181,9 +190,16 @@ test('the lobby makes no Reshaped Earth chunk or data requests until entry', asy
   expect(requests.filter(reshapedRequests)).toEqual([]);
   await switchMode(page, '地球另一端');
   expect(requests.filter(reshapedRequests)).toEqual([]);
+  for (const source of await Promise.all(javascript))
+    expect(source).not.toContain(publicationMarker);
   await switchMode(page, '变形地球');
   await ready(page);
   expect(requests.filter(reshapedRequests).length).toBeGreaterThan(0);
+  expect(
+    (await Promise.all(javascript)).some((source) =>
+      source.includes(publicationMarker),
+    ),
+  ).toBe(true);
 });
 
 test('keyboard radio changes, nondefault URL parameters and refresh preserve the selected real place', async ({

@@ -1,4 +1,4 @@
-import manifest from '../../data/manifests/reshaped-earth.json';
+import { RESHAPED_PUBLISHED_METRIC_IDS } from './publishedMetrics';
 
 export const RESHAPED_YEAR = 2020 as const;
 
@@ -52,10 +52,7 @@ export const RESHAPED_METRIC_BITS: Record<ReshapedMetricId, number> = {
   co2: 2,
   lights: 3,
 };
-const declared =
-  'publishedMetrics' in manifest
-    ? (manifest.publishedMetrics as readonly string[])
-    : METRIC_DEFINITIONS.map((metric) => metric.id);
+const declared: readonly string[] = RESHAPED_PUBLISHED_METRIC_IDS;
 export const RESHAPED_METRICS = METRIC_DEFINITIONS.filter((metric) =>
   declared.includes(metric.id),
 );
