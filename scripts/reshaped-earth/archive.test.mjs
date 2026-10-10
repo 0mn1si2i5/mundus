@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdtemp, writeFile, readFile } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -10,7 +10,7 @@ const run = promisify(execFile);
 
 test('ZIP inspection bounds extraction and CRC-verified cache resumes by identity', async (t) => {
   const cacheDir = await mkdtemp(join(tmpdir(), 'mundus-archive-'));
-  t.after(() => run('/usr/bin/trash', [cacheDir]));
+  t.after(() => rm(cacheDir, { recursive: true, force: true }));
   await writeFile(join(cacheDir, '2020.nc'), 'tiny reviewed data');
   const path = join(cacheDir, 'source.zip');
   await run('zip', ['-q', path, '2020.nc'], { cwd: cacheDir });
@@ -30,7 +30,7 @@ test('ZIP inspection bounds extraction and CRC-verified cache resumes by identit
 
 test('ZIP traversal and symlink entries fail before extraction', async (t) => {
   const cacheDir = await mkdtemp(join(tmpdir(), 'mundus-archive-'));
-  t.after(() => run('/usr/bin/trash', [cacheDir]));
+  t.after(() => rm(cacheDir, { recursive: true, force: true }));
   await writeFile(join(cacheDir, 'abc.nc'), 'data');
   const path = join(cacheDir, 'source.zip');
   await run('zip', ['-q', path, 'abc.nc'], { cwd: cacheDir });
