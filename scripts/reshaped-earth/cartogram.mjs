@@ -1016,7 +1016,11 @@ export function rasterizeInverseMap(
 }
 
 /** Compose correction after an existing forward map, retaining its source mesh. */
-export function composeCartograms(first, correction) {
+export function composeCartograms(
+  first,
+  correction,
+  { preserveTopology = false } = {},
+) {
   const grid = new Float64Array(first.forwardGrid.length);
   for (let i = 0; i < grid.length; i += 2) {
     const p = correction.forward(
@@ -1045,7 +1049,38 @@ export function composeCartograms(first, correction) {
       rounds,
     },
   });
-  const orientation = measureTriangleOrientation(map);
+  let orientation = measureTriangleOrientation(map);
+  if (!orientation.positive && preserveTopology) {
+    const proposed = Float64Array.from(grid);
+    let fraction = 1;
+    for (let attempt = 0; attempt < 40 && !orientation.positive; attempt += 1) {
+      // Composition samples a curved correction onto the original affine
+      // mesh. Repair pinched vertex stars before reducing the entire globe's
+      // correction because a handful of compressed cells can otherwise stop
+      // all unit-area convergence.
+      try {
+        const repaired = regularizeCartogram(map, {
+          minimumJacobian: 0.001,
+          passes: 8,
+        });
+        grid.set(repaired.forwardGrid);
+        map.diagnostics.regularizedVertices =
+          repaired.diagnostics.regularizedVertices;
+        orientation = measureTriangleOrientation(map);
+        if (orientation.positive) break;
+      } catch (error) {
+        if (error.message !== 'Vertex regularization lost topology')
+          throw error;
+      }
+      fraction *= 0.5;
+      for (let i = 0; i < grid.length; i += 1)
+        grid[i] =
+          first.forwardGrid[i] +
+          fraction * (proposed[i] - first.forwardGrid[i]);
+      orientation = measureTriangleOrientation(map);
+    }
+    map.diagnostics.appliedCorrectionFraction = fraction;
+  }
   if (!orientation.positive)
     throw new Error(
       `Composed map has ${orientation.nonPositive} folded triangles`,
@@ -1053,6 +1088,130 @@ export function composeCartograms(first, correction) {
   map.iterations = (first.iterations ?? 1) + 1;
   map.density = first.density;
   return map;
+}
+
+/** Subdivide the original affine triangles without altering the current map.
+ * A power-of-two subdivision keeps all old diagonals as mesh edges. */
+export function refineCartogram(map, factor = 2) {
+  if (!Number.isInteger(factor) || factor < 2 || factor & (factor - 1))
+    throw new RangeError('Cartogram refinement factor must be a power of two');
+  const width = map.width * factor,
+    height = map.height * factor;
+  const forwardGrid = new Float64Array((width + 1) * (height + 1) * 2);
+  for (let y = 0; y <= height; y += 1)
+    for (let x = 0; x <= width; x += 1) {
+      const at = map.forward(x / width, y / height);
+      const i = (y * (width + 1) + x) * 2;
+      forwardGrid[i] = at[0];
+      forwardGrid[i + 1] = at[1];
+    }
+  const refined = cartogramFromForwardGrid({
+    width,
+    height,
+    forwardGrid,
+    diagnostics: { ...map.diagnostics, refinedFrom: [map.width, map.height] },
+  });
+  if (!measureTriangleOrientation(refined).positive)
+    throw new Error('Refinement lost topology');
+  return refined;
+}
+
+/** Improve numerically pinched vertex stars while keeping every incident
+ * triangle strictly positive. The feasible kernel is the intersection of the
+ * six oriented neighbour-edge half planes; its centroid stays in that kernel.
+ * Result unit areas are always remeasured after this geometric correction. */
+export function regularizeCartogram(
+  map,
+  { minimumJacobian = 1e-4, passes = 4 } = {},
+) {
+  const { width, height } = map;
+  const grid = Float64Array.from(map.forwardGrid);
+  const offsets = [
+    2,
+    (width + 2) * 2,
+    (width + 1) * 2,
+    -2,
+    -(width + 2) * 2,
+    -(width + 1) * 2,
+  ];
+  const threshold = minimumJacobian / (width * height);
+  let changed = 0;
+  for (let pass = 0; pass < passes; pass += 1) {
+    let currentChanges = 0;
+    for (let y = 1; y < height; y += 1)
+      for (let x = 1; x < width; x += 1) {
+        const at = (y * (width + 1) + x) * 2;
+        let minimum = Infinity;
+        for (let k = 0; k < 6; k += 1)
+          minimum = Math.min(
+            minimum,
+            cross(grid, at, at + offsets[k], at + offsets[(k + 1) % 6]),
+          );
+        if (minimum >= threshold) continue;
+        const neighbours = offsets.map((offset) => [
+          grid[at + offset],
+          grid[at + offset + 1],
+        ]);
+        const xs = neighbours.map((p) => p[0]),
+          ys = neighbours.map((p) => p[1]);
+        let kernel = [
+          [Math.min(...xs), Math.min(...ys)],
+          [Math.max(...xs), Math.min(...ys)],
+          [Math.max(...xs), Math.max(...ys)],
+          [Math.min(...xs), Math.max(...ys)],
+        ];
+        for (let k = 0; k < 6 && kernel.length > 0; k += 1) {
+          const a = neighbours[k],
+            b = neighbours[(k + 1) % 6];
+          const signed = (p) =>
+            (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+          const next = [];
+          let p = kernel[kernel.length - 1],
+            dp = signed(p);
+          for (const q of kernel) {
+            const dq = signed(q);
+            if (dp >= 0 !== dq >= 0) {
+              const t = dp / (dp - dq);
+              next.push([p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])]);
+            }
+            if (dq >= 0) next.push(q);
+            p = q;
+            dp = dq;
+          }
+          kernel = next;
+        }
+        if (kernel.length < 3) continue;
+        const nx = kernel.reduce((sum, p) => sum + p[0], 0) / kernel.length;
+        const ny = kernel.reduce((sum, p) => sum + p[1], 0) / kernel.length;
+        const ox = grid[at],
+          oy = grid[at + 1];
+        grid[at] = nx;
+        grid[at + 1] = ny;
+        let proposedMinimum = Infinity;
+        for (let k = 0; k < 6; k += 1)
+          proposedMinimum = Math.min(
+            proposedMinimum,
+            cross(grid, at, at + offsets[k], at + offsets[(k + 1) % 6]),
+          );
+        if (proposedMinimum > minimum && proposedMinimum > 0) {
+          changed += 1;
+          currentChanges += 1;
+        } else {
+          grid[at] = ox;
+          grid[at + 1] = oy;
+        }
+      }
+    if (!currentChanges) break;
+  }
+  const result = cartogramFromForwardGrid({
+    width,
+    height,
+    forwardGrid: grid,
+    diagnostics: { ...map.diagnostics, regularizedVertices: changed },
+  });
+  if (!measureTriangleOrientation(result).positive)
+    throw new Error('Vertex regularization lost topology');
+  return result;
 }
 
 /**

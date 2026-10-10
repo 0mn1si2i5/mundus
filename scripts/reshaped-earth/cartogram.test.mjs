@@ -17,6 +17,8 @@ import {
   measureTriangleOrientation,
   polygonSignedArea,
   rasterizeInverseMap,
+  regularizeCartogram,
+  cartogramFromForwardGrid,
   sampleInverseRaster,
   summarizeAreaErrors,
   validateCartogram,
@@ -28,6 +30,28 @@ function close(actual, expected, tolerance = 1e-10) {
     `${actual} differs from ${expected} by ${Math.abs(actual - expected)}`,
   );
 }
+
+test('vertex-star repair restores a locally inverted mesh without moving its boundary', () => {
+  const width = 4,
+    height = 4;
+  const grid = Float64Array.from({ length: 50 }, (_, i) =>
+    i % 2 === 0
+      ? (Math.floor(i / 2) % 5) / 4
+      : Math.floor(Math.floor(i / 2) / 5) / 4,
+  );
+  grid[(2 * 5 + 2) * 2] = 0.85;
+  const map = cartogramFromForwardGrid({ width, height, forwardGrid: grid });
+  assert.equal(measureTriangleOrientation(map).positive, false);
+  const repaired = regularizeCartogram(map);
+  assert.equal(measureTriangleOrientation(repaired).positive, true);
+  for (let y = 0; y <= height; y += 1)
+    for (let x = 0; x <= width; x += 1)
+      if (x === 0 || y === 0 || x === width || y === height) {
+        const i = (y * 5 + x) * 2;
+        assert.equal(repaired.forwardGrid[i], grid[i]);
+        assert.equal(repaired.forwardGrid[i + 1], grid[i + 1]);
+      }
+});
 
 function naiveDft(values) {
   return Array.from(values, (_, k) => {
