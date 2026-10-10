@@ -11,7 +11,10 @@ import {
 import { MODE_DEFINITIONS, type ModeId } from '../features/modes/modeRegistry';
 import { ModeExperience } from '../features/modes/ModeExperience';
 import { ModeSwitcher } from '../features/modes/ModeSwitcher';
-import { useGlobePresentation } from '../features/modes/useModePresentation';
+import {
+  useGlobePresentation,
+  useSharedReshapedData,
+} from '../features/modes/useModePresentation';
 import { ExhibitLobby } from '../features/modes/ExhibitLobby';
 import { AboutDialog } from '../features/about/AboutDialog';
 import { FirstInteractionHint } from '../features/discovery/FirstInteractionHint';
@@ -77,7 +80,8 @@ export function App() {
   const requestCameraFocus = useAppStore((state) => state.requestCameraFocus);
   const setLocale = useAppStore((state) => state.setLocale);
   const t = messages[locale];
-  const globe = useGlobePresentation();
+  const reshapedData = useSharedReshapedData();
+  const globe = useGlobePresentation(reshapedData);
   // The lobby card a mode was entered from, so returning restores focus to
   // it; a direct URL entry falls back to the lobby heading.
   const lobbyEntryModeRef = useRef<ModeId | null>(null);
@@ -244,6 +248,7 @@ export function App() {
               surnameMapLabels={globe.surnameMapLabels}
               surnameDisplayMode={globe.surnameDisplayMode}
               isolation={globe.isolation}
+              reshaped={globe.reshaped}
             />
           </Suspense>
         </ErrorBoundary>
@@ -258,7 +263,11 @@ export function App() {
           returnLabel={t.returnToLobby}
           onReturnToLobby={returnToLobby}
         >
-          <ModeExperience locale={locale} onCameraFocus={requestCameraFocus} />
+          <ModeExperience
+            locale={locale}
+            reshapedData={reshapedData}
+            onCameraFocus={requestCameraFocus}
+          />
         </ModeBoundary>
       ) : null}
 

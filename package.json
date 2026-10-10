@@ -33,6 +33,8 @@
     "test:data-cities": "node --test scripts/build-geonames-major-cities.test.mjs",
     "test:data-countries": "node --test scripts/build-mundus-countries.test.mjs",
     "data:isolation": "node --experimental-strip-types scripts/build-urban-isolation.mjs",
+    "data:reshaped": "node --expose-gc --max-old-space-size=1024 scripts/build-reshaped-earth.mjs",
+    "test:data-reshaped": "node --test scripts/reshaped-earth/*.test.mjs",
     "test:data-isolation": "node --experimental-strip-types --test scripts/build-urban-isolation.test.mjs",
     "test:toolchain": "node --test scripts/verify-toolchain.test.mjs",
     "test:data-vector-globe": "node --test --test-name-pattern='production vector assets|handles antimeridian holes|meshopt encoding' scripts/build-natural-earth-vector-globe.test.mjs && node --test scripts/publish-asset-set.test.mjs",
@@ -43,7 +45,7 @@
     "test:watch": "vitest",
     "test:e2e": "node scripts/run-playwright-e2e.mjs",
     "test:e2e:smoke": "node scripts/run-playwright-e2e.mjs --project=chromium --grep @smoke",
-    "check:source": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-countries && pnpm test:data-cities && pnpm test:data-isolation && pnpm test:toolchain && pnpm test:performance && pnpm test && pnpm test:release",
+    "check:source": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-countries && pnpm test:data-cities && pnpm test:data-isolation && pnpm test:data-reshaped && pnpm test:toolchain && pnpm test:performance && pnpm test && pnpm test:release",
     "check": "pnpm check:source && pnpm test:data-vector-globe && pnpm build && pnpm release:verify"
   },
   "dependencies": {
@@ -75,7 +77,9 @@
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.26",
+    "geotiff": "^3.0.5",
     "globals": "^17.4.0",
+    "h5wasm": "^0.10.3",
     "jsdom": "^28.1.0",
     "opencc-js": "1.4.1",
     "prettier": "^3.8.2",

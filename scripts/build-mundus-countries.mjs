@@ -21,7 +21,7 @@ import { publishAssetSet } from './publish-asset-set.mjs';
  * (low and high detail) with stable `countryId` and `name` properties.
  */
 
-const SOURCES = {
+export const SOURCES = {
   chn: {
     url: 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson',
     sha256: 'a13bf5f310fde87bc0a5f994f8ce9bd706cc198d8ee37d221e61c2546b945372',

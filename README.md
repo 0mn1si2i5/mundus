@@ -7,8 +7,8 @@ different scientific lenses. It is designed as a small digital museum exhibit:
 direct enough to explore, explicit about its methods, and careful about the
 limits of its data.
 
-The current implementation includes four observation modes. Other Side, Surname
-Atlas and Urban Proximity are the primary observations; Sunline remains under
+The current implementation includes five observation modes. Other Side, Surname
+Atlas, Urban Proximity and Reshaped Earth are the primary observations; Sunline remains under
 More observations:
 
 - **Other Side** calculates exact antipodal endpoints and shows the nearest
@@ -31,6 +31,11 @@ More observations:
   by each centre's current proximity distance, with a centre for each region.
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
+- **Reshaped Earth** changes country areas to compare 2020 population, PPP GDP,
+  fossil CO₂ and night lights. Hatched padding marks excess area that continuous
+  reshaping could not remove; the solid core represents the target area. Shared
+  points retain their real coordinates. The [method notes](docs/data/reshaped-earth.md)
+  explain the sources, missing values and numerical precision.
 
 The public site is <https://0mn1si2i5.github.io/mundus/>. Deployment evidence
 and known verification limits are recorded in [Implementation status](docs/IMPLEMENTATION.md).
