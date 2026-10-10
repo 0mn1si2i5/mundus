@@ -152,6 +152,67 @@ describe('URL state codec', () => {
         sunlineClockMode: 'fixed',
       });
     });
+
+    it('defaults Reshaped Earth and retains the selected real-world point', () => {
+      const reshaped = parseUrlState(
+        '?v=2&mode=reshaped&point=-33.8688%2C151.2093',
+        nowMs,
+      );
+      expect(reshaped).toMatchObject({
+        activeMode: 'reshaped',
+        reshapedMetric: 'population',
+        reshapedLevel: 'country',
+        point: { latitude: -33.8688 },
+      });
+      expect(reshaped.point.longitude).toBeCloseTo(151.2093, 10);
+      expect(parseNavigationNotice('?v=2&mode=reshaped')).toBeNull();
+    });
+
+    it.each(['', 'unknown', 'GDP', '0', 'population,gdp'])(
+      'defaults an invalid Reshaped Earth metric %s independently of the valid level',
+      (metric) => {
+        expect(
+          parseUrlState(
+            `?v=2&mode=reshaped&metric=${encodeURIComponent(metric)}&level=admin1`,
+            nowMs,
+          ),
+        ).toMatchObject({
+          reshapedMetric: 'population',
+          reshapedLevel: 'admin1',
+        });
+      },
+    );
+
+    it.each(['', 'admin2', 'Country', '1'])(
+      'defaults an invalid Reshaped Earth level %s independently of the valid metric',
+      (level) => {
+        expect(
+          parseUrlState(
+            `?v=2&mode=reshaped&metric=co2&level=${encodeURIComponent(level)}`,
+            nowMs,
+          ),
+        ).toMatchObject({ reshapedMetric: 'co2', reshapedLevel: 'country' });
+      },
+    );
+
+    it('ignores Reshaped Earth parameters on other, historical and retired links', () => {
+      const point = { latitude: 12.3457, longitude: -98.7654 };
+      for (const [query, activeMode] of [
+        ['?point=12.3457%2C-98.7654', 'antipodes'],
+        ['?v=1&point=12.3457%2C-98.7654', 'antipodes'],
+        ['?v=2&mode=surnames&point=12.3457%2C-98.7654', 'surnames'],
+        ['?v=2&point=12.3457%2C-98.7654', null],
+        ['?v=1&mode=development&point=12.3457%2C-98.7654', null],
+      ] as const) {
+        const parsed = parseUrlState(`${query}&metric=gdp&level=admin1`, nowMs);
+        expect(parsed).toMatchObject({ activeMode, point });
+        expect(parsed).not.toHaveProperty('reshapedMetric');
+        expect(parsed).not.toHaveProperty('reshapedLevel');
+      }
+      expect(parseNavigationNotice('?v=1&mode=development&metric=gdp')).toBe(
+        'retired-mode',
+      );
+    });
   });
 
   describe('serializeUrlState', () => {
@@ -237,6 +298,35 @@ describe('URL state codec', () => {
       expect(serializeUrlState(legacy)).toBe(
         '?mode=sunline&point=35.6762%2C139.6503&v=2',
       );
+    });
+
+    it('omits default Reshaped Earth parameters and serializes only active nondefaults', () => {
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'reshaped',
+          reshapedMetric: 'population',
+          reshapedLevel: 'country',
+        }),
+      ).toBe('?mode=reshaped&v=2');
+      const state: ShareableState = {
+        ...lobby,
+        activeMode: 'reshaped',
+        point: { latitude: 12.345678, longitude: -98.765432 },
+        reshapedMetric: 'gdp',
+        reshapedLevel: 'admin1',
+      };
+      const query = serializeUrlState(state);
+      expect(new URLSearchParams(query).get('metric')).toBe('gdp');
+      expect(new URLSearchParams(query).get('level')).toBe('admin1');
+      expect(new URLSearchParams(query).get('point')).toBe('12.3457,-98.7654');
+      expect(parseUrlState(query, nowMs)).toEqual({
+        ...state,
+        point: { latitude: 12.3457, longitude: -98.7654 },
+      });
+      expect(
+        serializeUrlState({ ...state, activeMode: 'antipodes' }),
+      ).not.toMatch(/metric=|level=/);
     });
   });
 

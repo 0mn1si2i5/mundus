@@ -22,6 +22,7 @@ describe('useGlobePresentation', () => {
       surnameMapLabels: [],
       surnameDisplayMode: 'local',
       isolation: null,
+      reshaped: null,
     });
   });
 

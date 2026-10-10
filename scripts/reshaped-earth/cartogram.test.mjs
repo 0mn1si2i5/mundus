@@ -18,6 +18,7 @@ import {
   polygonSignedArea,
   rasterizeInverseMap,
   regularizeCartogram,
+  dampFoldedVertices,
   cartogramFromForwardGrid,
   sampleInverseRaster,
   summarizeAreaErrors,
@@ -30,6 +31,54 @@ function close(actual, expected, tolerance = 1e-10) {
     `${actual} differs from ${expected} by ${Math.abs(actual - expected)}`,
   );
 }
+
+test('local flow damping closes affected stars across the seam while retaining distant motion', () => {
+  const width = 16,
+    height = 8;
+  const previous = Float64Array.from({ length: 2 * 17 * 9 }, (_, i) =>
+    i % 2 === 0
+      ? (Math.floor(i / 2) % 17) / width
+      : Math.floor(Math.floor(i / 2) / 17) / height,
+  );
+  const proposed = Float64Array.from(previous);
+  for (let i = 0; i < proposed.length; i += 2) proposed[i] += 0.003;
+  const foldedAt = 2 * (4 * 17);
+  proposed[foldedAt] += 0.2;
+  proposed[foldedAt + 2 * width] = proposed[foldedAt] + 1;
+  const map = { width, height, forwardGrid: proposed };
+  assert.equal(measureTriangleOrientation(map).positive, false);
+  const repaired = dampFoldedVertices(previous, proposed, width, height);
+  assert.equal(repaired.complete, true);
+  assert.ok(repaired.changed > 0);
+  assert.equal(measureTriangleOrientation(map).positive, true);
+  const distant = 2 * (4 * 17 + 8);
+  close(proposed[distant] - previous[distant], 0.003);
+  for (let y = 0; y <= height; y += 1) {
+    const at = 2 * y * 17;
+    close(proposed[at + 2 * width] - proposed[at], 1);
+    close(proposed[at + 2 * width + 1], proposed[at + 1]);
+  }
+  for (let x = 0; x <= width; x += 1) {
+    close(proposed[2 * x + 1], 0);
+    close(proposed[2 * (height * 17 + x) + 1], 1);
+  }
+});
+
+test('local flow damping rejects an oversized correction without declaring success', () => {
+  const width = 4,
+    height = 4;
+  const previous = Float64Array.from({ length: 50 }, (_, i) =>
+    i % 2 === 0
+      ? (Math.floor(i / 2) % 5) / width
+      : Math.floor(Math.floor(i / 2) / 5) / height,
+  );
+  const proposed = Float64Array.from(previous);
+  proposed[(2 * 5 + 2) * 2] = 0.9;
+  const repaired = dampFoldedVertices(previous, proposed, width, height, {
+    maximumDisplacement: 1e-5,
+  });
+  assert.equal(repaired.complete, false);
+});
 
 test('vertex-star repair restores a locally inverted mesh without moving its boundary', () => {
   const width = 4,
@@ -51,6 +100,34 @@ test('vertex-star repair restores a locally inverted mesh without moving its bou
         assert.equal(repaired.forwardGrid[i], grid[i]);
         assert.equal(repaired.forwardGrid[i + 1], grid[i + 1]);
       }
+});
+
+test('area projection repairs periodic seam triangles and keeps reflecting edges exact', () => {
+  const width = 8,
+    height = 4;
+  const grid = Float64Array.from({ length: 90 }, (_, i) =>
+    i % 2 === 0
+      ? (Math.floor(i / 2) % 9) / width
+      : Math.floor(Math.floor(i / 2) / 9) / height,
+  );
+  grid[2 * 9 * 2] = 0.2;
+  grid[(2 * 9 + width) * 2] = 1.2;
+  const map = cartogramFromForwardGrid({ width, height, forwardGrid: grid });
+  assert.equal(measureTriangleOrientation(map).positive, false);
+  const repaired = regularizeCartogram(map, { passes: 12 });
+  const orientation = measureTriangleOrientation(repaired);
+  assert.equal(orientation.positive, true);
+  close(orientation.totalArea, 1);
+  for (let y = 0; y <= height; y += 1) {
+    const left = y * 9 * 2,
+      right = left + width * 2;
+    close(repaired.forwardGrid[right] - repaired.forwardGrid[left], 1);
+    close(repaired.forwardGrid[right + 1], repaired.forwardGrid[left + 1]);
+  }
+  for (let x = 0; x <= width; x += 1) {
+    assert.equal(repaired.forwardGrid[x * 2 + 1], 0);
+    assert.equal(repaired.forwardGrid[(height * 9 + x) * 2 + 1], 1);
+  }
 });
 
 function naiveDft(values) {
@@ -299,6 +376,56 @@ test('GSM2018 bounded integration rejects large predictor steps and is determini
       }),
     /resource limit/,
   );
+});
+
+test('residual flow integrates material vertices on a finer mesh and retains the periodic domain', () => {
+  const width = 16,
+    height = 8;
+  const density = Float64Array.from(
+    { length: width * height },
+    (_, i) => 1 + 0.35 * Math.cos((2 * Math.PI * ((i % width) + 0.5)) / width),
+  );
+  const initialMap = createCartogram({
+    width,
+    height,
+    density,
+    meshWidth: 32,
+    meshHeight: 16,
+    algorithm: 'gsm2018',
+  });
+  const identityCorrection = createCartogram({
+    width,
+    height,
+    density: new Float64Array(width * height).fill(1),
+    initialMap,
+    algorithm: 'gsm2018',
+  });
+  assert.deepEqual(identityCorrection.forwardGrid, initialMap.forwardGrid);
+  const map = createCartogram({
+    width,
+    height,
+    density,
+    initialMap,
+    algorithm: 'gsm2018',
+  });
+  assert.equal(map.width, 32);
+  assert.equal(map.height, 16);
+  assert.equal(map.diagnostics.composition, 'integrated-material-vertices');
+  assert.equal(map.diagnostics.rounds.length, 2);
+  assert.notDeepEqual(map.forwardGrid, initialMap.forwardGrid);
+  const orientation = measureTriangleOrientation(map);
+  assert.equal(orientation.positive, true);
+  close(orientation.totalArea, 1);
+  for (let y = 0; y <= map.height; y += 1) {
+    const left = map.forward(0, y / map.height),
+      right = map.forward(1, y / map.height);
+    close(right[0] - left[0], 1);
+    close(right[1], left[1]);
+  }
+  for (let x = 0; x <= map.width; x += 1) {
+    assert.equal(map.forward(x / map.width, 0)[1], 0);
+    assert.equal(map.forward(x / map.width, 1)[1], 1);
+  }
 });
 
 test('GSM2018 two-dimensional flow reaches t=1, preserves reflecting poles and has an exact triangle inverse', () => {

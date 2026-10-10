@@ -7,6 +7,8 @@ import {
   useMemo,
   useRef,
   useState,
+  lazy,
+  Suspense,
   type MutableRefObject,
   type Ref,
 } from 'react';
@@ -88,6 +90,13 @@ import { SurnameMapLabelLayer } from './SurnameMapLabelLayer';
 import { IsolationLayer } from './IsolationLayer';
 import { IsolationFieldLayer } from './IsolationFieldLayer';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
+import type { ReshapedMappingHandle } from './ReshapedLayer';
+import type { GlobePresentation } from '../modes/useModePresentation';
+const ReshapedLayer = lazy(() =>
+  import('./ReshapedLayer').then((module) => ({
+    default: module.ReshapedLayer,
+  })),
+);
 
 export interface GlobeKeyboardController {
   rotateHorizontal: (radians: number) => void;
@@ -121,6 +130,7 @@ interface GlobeSceneProps {
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
   isolation: IsolationGlobePresentation | null;
+  reshaped: GlobePresentation['reshaped'];
   onIsolationFieldRendered: (alpha: number) => void;
   cameraGestureCancelRef: MutableRefObject<(() => void) | null>;
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
@@ -159,6 +169,7 @@ export function GlobeScene({
   surnameMapLabels,
   surnameDisplayMode,
   isolation,
+  reshaped,
   onIsolationFieldRendered,
   cameraGestureCancelRef,
   onSurnameLabelVisibilityChange,
@@ -192,6 +203,10 @@ export function GlobeScene({
   } = diagnostics;
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
+  const reshapedMapping = useRef<ReshapedMappingHandle | null>(null);
+  const setReshapedSelectedUnitId = useAppStore(
+    (state) => state.setReshapedSelectedUnitId,
+  );
   const selectedCountry = useAppStore((state) => state.selectedCountry);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
   const cameraTarget = useAppStore((state) => state.cameraFocusIntent.target);
@@ -263,6 +278,20 @@ export function GlobeScene({
     Readonly<Record<string, SurnameLabelSlot>>
   >({});
   const { camera, gl, invalidate, size } = useThree();
+  const graphicsUnavailable = useAppStore(
+    (state) => state.reshapedGraphicsUnavailable,
+  );
+  const setGraphicsUnavailable = useAppStore(
+    (state) => state.setReshapedGraphicsUnavailable,
+  );
+  useEffect(() => {
+    setGraphicsUnavailable(
+      Boolean(reshaped) &&
+        (gl.capabilities.maxTextureSize <
+          (profile.level === 'low' ? 2048 : 4096) ||
+          !(gl.getContext() instanceof WebGL2RenderingContext)),
+    );
+  }, [gl, profile.level, reshaped, setGraphicsUnavailable]);
   const surnameOverrideKey = `${selectedCountry?.countryId ?? ''}:${surnameDisplayMode}:${size.width}:${size.height}`;
   const clearCameraFocus = useCallback(() => {
     cameraFocusGeneration.current += 1;
@@ -689,10 +718,16 @@ export function GlobeScene({
       },
       selectCenter() {
         if (!group.current) return;
-        const center = vector3ToGeo(
+        const hit = vector3ToGeo(
           group.current.worldToLocal(camera.position.clone()).normalize(),
         );
+        const center = reshapedMapping.current?.inverse(hit) ?? hit;
         selectPoint(center);
+        setReshapedSelectedUnitId(
+          reshapedMapping.current
+            ? reshapedMapping.current.unitId(center)
+            : undefined,
+        );
         setSelectedCountry(countries.findCountry(center));
         invalidate();
       },
@@ -705,6 +740,7 @@ export function GlobeScene({
     markMeaningfulInteraction,
     onCameraFocusStart,
     selectPoint,
+    setReshapedSelectedUnitId,
     setSelectedCountry,
     setCameraFocusFree,
     clearCameraFocus,
@@ -844,6 +880,7 @@ export function GlobeScene({
     }
     if (
       activeMode !== 'surnames' &&
+      activeMode !== 'reshaped' &&
       isolation?.view !== 'field' &&
       !hasInteracted &&
       !manualCameraInteraction.current &&
@@ -869,14 +906,22 @@ export function GlobeScene({
               ? cameraFocusRequest.current.startedAt
               : performance.now(),
           startDirection: currentDirection,
-          targetDirection: geoToVector3(activeCameraTarget)
+          targetDirection: geoToVector3(
+            reshapedMapping.current?.forward(activeCameraTarget) ??
+              activeCameraTarget,
+          )
             .applyQuaternion(group.current.quaternion)
             .normalize(),
         };
       }
       const animation = cameraFocusAnimation.current;
       animation.targetDirection
-        .copy(geoToVector3(activeCameraTarget))
+        .copy(
+          geoToVector3(
+            reshapedMapping.current?.forward(activeCameraTarget) ??
+              activeCameraTarget,
+          ),
+        )
         .applyQuaternion(group.current.quaternion)
         .normalize();
       const { progress, complete } = cameraFocusAnimationProgress(
@@ -1035,11 +1080,18 @@ export function GlobeScene({
       return;
     }
     if (!group.current) return;
-    const selectedPoint = vector3ToGeo(
+    const hitPoint = vector3ToGeo(
       group.current.worldToLocal(event.point.clone()),
     );
+    const selectedPoint =
+      reshapedMapping.current?.inverse(hitPoint) ?? hitPoint;
     onGlobePick(selectedPoint);
     selectPoint(selectedPoint);
+    setReshapedSelectedUnitId(
+      reshapedMapping.current
+        ? reshapedMapping.current.unitId(selectedPoint)
+        : undefined,
+    );
     setSelectedCountry(countries.findCountry(selectedPoint));
     invalidate();
   }
@@ -1051,9 +1103,10 @@ export function GlobeScene({
     // while the globe itself is moving.
     if (cameraGestureActiveRef.current || pointerActiveRef.current) return;
     if (!group.current) return;
-    const hoverPoint = vector3ToGeo(
+    const hoverHit = vector3ToGeo(
       group.current.worldToLocal(event.point.clone()),
     );
+    const hoverPoint = reshapedMapping.current?.inverse(hoverHit) ?? hoverHit;
     setHoveredCountry(countries.findCountry(hoverPoint));
   }
 
@@ -1085,20 +1138,36 @@ export function GlobeScene({
           <sphereGeometry args={[1, ...profile.sphereSegments]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
-        <VectorGlobeLayer
-          profile={profile}
-          hoveredCountryId={hoveredCountry?.countryId ?? null}
-          selectedCountryId={selectedCountry?.countryId ?? null}
-          dragActive={antipodeDragActive}
-          onStateChange={handleVectorStateChange}
-          onPaletteUpdate={onVectorPaletteUpdate}
-          onDragMaterialChange={onVectorDragMaterialChange}
-          onDragEvidence={onVectorDragEvidence}
-          sunlineActive={Boolean(sunline)}
-          onSunlineHighlightChange={onVectorSunlineHighlightChange}
-          onRenderEvidence={onVectorRenderEvidence}
-          renderSampleKey={vectorRenderSampleKey}
-        />
+        {!graphicsUnavailable &&
+        reshaped &&
+        reshaped.data.status !== 'error' &&
+        reshaped.data.data?.ids &&
+        reshaped.data.data.inverse ? (
+          <Suspense fallback={null}>
+            <ReshapedLayer
+              profile={profile}
+              shape={reshaped.shape}
+              data={reshaped.data.data}
+              replayKey={reshaped.replayKey}
+              mappingRef={reshapedMapping}
+            />
+          </Suspense>
+        ) : (
+          <VectorGlobeLayer
+            profile={profile}
+            hoveredCountryId={hoveredCountry?.countryId ?? null}
+            selectedCountryId={selectedCountry?.countryId ?? null}
+            dragActive={antipodeDragActive}
+            onStateChange={handleVectorStateChange}
+            onPaletteUpdate={onVectorPaletteUpdate}
+            onDragMaterialChange={onVectorDragMaterialChange}
+            onDragEvidence={onVectorDragEvidence}
+            sunlineActive={Boolean(sunline)}
+            onSunlineHighlightChange={onVectorSunlineHighlightChange}
+            onRenderEvidence={onVectorRenderEvidence}
+            renderSampleKey={vectorRenderSampleKey}
+          />
+        )}
         {vectorReady && surnameLabelEntries.length > 0 ? (
           <SurnameMapLabelLayer
             key={`surname-label-layer:${surnameDisplayMode}`}

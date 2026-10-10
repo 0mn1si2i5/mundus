@@ -17,14 +17,24 @@ export function decodeNumericColumn(encoded, count, bytes, kind) {
 }
 
 export function decodeUnits(asset) {
-  if (asset?.formatVersion !== 1 || asset.encoding !== 'columns-shuffled-le')
-    throw new Error('Invalid Reshaped Earth units format');
-  const { codes, countries, parent, en, zh } = asset;
   if (
-    ![codes, countries, parent, en, zh].every(Array.isArray) ||
+    asset?.formatVersion !== 1 ||
+    asset.encoding !== 'columns-shuffled-le' ||
+    asset.year !== 2020 ||
+    asset.codeEncoding !== 'prefix-base36'
+  )
+    throw new Error('Invalid Reshaped Earth units format');
+  const { countries, parent, en, zh, countryNames } = asset;
+  const codes = decodeCodes(asset.codes);
+  if (
+    ![countries, parent, en, zh, countryNames?.en, countryNames?.zh].every(
+      Array.isArray,
+    ) ||
     parent.length !== codes.length ||
     en.length !== codes.length ||
-    zh.length !== codes.length
+    zh.length !== codes.length ||
+    countryNames.en.length !== countries.length ||
+    countryNames.zh.length !== countries.length
   )
     throw new Error('Invalid Reshaped Earth unit columns');
   const count = codes.length + countries.length;
@@ -38,6 +48,18 @@ export function decodeUnits(asset) {
       : countries[i - codes.length];
     if (typeof countryId !== 'string' || !(areas[i] >= 0))
       throw new Error('Invalid Reshaped Earth unit');
+    const name = admin
+      ? { en: en[i], zh: zh[i] }
+      : {
+          en: countryNames.en[i - codes.length],
+          zh: countryNames.zh[i - codes.length],
+        };
+    if (
+      typeof name.en !== 'string' ||
+      !name.en.trim() ||
+      (name.zh !== null && (typeof name.zh !== 'string' || !name.zh.trim()))
+    )
+      throw new Error('Invalid Reshaped Earth display name');
     const pixel = points[i];
     if (pixel !== 0xffffffff && pixel >= 43200 * 21600)
       throw new Error('Invalid representative pixel');
@@ -45,8 +67,7 @@ export function decodeUnits(asset) {
       id: admin ? `${countryId}:${codes[i]}` : countryId,
       level: admin ? 'admin1' : 'country',
       parentCountryId: countryId,
-      // Country display names come from the existing Mundus country dataset.
-      name: admin ? { en: en[i], zh: zh[i] } : { en: countryId, zh: null },
+      name,
       areaKm2: areas[i],
       representativePoint:
         pixel === 0xffffffff
@@ -59,6 +80,24 @@ export function decodeUnits(asset) {
       rasterId: admin ? i + 1 : i - codes.length + 1,
       excluded: excluded.has(i),
     };
+  });
+}
+
+function decodeCodes(encoded) {
+  if (!Array.isArray(encoded))
+    throw new Error('Invalid Reshaped Earth code column');
+  let previous = '';
+  return encoded.map((value) => {
+    if (typeof value !== 'string' || !/^[0-9a-z]+:/.test(value))
+      throw new Error('Invalid Reshaped Earth prefix code');
+    const separator = value.indexOf(':');
+    const prefix = Number.parseInt(value.slice(0, separator), 36);
+    if (!Number.isSafeInteger(prefix) || prefix > previous.length)
+      throw new Error('Invalid Reshaped Earth code prefix length');
+    const code = previous.slice(0, prefix) + value.slice(separator + 1);
+    if (!code) throw new Error('Empty Reshaped Earth unit code');
+    previous = code;
+    return code;
   });
 }
 

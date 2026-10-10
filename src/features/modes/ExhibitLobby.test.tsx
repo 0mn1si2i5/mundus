@@ -10,7 +10,7 @@ describe('ExhibitLobby', () => {
   it('offers the three primary observations as one labelled list', () => {
     render(<ExhibitLobby locale="en" onEnter={vi.fn()} />);
     const list = screen.getByRole('list', { name: 'Observation modes' });
-    expect(list.querySelectorAll('li')).toHaveLength(3);
+    expect(list.querySelectorAll('li')).toHaveLength(4);
     expect(
       screen.getByRole('button', { name: /Other Side/u }),
     ).toBeInTheDocument();

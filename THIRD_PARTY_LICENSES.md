@@ -109,14 +109,19 @@ license.
 
 ## Data
 
-| Material                        | Version                                                  | Terms                                                                                                                                              | Attribution                                                                   |
-| ------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Natural Earth Admin 0 countries | 5.1.2, 1:10m China view with Taiwan from default view    | Public domain                                                                                                                                      | Made with Natural Earth                                                       |
-| GeoNames major-city snapshot    | Captured 2026-08-01T09:39:05.688Z                        | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | Contains GeoNames data, licensed under CC BY 4.0                              |
-| Community surname observation   | Popular Names by Country v1.2                            | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) plus upstream [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) provenance | Community-compiled source-listed surname records; see `DATA_SOURCES.md`       |
-| Iranian surname supplement      | `farbodbj/iranian-surname-frequencies` commit `9fb2fdcc` | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0)                                                                                          | Iran rank-one record from a community frequency sample; see `DATA_SOURCES.md` |
-| African surname observations    | Pulse Nigeria article, retrieved 2026-09-23              | Factual country/surname pairs only; article text is not redistributed                                                                              | One source-listed surname per listed African country; see `DATA_SOURCES.md`   |
-| GHSL Urban Centre Database      | GHS-UCDB R2024A V1.1                                     | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | Urban Proximity city centres and 2025 populations; see `DATA_SOURCES.md`      |
+| Material                           | Version                                                  | Terms                                                                                                                                              | Attribution                                                                   |
+| ---------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Natural Earth Admin 0 countries    | 5.1.2, 1:10m China view with Taiwan from default view    | Public domain                                                                                                                                      | Made with Natural Earth                                                       |
+| GeoNames major-city snapshot       | Captured 2026-08-01T09:39:05.688Z                        | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | Contains GeoNames data, licensed under CC BY 4.0                              |
+| Community surname observation      | Popular Names by Country v1.2                            | [CC0](https://creativecommons.org/publicdomain/zero/1.0/) plus upstream [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) provenance | Community-compiled source-listed surname records; see `DATA_SOURCES.md`       |
+| Iranian surname supplement         | `farbodbj/iranian-surname-frequencies` commit `9fb2fdcc` | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0)                                                                                          | Iran rank-one record from a community frequency sample; see `DATA_SOURCES.md` |
+| African surname observations       | Pulse Nigeria article, retrieved 2026-09-23              | Factual country/surname pairs only; article text is not redistributed                                                                              | One source-listed surname per listed African country; see `DATA_SOURCES.md`   |
+| GHSL Urban Centre Database         | GHS-UCDB R2024A V1.1                                     | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | Urban Proximity city centres and 2025 populations; see `DATA_SOURCES.md`      |
+| GHS-POP population grid            | R2023A V1-0, epoch 2020                                  | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | European Commission, Joint Research Centre (JRC); Reshaped Earth population   |
+| Global downscaled GDP grid         | Kummu et al. v4, 2020 band                               | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | Kummu et al.; Reshaped Earth PPP GDP in 2021 international dollars            |
+| Fossil and cement CO₂ grid         | GCP-GridFED v2025.1, 2020                                | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | Jones et al.; Reshaped Earth emissions, excluding bunkers and carbonation     |
+| Harmonized DMSP–VIIRS night lights | Li, Zhou, Zhao & Zhao v10, 2020                          | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)                                                                                          | Li, Zhou, Zhao & Zhao; Reshaped Earth relative DN index                       |
+| Natural Earth admin-1 geometry     | 5.1.2, 1:10m                                             | Public domain                                                                                                                                      | Made with Natural Earth; Reshaped Earth administrative units                  |
 
 Natural Earth source and terms are documented at
 <https://www.naturalearthdata.com/about/terms-of-use/>. Exact source URLs,
@@ -139,9 +144,26 @@ attribution above; the large raw rolling downloads are not redistributed.
   imported by the application runtime; source and notices are at
   <https://github.com/topojson/topojson-server> and
   <https://github.com/topojson/topojson-simplify>.
+- `geotiff@3.0.5`, pinned in `pnpm-lock.yaml`, reads GeoTIFF source windows
+  only during Reshaped Earth builds. It is MIT licensed, copyright EOX IT
+  Services GmbH; source and notices are at
+  <https://github.com/geotiffjs/geotiff.js>. It is not imported by the
+  application runtime.
+- `h5wasm@0.10.3`, pinned in `pnpm-lock.yaml`, reads the GridFED netCDF4/HDF5
+  source only during Reshaped Earth builds. Its package declares
+  `SEE LICENSE IN LICENSE.txt`: the actual file contains the **NIST software
+  notice and HDF5 permissive licence**, including HDF Group, University of
+  Illinois, LBNL and UC LLNL notices. It is not MIT licensed. NIST is
+  acknowledged as the source of the h5wasm software; full notices remain in the
+  installed package and at
+  <https://github.com/usnistgov/h5wasm/blob/v0.10.3/LICENSE.txt>. Neither its
+  JavaScript nor its HDF5 WebAssembly binary enters the application runtime.
+
+Reshaped Earth's FFT/DCT and restricted PNG reader/writer are implemented in
+this repository. No third-party FFT or PNG runtime package was added.
 
 `meshoptimizer@1.1.1` is also used at runtime to decode the lazy Natural Earth
-vector globe buffers. It is MIT licensed; its exact bundled notice is emitted
+vector globe buffers and Reshaped Earth inverse fields. It is MIT licensed; its exact bundled notice is emitted
 to `THIRD_PARTY_NOTICES.md` by the production build.
 
 ## Solar method

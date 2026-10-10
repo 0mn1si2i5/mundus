@@ -29,9 +29,16 @@ export function resourceMonitor(phase, { maxRSS = 1.5 * 1024 ** 3 } = {}) {
   function progress(detail = {}, force = false) {
     const seconds = (performance.now() - start) / 1000;
     const rss = process.memoryUsage().rss;
-    peakRSS = Math.max(peakRSS, rss);
-    if (rss > maxRSS || seconds > 1800)
-      throw new Error(`S3: ${phase}: RSS ${rss}, elapsed ${seconds}s`);
+    // maxRSS includes transient spectral work arrays between progress calls.
+    const observedPeak = Math.max(
+      rss + (detail.externalRSSBytes ?? 0),
+      process.resourceUsage().maxRSS * 1024,
+    );
+    peakRSS = Math.max(peakRSS, observedPeak);
+    if (observedPeak > maxRSS || seconds > 1800)
+      throw new Error(
+        `S3: ${phase}: peak RSS ${observedPeak}, elapsed ${seconds}s`,
+      );
     if (!force && seconds - lastCheck < 5) return;
     lastCheck = seconds;
     const memory = systemMemory();

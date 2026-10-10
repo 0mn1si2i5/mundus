@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { useAppStore } from '../../state/appStore';
 import { ShareDialog } from './ShareDialog';
+import { parseUrlState } from '../../state/urlState';
 
 const initialShareState = {
   activeMode: 'antipodes' as const,
@@ -126,6 +127,33 @@ describe('ShareDialog', () => {
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(snapshot));
     expect(field).toHaveValue(snapshot);
+  });
+
+  it('restores a nondefault Reshaped Earth measure and level from the displayed share link', () => {
+    useAppStore.setState({
+      activeMode: 'reshaped',
+      reshapedMetric: 'gdp',
+      reshapedLevel: 'admin1',
+      reshapedShape: 'true',
+      point: { latitude: 30.12346, longitude: 120.98765 },
+    });
+    render(<ShareDialog locale="en" onClose={vi.fn()} />);
+
+    const field = screen.getByRole<HTMLInputElement>('textbox', {
+      name: 'Share link',
+    });
+    const shared = new URL(field.value);
+    expect(parseUrlState(shared.search)).toMatchObject({
+      activeMode: 'reshaped',
+      reshapedMetric: 'gdp',
+      reshapedLevel: 'admin1',
+      point: {
+        latitude: expect.closeTo(30.1235, 10),
+        longitude: expect.closeTo(120.9877, 10),
+      },
+    });
+    expect(shared.searchParams.has('shape')).toBe(false);
+    expect(shared.searchParams.has('t')).toBe(false);
   });
 
   it('selects the read-only field on focus', () => {

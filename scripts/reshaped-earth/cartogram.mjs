@@ -769,9 +769,16 @@ export function createCartogram({
   domainHeight = 2,
   zeroDensityFloor = 0.01,
   algorithm = 'diffusion',
+  meshRegularization = 0,
+  topologyRepair = 'project',
+  initialMap,
+  meshWidth = initialMap?.width ?? width,
+  meshHeight = initialMap?.height ?? height,
 } = {}) {
   if (!['diffusion', 'gsm2018'].includes(algorithm))
     throw new RangeError('cartogram algorithm must be diffusion or gsm2018');
+  if (!['project', 'project-margin', 'damp'].includes(topologyRepair))
+    throw new RangeError('Unknown cartogram topology repair');
   const linearFlow = algorithm === 'gsm2018';
   if (
     !Number.isFinite(tolerance) ||
@@ -798,7 +805,22 @@ export function createCartogram({
     domainHeight,
     zeroDensityFloor,
   });
-  let grid = identityNodes(width, height);
+  if (
+    initialMap &&
+    (initialMap.width !== meshWidth || initialMap.height !== meshHeight)
+  )
+    throw new RangeError('Initial material mesh dimensions do not match flow');
+  let grid = initialMap
+    ? Float64Array.from(initialMap.forwardGrid)
+    : identityNodes(meshWidth, meshHeight);
+  if (
+    !measureTriangleOrientation({
+      width: meshWidth,
+      height: meshHeight,
+      forwardGrid: grid,
+    }).positive
+  )
+    throw new Error('Initial material mesh must preserve topology');
   let candidate = new Float64Array(grid.length);
   let field = solver.evaluate(0);
   let time = linearFlow && field.maxSpeed === 0 ? 1 : 0;
@@ -813,6 +835,8 @@ export function createCartogram({
   let accepted = 0;
   let rejected = 0;
   let maximumLocalError = 0;
+  let regularizedVertices = 0;
+  let maximumRegularizationDisplacement = 0;
   const velocity = new Float64Array(2);
   const predictedVelocity = new Float64Array(2);
   while (linearFlow ? time < 1 : field.maxSpeed > speedTolerance) {
@@ -825,9 +849,9 @@ export function createCartogram({
     const nextField = solver.evaluate(nextTime);
     let error = 0;
     let boundaryValid = true;
-    for (let y = 0; y <= height; y += 1) {
-      for (let x = 0; x < width; x += 1) {
-        const i = (y * (width + 1) + x) * 2;
+    for (let y = 0; y <= meshHeight; y += 1) {
+      for (let x = 0; x < meshWidth; x += 1) {
+        const i = (y * (meshWidth + 1) + x) * 2;
         sampleVelocity(field, width, height, grid[i], grid[i + 1], velocity);
         const px = grid[i] + step * velocity[0];
         const py = grid[i + 1] + step * velocity[1];
@@ -838,7 +862,7 @@ export function createCartogram({
         candidate[i + 1] =
           y === 0
             ? 0
-            : y === height
+            : y === meshHeight
               ? 1
               : grid[i + 1] + 0.5 * step * (velocity[1] + predictedVelocity[1]);
         if (candidate[i + 1] < 0 || candidate[i + 1] > 1) boundaryValid = false;
@@ -848,23 +872,83 @@ export function createCartogram({
           Math.abs(candidate[i + 1] - py),
         );
       }
-      const start = y * (width + 1) * 2;
-      candidate[start + width * 2] = candidate[start] + 1;
-      candidate[start + width * 2 + 1] = candidate[start + 1];
+      const start = y * (meshWidth + 1) * 2;
+      candidate[start + meshWidth * 2] = candidate[start] + 1;
+      candidate[start + meshWidth * 2 + 1] = candidate[start + 1];
     }
-    const triangle =
+    let triangle =
       boundaryValid && error <= tolerance
-        ? measureTriangleOrientation({ width, height, forwardGrid: candidate })
+        ? measureTriangleOrientation({
+            width: meshWidth,
+            height: meshHeight,
+            forwardGrid: candidate,
+          })
         : null;
+    let topologyCorrection;
+    if (
+      triangle &&
+      meshRegularization > 0 &&
+      (!triangle.positive ||
+        (topologyRepair === 'project-margin' &&
+          triangle.minimum < meshRegularization / (2 * meshWidth * meshHeight)))
+    ) {
+      // Fold-only repair changes actual inversions. The optional margin path
+      // also repairs pinched positive triangles before floating-point collapse;
+      // every result is checked for topology and measured against unit targets.
+      const repair =
+        topologyRepair === 'damp'
+          ? dampFoldedVertices(grid, candidate, meshWidth, meshHeight, {
+              maximumDisplacement: 8 * tolerance,
+            })
+          : projectTriangleAreas(candidate, meshWidth, meshHeight, {
+              minimumJacobian:
+                topologyRepair === 'project-margin'
+                  ? meshRegularization
+                  : Math.min(meshRegularization, 1e-6),
+              passes: 128,
+              ...(topologyRepair === 'project-margin'
+                ? { maximumDisplacement: 8 * tolerance }
+                : {}),
+            });
+      topologyCorrection = repair;
+      regularizedVertices += repair.changed;
+      maximumRegularizationDisplacement = Math.max(
+        maximumRegularizationDisplacement,
+        repair.maximumDisplacement,
+      );
+      triangle =
+        repair.complete === false ||
+        (topologyRepair === 'project-margin' &&
+          repair.maximumDisplacement > 8 * tolerance)
+          ? null
+          : measureTriangleOrientation({
+              width: meshWidth,
+              height: meshHeight,
+              forwardGrid: candidate,
+            });
+    }
     if (!triangle?.positive) {
       rejected += 1;
+      onProgress?.({
+        phase: 'integration-rejected',
+        algorithm,
+        time,
+        step,
+        accepted,
+        rejected,
+        boundaryValid,
+        localError: error,
+        nonPositive: triangle?.nonPositive,
+        minimumTriangle: triangle?.minimum,
+        topologyCorrection,
+      });
       step *= Math.max(
         0.1,
         Math.min(0.5, 0.8 * Math.sqrt(tolerance / Math.max(error, EPSILON))),
       );
       if (step < 1e-12 || time + step === time)
         throw new Error(
-          `${linearFlow ? 'GSM2018' : 'Diffusion'} flow step underflow while preventing mesh folding`,
+          `${linearFlow ? 'GSM2018' : 'Diffusion'} flow step underflow while preventing mesh folding: ${JSON.stringify({ time, error, boundaryValid, triangle })}`,
         );
       continue;
     }
@@ -888,14 +972,15 @@ export function createCartogram({
     );
   }
   const map = cartogramFromForwardGrid({
-    width,
-    height,
+    width: meshWidth,
+    height: meshHeight,
     forwardGrid: grid,
     diagnostics: {
       algorithm: linearFlow ? 'gsm2018-fast-flow' : 'spectral-diffusion-flow',
       densityPath: linearFlow ? 'linear-to-mean' : 'analytic-heat-diffusion',
       boundaryX: 'periodic-FFT',
       boundaryY: 'reflecting-DCT-II',
+      flowGrid: [width, height],
       blurSigma,
       tolerance,
       speedTolerance,
@@ -911,11 +996,28 @@ export function createCartogram({
         ? 'flux-over-min-density-upper-bound'
         : 'cell-maximum',
       maximumLocalError,
+      meshRegularization,
+      topologyRepair,
+      regularizedVertices,
+      maximumRegularizationDisplacement,
       flooredCells: solver.flooredCells,
     },
   });
   map.density = Float64Array.from(density);
-  map.iterations = 1;
+  map.iterations = (initialMap?.iterations ?? 0) + 1;
+  if (initialMap) {
+    const round = map.diagnostics;
+    map.diagnostics = {
+      algorithm: linearFlow
+        ? 'composed-gsm2018-fast-flow'
+        : 'composed-spectral-diffusion-flow',
+      composition: 'integrated-material-vertices',
+      rounds: [
+        ...(initialMap.diagnostics.rounds ?? [initialMap.diagnostics]),
+        round,
+      ],
+    };
+  }
   return map;
 }
 
@@ -1019,7 +1121,7 @@ export function rasterizeInverseMap(
 export function composeCartograms(
   first,
   correction,
-  { preserveTopology = false } = {},
+  { preserveTopology = false, topologyRepair = 'project' } = {},
 ) {
   const grid = new Float64Array(first.forwardGrid.length);
   for (let i = 0; i < grid.length; i += 2) {
@@ -1050,6 +1152,21 @@ export function composeCartograms(
     },
   });
   let orientation = measureTriangleOrientation(map);
+  if (!orientation.positive && preserveTopology && topologyRepair === 'damp') {
+    const fullProposal = Float64Array.from(grid);
+    const repair = dampFoldedVertices(
+      first.forwardGrid,
+      grid,
+      first.width,
+      first.height,
+    );
+    map.diagnostics.localDamping = repair;
+    orientation = measureTriangleOrientation(map);
+    if (!repair.complete || !orientation.positive) {
+      grid.set(fullProposal);
+      orientation = measureTriangleOrientation(map);
+    }
+  }
   if (!orientation.positive && preserveTopology) {
     const proposed = Float64Array.from(grid);
     let fraction = 1;
@@ -1061,7 +1178,7 @@ export function composeCartograms(
       try {
         const repaired = regularizeCartogram(map, {
           minimumJacobian: 0.001,
-          passes: 8,
+          passes: 64,
         });
         grid.set(repaired.forwardGrid);
         map.diagnostics.regularizedVertices =
@@ -1071,6 +1188,11 @@ export function composeCartograms(
       } catch (error) {
         if (error.message !== 'Vertex regularization lost topology')
           throw error;
+        (map.diagnostics.topologyRepairAttempts ??= []).push({
+          fraction,
+          ...error.regularization,
+          orientation: error.orientation,
+        });
       }
       fraction *= 0.5;
       for (let i = 0; i < grid.length; i += 1)
@@ -1114,6 +1236,234 @@ export function refineCartogram(map, factor = 2) {
   if (!measureTriangleOrientation(refined).positive)
     throw new Error('Refinement lost topology');
   return refined;
+}
+
+/** Restore a proposal locally toward the known positive previous mesh.
+ * Every affected star is checked, including periodic neighbours. This is a
+ * bounded geometric approximation to the flow, not an ODE error estimate;
+ * exact unit areas and inverse accuracy must still pass after integration. */
+export function dampFoldedVertices(
+  previous,
+  proposed,
+  width,
+  height,
+  {
+    maximumDisplacement = Infinity,
+    maximumVertices = 65536,
+    maximumUpdates = 262144,
+  } = {},
+) {
+  const queue = [];
+  const queued = new Set();
+  const vertices = new Map();
+  let head = 0;
+  let largestDisplacement = 0;
+  function indices(id) {
+    const cell = id >>> 1;
+    const y = Math.floor(cell / width),
+      x = cell % width;
+    const a = 2 * (y * (width + 1) + x),
+      d = a + 2 * (width + 1);
+    return id & 1 ? [a, d + 2, d] : [a, a + 2, d + 2];
+  }
+  function enqueue(id) {
+    if (queued.has(id)) return;
+    const [a, b, c] = indices(id);
+    if (cross(proposed, a, b, c) > 0) return;
+    queued.add(id);
+    queue.push(id);
+  }
+  function cell(x, y, first = true, second = true) {
+    if (y < 0 || y >= height) return;
+    const id = 2 * (y * width + ((x + width) % width));
+    if (first) enqueue(id);
+    if (second) enqueue(id + 1);
+  }
+  function incident(x, y) {
+    cell(x, y);
+    cell(x - 1, y, true, false);
+    cell(x - 1, y - 1);
+    cell(x, y - 1, false, true);
+  }
+  for (let id = 0; id < 2 * width * height; id += 1) enqueue(id);
+  while (head < queue.length && head < maximumUpdates) {
+    const id = queue[head++];
+    queued.delete(id);
+    const positions = indices(id);
+    if (cross(proposed, ...positions) > 0) continue;
+    for (const position of positions) {
+      const row = Math.floor(position / (2 * (width + 1)));
+      const column = (position / 2) % (width + 1);
+      const canonicalColumn = column % width;
+      const at = 2 * (row * (width + 1) + canonicalColumn);
+      let vertex = vertices.get(at);
+      if (!vertex) {
+        if (vertices.size >= maximumVertices)
+          return {
+            changed: vertices.size,
+            maximumDisplacement: largestDisplacement,
+            complete: false,
+            updates: head,
+          };
+        vertex = { x: proposed[at], y: proposed[at + 1], alpha: 1 };
+        vertices.set(at, vertex);
+      }
+      vertex.alpha = vertex.alpha > 2 ** -24 ? vertex.alpha / 2 : 0;
+      proposed[at] = previous[at] + vertex.alpha * (vertex.x - previous[at]);
+      proposed[at + 1] =
+        previous[at + 1] + vertex.alpha * (vertex.y - previous[at + 1]);
+      largestDisplacement = Math.max(
+        largestDisplacement,
+        Math.hypot(proposed[at] - vertex.x, proposed[at + 1] - vertex.y),
+      );
+      if (largestDisplacement > maximumDisplacement)
+        return {
+          changed: vertices.size,
+          maximumDisplacement: largestDisplacement,
+          complete: false,
+          updates: head,
+        };
+      if (canonicalColumn === 0) {
+        proposed[at + 2 * width] = proposed[at] + 1;
+        proposed[at + 2 * width + 1] = proposed[at + 1];
+      }
+    }
+    // Changing one corner can invert a neighbour. Expand the active patch
+    // until it closes; no triangle outside these six stars has changed.
+    for (const position of positions) {
+      const row = Math.floor(position / (2 * (width + 1)));
+      const column = (position / 2) % (width + 1);
+      incident(column % width, row);
+    }
+  }
+  return {
+    changed: vertices.size,
+    maximumDisplacement: largestDisplacement,
+    complete: head === queue.length,
+    updates: head,
+  };
+}
+
+/** Project pinched triangle areas onto a positive margin. Each update follows
+ * the area gradient of all three vertices. Periodic seam copies are one vertex;
+ * reflecting edges may move along x only. This also repairs a cluster whose
+ * individual vertex-star kernels are empty. Scientific unit areas must always
+ * be measured again after these small geometric corrections. */
+function projectTriangleAreas(
+  grid,
+  width,
+  height,
+  {
+    minimumJacobian = 1e-4,
+    passes = 12,
+    maximumDisplacement: displacementLimit = Infinity,
+  } = {},
+) {
+  const threshold = minimumJacobian / (width * height);
+  let changed = 0;
+  let maximumDisplacement = 0;
+  const original = new Map();
+  const positions = new Int32Array(3);
+  const gradients = new Float64Array(6);
+  function triangle(a, b, c) {
+    const area = cross(grid, a, b, c);
+    if (area >= threshold) return;
+    positions[0] = a;
+    positions[1] = b;
+    positions[2] = c;
+    gradients[0] = grid[b + 1] - grid[c + 1];
+    gradients[1] = grid[c] - grid[b];
+    gradients[2] = grid[c + 1] - grid[a + 1];
+    gradients[3] = grid[a] - grid[c];
+    gradients[4] = grid[a + 1] - grid[b + 1];
+    gradients[5] = grid[b] - grid[a];
+    let norm = 0;
+    for (let k = 0; k < 3; k += 1) {
+      const row = Math.floor(positions[k] / (2 * (width + 1)));
+      if (row === 0 || row === height) gradients[2 * k + 1] = 0;
+      norm += gradients[2 * k] ** 2 + gradients[2 * k + 1] ** 2;
+    }
+    if (!(norm > 0)) return;
+    const scale = (threshold * 1.1 - area) / norm;
+    for (let k = 0; k < 3; k += 1) {
+      const row = Math.floor(positions[k] / (2 * (width + 1)));
+      const column = (positions[k] / 2) % (width + 1);
+      const at = column === width ? row * (width + 1) * 2 : positions[k];
+      const dx = scale * gradients[2 * k];
+      const dy = scale * gradients[2 * k + 1];
+      if (!original.has(at)) original.set(at, [grid[at], grid[at + 1]]);
+      grid[at] += dx;
+      grid[at + 1] += dy;
+      const before = original.get(at);
+      maximumDisplacement = Math.max(
+        maximumDisplacement,
+        Math.hypot(grid[at] - before[0], grid[at + 1] - before[1]),
+      );
+      if (column === 0 || column === width) {
+        grid[at + width * 2] = grid[at] + 1;
+        grid[at + width * 2 + 1] = grid[at + 1];
+      }
+    }
+    changed += 1;
+    for (let k = 0; k < 3; k += 1) {
+      const row = Math.floor(positions[k] / (2 * (width + 1)));
+      const column = (positions[k] / 2) % (width + 1);
+      incident(column % width, row);
+    }
+  }
+  // A ring worklist propagates only to incident triangles. Repeated global
+  // scans would spend almost all of their time on millions of sound cells.
+  const triangleCount = 2 * width * height;
+  const queued = new Uint8Array(triangleCount);
+  const queue = new Uint32Array(triangleCount);
+  let head = 0,
+    tail = 0,
+    pending = 0;
+  function indices(id) {
+    const cell = id >>> 1;
+    const y = Math.floor(cell / width),
+      x = cell % width;
+    const a = (y * (width + 1) + x) * 2;
+    const d = a + (width + 1) * 2;
+    return id & 1 ? [a, d + 2, d] : [a, a + 2, d + 2];
+  }
+  function enqueue(id) {
+    if (queued[id]) return;
+    const [a, b, c] = indices(id);
+    if (cross(grid, a, b, c) >= threshold) return;
+    queue[tail] = id;
+    tail = (tail + 1) % triangleCount;
+    pending += 1;
+    queued[id] = 1;
+  }
+  function cell(x, y, first = true, second = true) {
+    if (y < 0 || y >= height) return;
+    const id = 2 * (y * width + ((x + width) % width));
+    if (first) enqueue(id);
+    if (second) enqueue(id + 1);
+  }
+  function incident(x, y) {
+    cell(x, y);
+    cell(x - 1, y, true, false);
+    cell(x - 1, y - 1);
+    cell(x, y - 1, false, true);
+  }
+  for (let id = 0; id < triangleCount; id += 1) enqueue(id);
+  const maximumUpdates = passes * Math.max(2048, pending);
+  let updates = 0;
+  while (pending && updates < maximumUpdates) {
+    const id = queue[head];
+    head = (head + 1) % triangleCount;
+    pending -= 1;
+    queued[id] = 0;
+    const [a, b, c] = indices(id);
+    triangle(a, b, c);
+    updates += 1;
+    if (maximumDisplacement > displacementLimit)
+      return { changed, maximumDisplacement, complete: false };
+  }
+
+  return { changed, maximumDisplacement };
 }
 
 /** Improve numerically pinched vertex stars while keeping every incident
@@ -1209,8 +1559,22 @@ export function regularizeCartogram(
     forwardGrid: grid,
     diagnostics: { ...map.diagnostics, regularizedVertices: changed },
   });
-  if (!measureTriangleOrientation(result).positive)
-    throw new Error('Vertex regularization lost topology');
+  if (!measureTriangleOrientation(result).positive) {
+    const repair = projectTriangleAreas(grid, width, height, {
+      minimumJacobian,
+      passes: Math.max(128, passes * 4),
+    });
+    result.diagnostics.projectedTriangles = repair.changed;
+    result.diagnostics.maximumRegularizationDisplacement =
+      repair.maximumDisplacement;
+    const orientation = measureTriangleOrientation(result);
+    if (!orientation.positive) {
+      const error = new Error('Vertex regularization lost topology');
+      error.orientation = orientation;
+      error.regularization = repair;
+      throw error;
+    }
+  }
   return result;
 }
 

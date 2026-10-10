@@ -13,6 +13,14 @@ import {
   ALPHA_DEFAULT,
   parseAlphaParam,
 } from '../features/isolation/isolationMetric';
+import {
+  RESHAPED_DEFAULT_LEVEL,
+  RESHAPED_DEFAULT_METRIC,
+  isReshapedLevel,
+  isReshapedMetric,
+  type ReshapedLevelId,
+  type ReshapedMetricId,
+} from '../features/reshaped/metrics';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
@@ -39,11 +47,19 @@ export interface ShareableState {
   surnameDisplayMode: SurnameDisplayMode;
   isolationAlpha: number;
   isolationView: IsolationView;
+  reshapedMetric?: ReshapedMetricId;
+  reshapedLevel?: ReshapedLevelId;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
 
-const modeSchema = z.enum(['antipodes', 'sunline', 'surnames', 'isolation']);
+const modeSchema = z.enum([
+  'antipodes',
+  'sunline',
+  'surnames',
+  'isolation',
+  'reshaped',
+]);
 /** Observations that once shipped; their links open the lobby with a notice. */
 const RETIRED_MODES: ReadonlySet<string> = new Set(['development']);
 const surnameDisplayModeSchema = z.enum(['local', 'latin', 'chinese']);
@@ -104,6 +120,16 @@ export function parseUrlState(
     activeMode === 'isolation' && params.get('view') === 'field'
       ? 'field'
       : DEFAULT_ISOLATION_VIEW;
+  const rawReshapedMetric = params.get('metric');
+  const rawReshapedLevel = params.get('level');
+  const reshapedMetric =
+    activeMode === 'reshaped' && isReshapedMetric(rawReshapedMetric)
+      ? rawReshapedMetric
+      : RESHAPED_DEFAULT_METRIC;
+  const reshapedLevel =
+    activeMode === 'reshaped' && isReshapedLevel(rawReshapedLevel)
+      ? rawReshapedLevel
+      : RESHAPED_DEFAULT_LEVEL;
 
   return {
     activeMode,
@@ -120,6 +146,7 @@ export function parseUrlState(
       : DEFAULT_SURNAME_DISPLAY_MODE,
     isolationAlpha,
     isolationView,
+    ...(activeMode === 'reshaped' ? { reshapedMetric, reshapedLevel } : {}),
   };
 }
 
@@ -171,6 +198,20 @@ export function serializeUrlState(state: ShareableState): string {
       state.isolationView !== DEFAULT_ISOLATION_VIEW
     ) {
       params.set('view', state.isolationView);
+    }
+    if (state.activeMode === 'reshaped') {
+      if (
+        (state.reshapedMetric ?? RESHAPED_DEFAULT_METRIC) !==
+        RESHAPED_DEFAULT_METRIC
+      ) {
+        params.set('metric', state.reshapedMetric ?? RESHAPED_DEFAULT_METRIC);
+      }
+      if (
+        (state.reshapedLevel ?? RESHAPED_DEFAULT_LEVEL) !==
+        RESHAPED_DEFAULT_LEVEL
+      ) {
+        params.set('level', state.reshapedLevel ?? RESHAPED_DEFAULT_LEVEL);
+      }
     }
     params.set('v', '2');
   }

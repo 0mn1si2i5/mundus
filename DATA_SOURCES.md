@@ -182,6 +182,56 @@ The 50m geometry and this table load only when the Surname Atlas opens.
 - Caveats: adjacent cities can merge into one urban centre; 2025 populations are modelled grid estimates rather than census counts; and a large or irregular centre's centroid can sit away from its historic centre. Distances are geometry between centres and do not represent travel or economic access.
 - The runtime loads only the compact derived asset when Urban Proximity opens; raw downloads remain outside Git. The method note with the exact licence sentence, package hash and coordinate formula is [docs/data/ghsl-ucdb-r2024a.md](docs/data/ghsl-ucdb-r2024a.md).
 
+## Reshaped Earth
+
+Reshaped Earth uses one shared **2020** snapshot for four quantities at country
+and first-level administrative scales. Sources and licences were checked on
+2026-10-10; exact download identities, hashes and selection metadata are pinned
+in `scripts/reshaped-earth/sources.mjs`. At publication,
+`src/data/manifests/reshaped-earth.json` must record those source identities
+and the actual derived assets' hashes and sizes. Its current placeholder
+entries do not identify accepted production assets.
+
+Production cartograms have not passed publication acceptance. Candidate
+assets are not release data; the source and method contract below defines
+what must be satisfied before publication.
+
+| Quantity                | Source and version                                                                                                                                                                       | Terms                                                                 | Interpretation                                                                                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Population              | European Commission, Joint Research Centre, [GHS-POP R2023A V1-0](https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php), epoch 2020, WGS84 30 arcseconds                     | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             | Modelled persons per cell                                                                                                                                        |
+| GDP                     | Kummu et al., [global downscaled GDP grids v4](https://zenodo.org/records/18429133), `rast_gdpTot_1990_2024_5arcmin.tif`, band description 2020                                          | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             | **2021 international dollars (PPP)**, as specified by v4, not nominal GDP                                                                                        |
+| CO₂                     | Jones et al., [GCP-GridFED v2025.1](https://zenodo.org/records/17467681), complete 2020 archive from UEA                                                                                 | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             | Tonnes CO₂/year; monthly oil, coal, gas and cement-calcination emissions summed, excluding international aviation/shipping bunkers and cement-carbonation uptake |
+| Night lights            | Li, Zhou, Zhao & Zhao, [Harmonized DMSP–VIIRS NTL v10](https://figshare.com/articles/dataset/9828827/10), `Harmonized_DN_NTL_2020_simVIIRS.tif`                                          | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)             | Sum of DN 0–63, a relative brightness index with sensor saturation; not physical radiance                                                                        |
+| Administrative geometry | [Natural Earth 5.1.2 admin-1](https://github.com/nvkelso/natural-earth-vector/blob/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson) and the full-detail Mundus country view above | [Public domain](https://www.naturalearthdata.com/about/terms-of-use/) | Administrative ownership follows the Mundus country raster; boundaries are not a legal authority                                                                 |
+
+The build scans a 30-arcsecond classification raster without loading the entire
+global raster into memory. Population and night-light samples are mapped by
+their actual geographic pixel centres. The shifted GHS-POP affine grid is
+preserved; a population-only coastal search within two classification pixels
+assigns nearby coastal samples to land. Coarse GDP and CO₂ counts are divided
+between labelled land subpixels in proportion to their spherical intersection
+area. Country totals are sums of administrative children, missing stays `null`,
+and actual zero stays zero. At publication, unassigned amounts, conservation
+error, source metadata and name coverage must be recorded in the manifest. Offshore CO₂ and
+areas with no represented unit can remain unassigned.
+
+The continuous cartogram uses Gastner, Seguy & More's
+[2018 fast flow method](https://doi.org/10.1073/pnas.1712674115) on a
+2048×1024 cylindrical equal-area grid. Density is quantity divided by true
+unit area. Oceans, Antarctica and missing units receive mean density; actual
+zero values use a 1% mean-density display floor. The final area ratios are
+measured from the deformation rather than substituted from target shares.
+The publication manifest must record each of the eight maps' orientation,
+area, inverse round-trip and quantization checks. See
+[the method contract](docs/data/reshaped-earth.md) for the full acceptance
+thresholds, boundary-adjustment rules, budgets and rebuild commands.
+
+Only compact derived metadata, opaque ID PNGs and encoded inverse fields are
+redistributed. They retain the source attribution above and CC BY 4.0 where
+applicable. Raw GeoTIFFs, netCDF4/HDF5 files and classification caches remain
+outside the worktree. Every source notice and the method summary appears in
+the About dialog.
+
 ## Solar calculations
 
 - Method source: [NOAA Solar Calculator calculation details](https://gml.noaa.gov/grad/solcalc/calcdetails.html)

@@ -53,6 +53,8 @@ export function ShareDialog({
       surnameDisplayMode: state.surnameDisplayMode,
       isolationAlpha: state.isolationAlpha,
       isolationView: state.isolationView,
+      reshapedMetric: state.reshapedMetric,
+      reshapedLevel: state.reshapedLevel,
     };
     return {
       activeMode: state.activeMode,

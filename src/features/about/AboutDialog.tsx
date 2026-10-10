@@ -16,7 +16,7 @@ const COPY = {
   zh: {
     title: '关于 Mundus',
     description:
-      'Mundus 是一个交互式三维地球：选择一种观察方式，转动地球，看见一个清楚的发现。所有计算都在你的浏览器里完成。',
+      'Mundus 是一个交互式三维地球：选择一种观察方式，转动地球，看见一个清楚的发现。你可以直接在浏览器里探索它。',
     close: '关闭',
     methods: '观察与方法',
     sources: '数据来源与许可',
@@ -41,11 +41,15 @@ const COPY = {
         '城市邻近性',
         '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级邻近距离是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，距离呈阶梯式增长。全球分区把陆地点归给“距离 ÷ 当前邻近距离”最小的中心，形成不规则区域；颜色只区分归属，没有有效邻近距离的中心只标点。相邻城市可能被合并为一个城市中心；结果只反映几何与人口规模，不代表交通或经济可达性。',
       ],
+      [
+        '变形地球',
+        '此观察尚未发布，真实数据的变形精度仍待验收。方法采用 2020 年人口、PPP GDP、化石燃料与水泥 CO₂ 排放和夜光快照，在等积圆柱网格上离线计算 Gastner–Seguy–More（2018）连续面积变形图。国家值来自一级行政单元求和，边界沿用 Mundus 国家视角。海洋、南极和缺失单元用平均密度填充；真实零值使用平均密度 1% 的显示下限。GDP 是以 2021 年国际元计的模型下采样估计；夜光是有饱和上限的相对亮度指数。',
+      ],
     ] as const,
     credits: [
       {
         name: 'Natural Earth',
-        use: '国家边界与地球矢量底图。边界采用 Natural Earth 中国视角数据，台湾单独显示；地图边界不构成对领土地位的法律认定。',
+        use: '国家边界、一级行政区与地球矢量底图。边界采用 Natural Earth 中国视角数据，台湾单独显示；变形地球的一级行政区按国家栅格归属调整。地图边界不构成对领土地位的法律认定。',
         notice: 'Made with Natural Earth · 公共领域数据',
         links: [
           { label: '来源', href: 'https://www.naturalearthdata.com/' },
@@ -100,12 +104,58 @@ const COPY = {
           { label: 'GHSL · CC BY 4.0', href: CC_BY_4 },
         ],
       },
+      {
+        name: 'GHS-POP R2023A',
+        use: '变形地球 · 2020 年人口',
+        notice:
+          'European Commission, Joint Research Centre（JRC），GHS-POP R2023A V1-0 · CC BY 4.0。人口为模型估计。',
+        links: [
+          {
+            label: '数据集',
+            href: 'https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'Kummu et al. GDP v4',
+        use: '变形地球 · 2020 年 PPP GDP',
+        notice:
+          'Kummu et al.，全球下采样 GDP 网格 v4 · CC BY 4.0。以 2021 年国际元计的购买力平价估计，不是当地货币或名义 GDP。',
+        links: [
+          { label: '数据集', href: 'https://zenodo.org/records/18429133' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'GCP-GridFED v2025.1',
+        use: '变形地球 · 2020 年 CO₂ 排放',
+        notice:
+          'Jones et al.，GCP-GridFED v2025.1 · CC BY 4.0。石油、煤、天然气与水泥煅烧的月度排放加总；不含国际航运/航空燃料与水泥碳化吸收，部分海上排放未归属陆地单元。',
+        links: [
+          { label: '数据集', href: 'https://zenodo.org/records/17467681' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'Harmonized DMSP–VIIRS NTL v10',
+        use: '变形地球 · 2020 年夜光',
+        notice:
+          'Li, Zhou, Zhao & Zhao，协调化 DMSP–VIIRS 夜光 v10 · CC BY 4.0。DN 0–63 为相对亮度指数，存在传感器饱和，不是物理辐亮度。',
+        links: [
+          {
+            label: '数据集',
+            href: 'https://figshare.com/articles/dataset/9828827/10',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
     ] satisfies readonly Credit[],
   },
   en: {
     title: 'About Mundus',
     description:
-      'Mundus is an interactive globe: choose a way of observing, turn the Earth, and see one clear finding. Everything is computed in your browser.',
+      'Mundus is an interactive globe: choose a way of observing, turn the Earth, and see one clear finding. Explore it directly in your browser.',
     close: 'Close',
     methods: 'Observations and methods',
     sources: 'Data sources and licenses',
@@ -130,11 +180,15 @@ const COPY = {
         'Urban Proximity',
         'Uses 2025 populations from the GHSL Urban Centre Database (R2024A). The hierarchical proximity distance is the great-circle distance from a city of at least one million people to the nearest urban centre with at least α times its population; a higher α raises the bar, and the distance grows in steps. Global regions assign land points to the centre with the lowest distance / current proximity distance, producing irregular boundaries. Colours distinguish owners; centres without a valid proximity distance remain dots only. Neighbouring cities can merge into one urban centre; results reflect geometry and size only, not travel or economic access.',
       ],
+      [
+        'Reshaped Earth',
+        'This observation is not published; deformation accuracy on real data still awaits acceptance. The method uses 2020 population, PPP GDP, fossil-fuel and cement CO₂ emissions, and night-light snapshots for an offline Gastner–Seguy–More (2018) contiguous area cartogram on a cylindrical equal-area grid. Country values sum their first-level administrative children, following Mundus country boundaries. Oceans, Antarctica and missing units receive mean density; real zero values use a display floor of 1% of mean density. GDP is a modelled downscaled estimate in 2021 international dollars; night lights are a relative brightness index with sensor saturation.',
+      ],
     ] as const,
     credits: [
       {
         name: 'Natural Earth',
-        use: 'Country borders and the vector globe. Boundaries follow the Natural Earth China point-of-view layer, with Taiwan shown separately; map boundaries are not a legal statement on territorial status.',
+        use: 'Country borders, first-level administrative areas and the vector globe. Boundaries follow the Natural Earth China point-of-view layer, with Taiwan shown separately. Reshaped Earth adjusts administrative ownership against the country raster; map boundaries are not a legal statement on territorial status.',
         notice: 'Made with Natural Earth · public domain data',
         links: [
           { label: 'Source', href: 'https://www.naturalearthdata.com/' },
@@ -188,6 +242,52 @@ const COPY = {
             href: 'https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php',
           },
           { label: 'GHSL · CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'GHS-POP R2023A',
+        use: 'Reshaped Earth · 2020 population',
+        notice:
+          'European Commission, Joint Research Centre (JRC), GHS-POP R2023A V1-0 · CC BY 4.0. Population is modelled.',
+        links: [
+          {
+            label: 'Dataset',
+            href: 'https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'Kummu et al. GDP v4',
+        use: 'Reshaped Earth · 2020 PPP GDP',
+        notice:
+          'Kummu et al., global downscaled GDP grids v4 · CC BY 4.0. PPP estimates in 2021 international dollars, not local currency or nominal GDP.',
+        links: [
+          { label: 'Dataset', href: 'https://zenodo.org/records/18429133' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'GCP-GridFED v2025.1',
+        use: 'Reshaped Earth · 2020 CO₂ emissions',
+        notice:
+          'Jones et al., GCP-GridFED v2025.1 · CC BY 4.0. Annual sum of monthly oil, coal, gas and cement-calcination emissions; international aviation/shipping bunkers and cement-carbonation uptake are excluded. Some offshore emissions are not assigned to land units.',
+        links: [
+          { label: 'Dataset', href: 'https://zenodo.org/records/17467681' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'Harmonized DMSP–VIIRS NTL v10',
+        use: 'Reshaped Earth · 2020 night lights',
+        notice:
+          'Li, Zhou, Zhao & Zhao, harmonized DMSP–VIIRS night lights v10 · CC BY 4.0. DN 0–63 is a relative brightness index with sensor saturation, not physical radiance.',
+        links: [
+          {
+            label: 'Dataset',
+            href: 'https://figshare.com/articles/dataset/9828827/10',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
         ],
       },
     ] satisfies readonly Credit[],

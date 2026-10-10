@@ -7,6 +7,7 @@ export const MODE_ORDER = [
   'antipodes',
   'surnames',
   'isolation',
+  'reshaped',
   'sunline',
 ] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
@@ -27,6 +28,7 @@ export interface ModeDefinition {
   version: 1;
   tier: ModeTier;
   title: LocalizedText;
+  compactTitle?: LocalizedText;
   titlePhrases: { zh: readonly string[] };
   question: LocalizedText;
   summary: LocalizedText;
@@ -41,6 +43,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     version: 1,
     tier: 'primary',
     title: { zh: '地球另一端', en: 'Other Side' },
+    compactTitle: { zh: '另一端', en: 'Other Side' },
     titlePhrases: { zh: ['地球', '另一端'] },
     question: {
       zh: '如果从这里穿过地心，你会在哪里重新看见天空？',
@@ -64,6 +67,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     version: 1,
     tier: 'primary',
     title: { zh: '姓氏观察', en: 'Surname Atlas' },
+    compactTitle: { zh: '姓氏', en: 'Surnames' },
     titlePhrases: { zh: ['姓氏观察'] },
     question: {
       zh: '每个国家常见的姓氏是什么？',
@@ -87,6 +91,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     version: 1,
     tier: 'primary',
     title: { zh: '城市邻近性', en: 'Urban Proximity' },
+    compactTitle: { zh: '城市邻近', en: 'Proximity' },
     titlePhrases: { zh: ['城市', '邻近性'] },
     question: {
       zh: '离一座大城市最近的达标城市中心有多远？',
@@ -105,6 +110,32 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
       }),
       alpha: z.number().min(ALPHA_MIN).max(ALPHA_MAX),
       view: z.enum(['city', 'field']),
+    }),
+  },
+  reshaped: {
+    id: 'reshaped',
+    version: 1,
+    tier: 'primary',
+    title: { zh: '变形地球', en: 'Reshaped Earth' },
+    compactTitle: { zh: '变形地球', en: 'Reshaped' },
+    titlePhrases: { zh: ['变形', '地球'] },
+    question: {
+      zh: '如果土地按人口、经济、排放或灯光重新分配，世界会是什么形状？',
+      en: 'What shape would the world take if land were shared out by people, wealth, emissions or light?',
+    },
+    summary: {
+      zh: '在真实形状与连续变形之间切换，比较 2020 年的四种全球指标。',
+      en: 'Compare four 2020 global measures by morphing between true and reshaped land.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['mundus-countries', 'reshaped-earth'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
+      metric: z.enum(['population', 'gdp', 'co2', 'lights']),
+      level: z.enum(['country', 'admin1']),
     }),
   },
   sunline: {

@@ -18,7 +18,9 @@ export function useUrlState() {
           state.sunlineClockMode === previous.sunlineClockMode &&
           state.surnameDisplayMode === previous.surnameDisplayMode &&
           state.isolationAlpha === previous.isolationAlpha &&
-          state.isolationView === previous.isolationView)
+          state.isolationView === previous.isolationView &&
+          state.reshapedMetric === previous.reshapedMetric &&
+          state.reshapedLevel === previous.reshapedLevel)
       ) {
         return;
       }
@@ -54,6 +56,7 @@ export function useUrlState() {
         ...parseUrlState(window.location.search),
         navigationNotice: parseNavigationNotice(window.location.search),
         hoveredCountry: null,
+        reshapedSelectedUnitId: undefined,
         cameraFocusIntent: { side: 'origin', target: null },
         sunlinePlaying: false,
       });

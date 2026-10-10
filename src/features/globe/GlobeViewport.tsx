@@ -16,7 +16,7 @@ import {
   CLICK_DRAG_THRESHOLD_PX,
   TOUCH_CLICK_DRAG_THRESHOLD_PX,
 } from './interaction';
-import { detectQualityProfile } from './quality';
+import { getRuntimeQualityProfile } from './quality';
 import { SUNLINE_RENDERING } from './rendering';
 import { supportsWebGL2 } from './webgl';
 import styles from './GlobeViewport.module.css';
@@ -28,6 +28,7 @@ import type { SurnameMapLabel } from '../surnames/surnameData';
 import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
 import type { SurnameDisplayMode } from '../../state/urlState';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
+import type { GlobePresentation } from '../modes/useModePresentation';
 import { messages } from '../../i18n/messages';
 import {
   clearCameraDiagnostic,
@@ -65,6 +66,7 @@ interface GlobeViewportProps {
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
   isolation: IsolationGlobePresentation | null;
+  reshaped: GlobePresentation['reshaped'];
 }
 
 interface PointerStart {
@@ -89,9 +91,11 @@ export function GlobeViewport({
   surnameMapLabels,
   surnameDisplayMode,
   isolation,
+  reshaped,
 }: GlobeViewportProps) {
+  const reshapedMorphState = useAppStore((state) => state.reshapedMorphState);
   const [supported] = useState(supportsWebGL2);
-  const [profile] = useState(detectQualityProfile);
+  const [profile] = useState(getRuntimeQualityProfile);
   const [dragDiagnosticsEnabled] = useState(() =>
     new URLSearchParams(window.location.search).has('dragDiagnostics'),
   );
@@ -345,6 +349,8 @@ export function GlobeViewport({
         vectorState === 'ready' ? vectorPaletteVersion : undefined
       }
       data-vector-raster-fallback-visible={String(vectorState !== 'ready')}
+      data-reshaped-mode={reshaped ? 'active' : undefined}
+      data-morph-state={reshaped ? reshapedMorphState : undefined}
       data-vector-render-draws={vectorRenderEvidence?.vectorDraws}
       data-vector-renderer-calls={vectorRenderEvidence?.rendererCalls}
       data-vector-render-revision={vectorRenderEvidence?.revision}
@@ -546,6 +552,7 @@ export function GlobeViewport({
           surnameMapLabels={surnameMapLabels}
           surnameDisplayMode={surnameDisplayMode}
           isolation={isolation}
+          reshaped={reshaped}
           onIsolationFieldRendered={setFieldRenderedAlpha}
           cameraGestureCancelRef={cancelCameraGesture}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}

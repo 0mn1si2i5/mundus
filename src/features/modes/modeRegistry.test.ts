@@ -17,7 +17,7 @@ describe('mode registry', () => {
   });
 
   it('provides one explicit product order with unique identifiers', () => {
-    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3]);
+    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3, 4]);
     expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
@@ -37,11 +37,12 @@ describe('mode registry', () => {
     }
   });
 
-  it('offers Urban Proximity as a primary observation and Sunline under More', () => {
+  it('offers Reshaped Earth as a primary observation and Sunline under More', () => {
     expect(modesInTier('primary').map((mode) => mode.id)).toEqual([
       'antipodes',
       'surnames',
       'isolation',
+      'reshaped',
     ]);
     expect(modesInTier('more').map((mode) => mode.id)).toEqual(['sunline']);
   });

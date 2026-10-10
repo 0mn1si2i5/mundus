@@ -18,9 +18,10 @@ observation while keeping the selected place.
 - Live site: <https://0mn1si2i5.github.io/mundus/> (repository
   `0mn1si2i5/mundus`; Pages paths are case-sensitive, and the deploy job's
   `page_url` is the authority for the address).
-- The bare address opens a neutral lobby. The header switcher offers the three
+- The bare address opens a neutral lobby. The header switcher offers the four
   primary observations, **Other Side** (`antipodes`), **Surname Atlas**
-  (`surnames`) and **Urban Proximity** (`isolation`); **Sunline** (`sunline`)
+  (`surnames`), **Urban Proximity** (`isolation`) and **Reshaped Earth**
+  (`reshaped`); **Sunline** (`sunline`)
   sits under "More observations".
   **Development, Unpacked** was retired in 2026-10: its links
   (`mode=development`) open the lobby with a "retired" notice, and its UNDP
@@ -49,6 +50,11 @@ Observation contracts:
   centre of at least one million people to the nearest centre meeting the
   visible α population threshold; it describes geometry and size, not travel
   accessibility.
+- **Reshaped Earth** — offline continuous area cartograms of 2020 population,
+  PPP GDP, fossil CO₂ and relative nightlight DN at country or admin-1 level;
+  real coordinates remain shareable through shape changes. Rebuilds, boundary
+  adjustments, missing values and numerical acceptance:
+  `docs/data/reshaped-earth.md`.
 
 Experience requirements: the first screen is the globe; Chinese and English
 agree in meaning; desktop and mobile complete the same loop; keyboard, focus
@@ -113,6 +119,8 @@ URL contract:
 Coordinates serialise to at most four decimals. Continuous time or camera
 updates replace history entries. Opening a dialog never mutates the URL.
 Locale and first-use state are local preferences.
+Reshaped Earth serialises only nondefault `metric` and `level` parameters;
+shape and animation progress stay local.
 
 ## 4. Data
 
@@ -147,7 +155,7 @@ live smoke against the deployed URL. Live smoke only proves the host serves the
 artifact and renders the lobby; it does not replace the browser suites.
 
 Browser tests live in `tests/e2e/`, one file per area (`shell`, `layout`,
-`globe`, `other-side`, `surnames`, `sunline`) with shared
+`globe`, `other-side`, `surnames`, `sunline`, `reshaped`) with shared
 helpers in `helpers.ts`; `@smoke` tags the CI smoke subset.
 
 Test discipline: never loosen an assertion, add retries, raise timeouts or skip
