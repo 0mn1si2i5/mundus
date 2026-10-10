@@ -50,10 +50,16 @@ export function ModeSwitcher({
           type="button"
           className={styles.tab}
           data-mode-tab={mode.id}
+          aria-label={mode.title[locale]}
           aria-current={activeMode === mode.id ? 'page' : undefined}
           onClick={() => choose(mode.id)}
         >
-          {mode.title[locale]}
+          <span className={styles.fullTitle} aria-hidden="true">
+            {mode.title[locale]}
+          </span>
+          <span className={styles.compactTitle} aria-hidden="true">
+            {(mode.compactTitle ?? mode.title)[locale]}
+          </span>
         </button>
       ))}
       <div
@@ -69,6 +75,7 @@ export function ModeSwitcher({
       >
         <button
           ref={toggle}
+          aria-label={activeMore ? activeMore.title[locale] : t.moreModes}
           type="button"
           className={styles.tab}
           aria-expanded={open}
@@ -76,7 +83,12 @@ export function ModeSwitcher({
           aria-current={activeMore ? 'page' : undefined}
           onClick={() => setOpen((current) => !current)}
         >
-          {activeMore ? activeMore.title[locale] : t.moreModes}
+          <span className={styles.fullTitle} aria-hidden="true">
+            {activeMore ? activeMore.title[locale] : t.moreModes}
+          </span>
+          <span className={styles.compactTitle} aria-hidden="true">
+            {activeMore ? activeMore.title[locale] : t.moreModesCompact}
+          </span>
           <span className={styles.caret} aria-hidden="true">
             ▾
           </span>

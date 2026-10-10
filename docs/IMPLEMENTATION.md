@@ -54,3 +54,12 @@ GHSL 原定义与人口估计局限见 [数据方法](data/ghsl-ucdb-r2024a.md)�
 完整旧实施记录保留在
 [固定 Git 历史](https://github.com/0mn1si2i5/mundus/blob/a7fd01f7d3094569a9c506f4b1135e6796998d1e/docs/IMPLEMENTATION.md)，
 原始性能报告继续保留，便于追溯而不扩大当前契约。
+
+## 待审阅功能
+
+变形地球增加国家级 2020 人口、PPP GDP、化石 CO₂ 与相对夜光面积变形，
+连续变形无法消除的多余面积以斜线 padding 标示，实色核心代表应得面积。
+分享保留真实坐标。它使用离线 JS GSM2018 场和均匀 MRE3 逆映射，支持
+双语国家结果、排行、真实形状切换与失败重试。来源和数值验收见
+[数据契约](data/reshaped-earth.md)。此功能由 feature PR 交付；合并、部署
+和公开验收单独记录，当前部署基线不包含它。

@@ -66,6 +66,17 @@ function triangleEntries(coverage, triangle) {
   return weights;
 }
 
+function countryDensity(coverage, options) {
+  return densityFromCoverage(coverage, {
+    countries: options.units,
+    adminToCountryIndex: Array.from(
+      { length: coverage.unitAreas.length },
+      (_, i) => i,
+    ),
+    ...options,
+  });
+}
+
 test('rectangle/triangle integration handles diagonal intersections exactly', () => {
   assert.deepEqual(rectangleTriangleAreas(0, 0, 1, 1), [0.5, 0.5]);
   assert.deepEqual(rectangleTriangleAreas(0.5, 0, 1, 0.5), [0.25, 0]);
@@ -242,14 +253,13 @@ test('density conserves weighted mass and distinguishes zero, missing and exclud
     gridHeight: 1,
   });
   const units = [1, 2, 3, 4].map((paletteIndex) => ({
-    id: `admin-${paletteIndex}`,
+    id: `country-${paletteIndex}`,
     paletteIndex,
     excluded: paletteIndex === 4,
   }));
-  const field = densityFromCoverage(coverage, {
+  const field = countryDensity(coverage, {
     units,
-    values: [null, 10, 0, null, 1000],
-    level: 'admin1',
+    countryValues: [null, 10, 0, null, 1000],
   });
   near(field.totalValue, 10);
   near(field.meanDensity, 25);
@@ -277,28 +287,25 @@ test('density conserves weighted mass and distinguishes zero, missing and exclud
   near(field.density[0], (0.2 * 25 + 0.2 * 50 + 0.1 * 0.25) / (0.5 * 25.05));
   assert.throws(
     () =>
-      densityFromCoverage(coverage, {
+      countryDensity(coverage, {
         units,
-        values: [null, 0, 0, null, 0],
-        level: 'admin1',
+        countryValues: [null, 0, 0, null, 0],
       }),
     /positive included/,
   );
   assert.throws(
     () =>
-      densityFromCoverage(coverage, {
+      countryDensity(coverage, {
         units,
-        values: [null, -1, 0],
-        level: 'admin1',
+        countryValues: [null, -1, 0],
       }),
     /invalid metric/,
   );
   assert.throws(
     () =>
-      densityFromCoverage(coverage, {
+      countryDensity(coverage, {
         units: units.slice(1),
         values: [],
-        level: 'admin1',
       }),
     /unknown coverage label/,
   );
@@ -322,12 +329,11 @@ test('country fields reuse admin pieces and aggregate true areas before density'
     paletteIndex,
     excluded: paletteIndex === 3,
   }));
-  const field = densityFromCoverage(coverage, {
+  const field = countryDensity(coverage, {
     units,
     countries,
     adminToCountryIndex: [0, 1, 1, 2, 3],
     countryValues: [null, 10, null, 100],
-    level: 'country',
   });
   near(field.trueAreas.get(1), 0.4);
   near(field.trueAreas.get(2), 0.2);
@@ -342,7 +348,6 @@ test('country fields reuse admin pieces and aggregate true areas before density'
         units,
         countries,
         countryValues: [],
-        level: 'country',
       }),
     /adminToCountryIndex/,
   );
@@ -364,21 +369,19 @@ test('coverage cache roundtrips typed chunks and rejects truncation or invalid v
   assert.deepEqual(loaded.chunks, coverage.chunks);
   assert.deepEqual(loaded.unitAreas, coverage.unitAreas);
   assert.deepEqual(
-    densityFromCoverage(loaded, {
+    countryDensity(loaded, {
       units: [1, 2, 3].map((paletteIndex) => ({
         id: String(paletteIndex),
         paletteIndex,
       })),
-      values: [null, 1, 2, 3],
-      level: 'admin1',
+      countryValues: [null, 1, 2, 3],
     }).density,
-    densityFromCoverage(coverage, {
+    countryDensity(coverage, {
       units: [1, 2, 3].map((paletteIndex) => ({
         id: String(paletteIndex),
         paletteIndex,
       })),
-      values: [null, 1, 2, 3],
-      level: 'admin1',
+      countryValues: [null, 1, 2, 3],
     }).density,
   );
   const bytes = await readFile(cachePath);

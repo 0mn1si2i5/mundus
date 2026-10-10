@@ -391,21 +391,18 @@ function metricValue(values, unit) {
  */
 export function densityFromCoverage(
   coverage,
-  { units, countries, adminToCountryIndex, values, countryValues, level } = {},
+  { units, countries, adminToCountryIndex, countryValues } = {},
 ) {
-  if (level !== 'admin1' && level !== 'country')
-    throw new RangeError('density level must be country or admin1');
   const adminInventory = inventory(units);
   for (let label = 1; label < coverage.unitAreas.length; label += 1)
     if (coverage.unitAreas[label] > 0 && !adminInventory.has(label))
       throw new Error(`unknown coverage label ${label}`);
-  const selectedInventory =
-    level === 'country' ? inventory(countries) : adminInventory;
-  const parent = level === 'country' ? adminToCountryIndex : null;
-  if (level === 'country' && parent == null)
+  const selectedInventory = inventory(countries);
+  const parent = adminToCountryIndex;
+  if (parent == null)
     throw new Error('country density needs adminToCountryIndex');
   const trueAreas = areasByParent(coverage.unitAreas, parent);
-  const selectedValues = level === 'country' ? countryValues : values;
+  const selectedValues = countryValues;
   const data = new Map();
   let totalValue = 0;
   let includedArea = 0;

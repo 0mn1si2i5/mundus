@@ -11,6 +11,12 @@ import {
 import { SurnameScriptToggle } from '../surnames/SurnameScriptToggle';
 import type { SurnameRecord } from '../surnames/surnameData';
 import { IsolationResult } from '../isolation/IsolationResult';
+import { lazy, Suspense } from 'react';
+const ReshapedResult = lazy(() =>
+  import('../reshaped/ReshapedResult').then((module) => ({
+    default: module.ReshapedResult,
+  })),
+);
 
 export function ModeResult({
   locale,
@@ -257,6 +263,12 @@ export function ModeResult({
     }
     case 'isolation':
       return <IsolationResult locale={locale} presentation={presentation} />;
+    case 'reshaped':
+      return (
+        <Suspense fallback={null}>
+          <ReshapedResult locale={locale} presentation={presentation} />
+        </Suspense>
+      );
     default:
       return assertNever(presentation);
   }

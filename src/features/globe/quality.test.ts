@@ -1,7 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { chooseQualityProfile } from './quality';
 
 describe('render quality', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('shares the initial quality between the Canvas and assets after a viewport change', async () => {
+    vi.resetModules();
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(390);
+    const { getRuntimeQualityProfile } = await import('./quality');
+    const initial = getRuntimeQualityProfile();
+    expect(initial.level).toBe('low');
+    vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1440);
+    expect(getRuntimeQualityProfile()).toBe(initial);
+  });
+
   it('uses a bounded low profile on mobile', () => {
     const profile = chooseQualityProfile({
       viewportWidth: 390,
