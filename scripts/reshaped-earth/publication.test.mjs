@@ -11,6 +11,8 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { gzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
 import {
   assertProductionFields,
   buildIdRasters,
@@ -20,6 +22,30 @@ import {
 import { decodeRgbPng } from './png.mjs';
 
 const fingerprint = 'f'.repeat(64);
+
+test('published distance PNG retains the accepted country and padding channels', async () => {
+  const bytes = await readFile(
+    'src/data/generated/reshaped-earth/ids-country.png',
+  );
+  const { data } = decodeRgbPng(bytes);
+  const countries = new Uint8Array(data.length / 3);
+  const padding = new Uint8Array(countries.length);
+  for (let i = 0; i < countries.length; i += 1) {
+    countries[i] = data[i * 3];
+    padding[i] = data[i * 3 + 1];
+  }
+  const hash = (input) => createHash('sha256').update(input).digest('hex');
+  // The accepted format-4 asset at 92247c7 fixes these two channels. The
+  // vector-derived distance revision changes neither classification nor core.
+  assert.equal(
+    hash(countries),
+    '76b775f3807902f7ee894799b2f351a741f0694982b9404c3572efc3ccfe2494',
+  );
+  assert.equal(
+    hash(padding),
+    '19f5358712ec3a66fa037eddedf1628eef6a9d0980cd67b2a7e828d0ab69ac8c',
+  );
+});
 function fields() {
   return Object.fromEntries(
     ['population', 'gdp', 'co2', 'lights'].map((key) => [
@@ -118,14 +144,16 @@ test('country publication preserves classified coastal ownership without publish
       8,
       'lights keeps stable bit 3',
     );
-    assert.equal(data[2], 0, 'B is reserved');
+    assert.equal(data[2], 0, 'Absent synthetic geometry keeps distance zero');
     const ocean = new Uint8Array(population.length);
     ocean[ocean.length - 1] = 1;
     await assert.rejects(
       buildIdRasters(classification, { co2: ocean }),
       /Ocean cannot contain padding/u,
     );
-    assert.ok(assets['ids-country.png'].length <= 900_000);
+    assert.ok(
+      gzipSync(assets['ids-country.png'], { level: 6 }).length <= 1_200_000,
+    );
   } finally {
     await rm(directory, { recursive: true });
   }
@@ -302,6 +330,8 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
     );
     const pixels = new Uint8Array(4096 * 2048 * 3);
     pixels[0] = 1;
+    pixels[2] = 255;
+    pixels[5] = 255;
     const png = writeRgbPng(4096, 2048, pixels);
     const derivedAssets = {};
     const assetBytes = {};
@@ -330,8 +360,8 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
       kind: 'id-raster',
       width: 4096,
       height: 2048,
-      encoding: 'country-padding-rg8',
-      gpuBytes: 4096 * 2048 * 2,
+      encoding: 'country-padding-distance-rgb8',
+      gpuBytes: 4096 * 2048 * 3,
     });
     await MeshoptEncoder.ready;
     const encoded = MeshoptEncoder.encodeVertexBuffer(
@@ -392,7 +422,7 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
     );
     const manifest = reshapedEarthManifestSchema.parse({
       id: 'reshaped-earth',
-      formatVersion: 4,
+      formatVersion: 5,
       sourceName: 'Synthetic verifier test',
       sourceUrl: 'https://example.com',
       licenseName: 'CC BY 4.0',

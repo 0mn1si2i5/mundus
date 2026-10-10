@@ -1,4 +1,5 @@
 import { RESHAPED_PUBLISHED_METRIC_IDS } from './publishedMetrics';
+import { messages } from '../../i18n/messages';
 
 export const RESHAPED_YEAR = 2020 as const;
 
@@ -45,6 +46,100 @@ const METRIC_DEFINITIONS = [
   },
 ] as const;
 
+export const RESHAPED_AREA_RATIO_BANDS = [
+  { max: 0.1, inclusive: true },
+  { max: 0.25, inclusive: true },
+  { max: 0.5, inclusive: true },
+  { max: 2, inclusive: false },
+  { max: 4, inclusive: false },
+  { max: 10, inclusive: false },
+  { max: Number.POSITIVE_INFINITY, inclusive: true },
+] as const;
+
+export type ReshapedMetricTheme = {
+  palette: readonly string[];
+  ocean: string;
+  border: string;
+  borderLight: string;
+  selection: string;
+  graticule: string;
+  light: { ambient: number; directional: number };
+};
+
+export const RESHAPED_METRIC_THEMES: Record<
+  ReshapedMetricId,
+  ReshapedMetricTheme
+> = {
+  population: {
+    palette: [
+      '#1f6f78',
+      '#4f9a9f',
+      '#93c3c2',
+      '#e8dfc8',
+      '#e3a67f',
+      '#c8673f',
+      '#8f3b22',
+    ],
+    ocean: '#c7d2cd',
+    border: '#000000',
+    borderLight: '#ffffff',
+    selection: '#6b261c',
+    graticule: '#6b6258',
+    light: { ambient: 0.72, directional: 0.3 },
+  },
+  gdp: {
+    palette: [
+      '#5b418f',
+      '#8973b4',
+      '#c6bcd2',
+      '#eef4ce',
+      '#e6c66d',
+      '#c9982c',
+      '#8c6118',
+    ],
+    ocean: '#c7d2cd',
+    border: '#000000',
+    borderLight: '#ffffff',
+    selection: '#6b261c',
+    graticule: '#6b6258',
+    light: { ambient: 0.72, directional: 0.3 },
+  },
+  co2: {
+    palette: [
+      '#465773',
+      '#7290a7',
+      '#b3c5db',
+      '#f1dbdc',
+      '#d9a77c',
+      '#b16e38',
+      '#6d411e',
+    ],
+    ocean: '#c7d2cd',
+    border: '#000000',
+    borderLight: '#ffffff',
+    selection: '#6b261c',
+    graticule: '#6b6258',
+    light: { ambient: 0.72, directional: 0.3 },
+  },
+  lights: {
+    palette: [
+      '#31424f',
+      '#455f7a',
+      '#768fb2',
+      '#a39595',
+      '#bfad39',
+      '#f1ba89',
+      '#ffefc6',
+    ],
+    ocean: '#0b1424',
+    border: '#000000',
+    borderLight: '#ffffff',
+    selection: '#bdeaff',
+    graticule: '#718096',
+    light: { ambient: 0.72, directional: 0.18 },
+  },
+};
+
 export type ReshapedMetricId = (typeof METRIC_DEFINITIONS)[number]['id'];
 export const RESHAPED_METRIC_BITS: Record<ReshapedMetricId, number> = {
   population: 0,
@@ -60,6 +155,61 @@ export const RESHAPED_METRIC_IDS = RESHAPED_METRICS.map(
   (metric) => metric.id,
 ) as readonly ReshapedMetricId[];
 export const RESHAPED_DEFAULT_METRIC: ReshapedMetricId = 'population';
+
+export function areaRatioBand(ratio: number | null): number {
+  if (ratio === null || !Number.isFinite(ratio)) return -1;
+  const value = Math.max(0, ratio);
+  if (value >= 10) return 6;
+  if (value >= 4) return 5;
+  if (value >= 2) return 4;
+  if (value > 0.5) return 3;
+  if (value > 0.25) return 2;
+  if (value > 0.1) return 1;
+  return 0;
+}
+
+function significantPercent(value: number, locale: 'zh' | 'en'): string {
+  const maximumFractionDigits = Math.max(
+    0,
+    1 - Math.floor(Math.log10(Math.abs(value))),
+  );
+  return new Intl.NumberFormat(locale === 'zh' ? 'zh-CN' : 'en-US', {
+    maximumFractionDigits,
+    minimumFractionDigits: 0,
+  }).format(value);
+}
+
+export function formatReshapedShare(
+  share: number | null,
+  locale: 'zh' | 'en',
+): string {
+  if (share === null || !Number.isFinite(share))
+    return locale === 'zh' ? '缺失' : 'missing';
+  if (share === 0) return '0%';
+  const percent = Math.abs(share * 100);
+  if (percent < 0.001) return '<0.001%';
+  if (percent >= 10) return `${percent.toFixed(1)}%`;
+  return `${significantPercent(percent, locale)}%`;
+}
+
+export function formatReshapedAreaRatio(
+  ratio: number | null,
+  locale: 'zh' | 'en',
+): string {
+  if (ratio === null || !Number.isFinite(ratio))
+    return locale === 'zh' ? '缺失' : 'missing';
+  if (ratio <= 0) return '0×';
+  if (ratio < 0.1) {
+    const denominator = Math.max(1, Math.round(1 / ratio));
+    return messages[locale].reshapedReciprocal.replace(
+      '{n}',
+      String(denominator),
+    );
+  }
+  if (ratio < 1) return `${ratio.toFixed(2)}×`;
+  if (ratio < 10) return `${ratio.toFixed(1)}×`;
+  return `${Math.round(ratio)}×`;
+}
 
 export function isReshapedMetric(value: unknown): value is ReshapedMetricId {
   return (

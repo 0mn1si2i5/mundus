@@ -92,6 +92,20 @@
 .rankings button:hover {
   color: var(--color-accent);
 }
+.rankBand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-muted);
+  font-size: 0.78em;
+}
+.rankSwatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 1px solid var(--color-hairline);
+  background: #c8c5bc;
+}
 
 .live {
   position: absolute;

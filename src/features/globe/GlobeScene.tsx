@@ -11,6 +11,7 @@ import {
   Suspense,
   type MutableRefObject,
   type Ref,
+  type ComponentRef,
 } from 'react';
 import type {
   Group,
@@ -19,6 +20,8 @@ import type {
   MeshStandardMaterial,
 } from 'three';
 import { Quaternion, Vector3 } from 'three';
+import { Color } from 'three';
+import { RESHAPED_METRIC_THEMES } from '../reshaped/metrics';
 import { useAppStore } from '../../state/appStore';
 import {
   createCountryHighlightTexture,
@@ -117,6 +120,13 @@ export interface SunlineRenderState {
   subsolarPoint: GeoPoint;
 }
 
+export interface RasterLayerVisibility {
+  reshaped: boolean;
+  baseSurface: boolean;
+  outerShell: boolean;
+  highlight: boolean;
+}
+
 interface GlobeSceneProps {
   profile: QualityProfile;
   benchmarkActive: boolean;
@@ -147,6 +157,7 @@ interface GlobeSceneProps {
     state: VectorGlobeState,
     resources: VectorGlobeResources | null,
   ) => void;
+  onRasterLayerVisibilityChange: (visibility: RasterLayerVisibility) => void;
   onVectorPaletteUpdate: (version: number) => void;
   onVectorDragMaterialChange: (transparent: boolean) => void;
   onVectorDragEvidence: (alphaEvidence: string, orderEvidence: string) => void;
@@ -175,6 +186,7 @@ export function GlobeScene({
   onSurnameLabelVisibilityChange,
   onSurnameLabelLayoutChange,
   onVectorStateChange,
+  onRasterLayerVisibilityChange,
   onVectorPaletteUpdate,
   onVectorDragMaterialChange,
   onVectorDragEvidence,
@@ -283,6 +295,14 @@ export function GlobeScene({
   );
   const setGraphicsUnavailable = useAppStore(
     (state) => state.setReshapedGraphicsUnavailable,
+  );
+  const reshapedData = reshaped?.data.data;
+  const reshapedRenderable = Boolean(
+    !graphicsUnavailable &&
+    reshaped &&
+    reshaped.data.status !== 'error' &&
+    reshapedData?.ids &&
+    reshapedData.inverse,
   );
   useEffect(() => {
     setGraphicsUnavailable(
@@ -858,7 +878,7 @@ export function GlobeScene({
     vectorReady,
   ]);
   useEffect(() => {
-    if (vectorReady) return;
+    if (vectorReady || reshapedRenderable) return;
     highlights.update(
       hoveredCountry?.countryId ?? null,
       selectedCountry?.countryId ?? null,
@@ -869,6 +889,20 @@ export function GlobeScene({
     hoveredCountry?.countryId,
     invalidate,
     selectedCountry?.countryId,
+    reshapedRenderable,
+    vectorReady,
+  ]);
+  useEffect(() => {
+    onRasterLayerVisibilityChange({
+      reshaped: reshapedRenderable,
+      baseSurface: baseSurface.current?.visible ?? false,
+      outerShell: outerShell.current?.visible ?? false,
+      highlight: highlightMesh.current?.visible ?? false,
+    });
+  }, [
+    antipodeDragActive,
+    onRasterLayerVisibilityChange,
+    reshapedRenderable,
     vectorReady,
   ]);
 
@@ -1138,16 +1172,12 @@ export function GlobeScene({
           <sphereGeometry args={[1, ...profile.sphereSegments]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
-        {!graphicsUnavailable &&
-        reshaped &&
-        reshaped.data.status !== 'error' &&
-        reshaped.data.data?.ids &&
-        reshaped.data.data.inverse ? (
+        {reshapedRenderable && reshaped && reshapedData ? (
           <Suspense fallback={null}>
             <ReshapedLayer
               profile={profile}
               shape={reshaped.shape}
-              data={reshaped.data.data}
+              data={reshapedData}
               replayKey={reshaped.replayKey}
               mappingRef={reshapedMapping}
             />
@@ -1185,7 +1215,7 @@ export function GlobeScene({
         ) : null}
         <mesh
           ref={baseSurface}
-          visible={!vectorReady && !antipodeDragActive}
+          visible={!reshapedRenderable && !vectorReady && !antipodeDragActive}
           renderOrder={0}
           raycast={ignoreRaycast}
         >
@@ -1201,7 +1231,7 @@ export function GlobeScene({
         </mesh>
         <mesh
           ref={outerShell}
-          visible={!vectorReady && antipodeDragActive}
+          visible={!reshapedRenderable && !vectorReady && antipodeDragActive}
           renderOrder={ANTIPODE_DRAG_RENDERING.outerShell.renderOrder}
           raycast={ignoreRaycast}
         >
@@ -1239,7 +1269,7 @@ export function GlobeScene({
         </mesh>
         <mesh
           ref={highlightMesh}
-          visible={!vectorReady}
+          visible={!reshapedRenderable && !vectorReady}
           scale={
             sunline
               ? SUNLINE_RENDERING.highlight.radius
@@ -1261,7 +1291,11 @@ export function GlobeScene({
             depthWrite={false}
           />
         </mesh>
-        <GeographicGraticule sunline={Boolean(sunline)} />
+        <GeographicGraticule
+          sunline={Boolean(sunline)}
+          lightsTheme={reshaped?.metric === 'lights'}
+          reshapedMapping={reshaped ? reshapedMapping : undefined}
+        />
         {sunline ? (
           <>
             <SunlineLayer
@@ -1358,20 +1392,56 @@ export function GlobeScene({
   );
 }
 
-function GeographicGraticule({ sunline }: { sunline: boolean }) {
+function GeographicGraticule({
+  sunline,
+  lightsTheme,
+  reshapedMapping,
+}: {
+  sunline: boolean;
+  lightsTheme: boolean;
+  reshapedMapping?: MutableRefObject<ReshapedMappingHandle | null>;
+}) {
   const lines = useMemo(
     () => createGraticuleLines(sunline ? 1.018 : 1.006),
     [sunline],
   );
+  const lineRefs = useRef<(ComponentRef<typeof Line> | null)[]>([]);
+  const [color] = useState(() => new Color());
+  const [targetColor] = useState(() => new Color());
+  useFrame(() => {
+    const theme = reshapedMapping?.current?.theme();
+    if (!theme) return;
+    color
+      .set(RESHAPED_METRIC_THEMES[theme.from].graticule)
+      .lerp(
+        targetColor.set(RESHAPED_METRIC_THEMES[theme.to].graticule),
+        theme.t,
+      );
+    const opacity =
+      (theme.from === 'lights' ? 0.28 : GLOBE_RENDERING.graticule.opacity) *
+        (1 - theme.t) +
+      (theme.to === 'lights' ? 0.28 : GLOBE_RENDERING.graticule.opacity) *
+        theme.t;
+    for (const line of lineRefs.current)
+      if (line) {
+        line.material.color.copy(color);
+        line.material.opacity = opacity;
+      }
+  });
 
-  return lines.map((line) => (
+  return lines.map((line, index) => (
     <Line
+      ref={(value) => {
+        lineRefs.current[index] = value;
+      }}
       key={`${line.kind}-${line.coordinate}`}
       points={line.points}
-      color={GLOBE_RENDERING.graticule.color}
+      color={lightsTheme ? '#718096' : GLOBE_RENDERING.graticule.color}
       lineWidth={line.coordinate === 0 ? 0.85 : 0.55}
       transparent
-      opacity={sunline ? 0.42 : GLOBE_RENDERING.graticule.opacity}
+      opacity={
+        sunline ? 0.42 : lightsTheme ? 0.28 : GLOBE_RENDERING.graticule.opacity
+      }
       depthTest
       renderOrder={3}
     />

@@ -11,6 +11,13 @@ import { decodePngRgb } from './pngCore.mjs';
 import { decodeInverse, type InverseField } from './inverseFormat.mjs';
 import { decodeUnits, decodeValues } from './metadata.mjs';
 import { getRuntimeQualityProfile } from '../globe/quality';
+import { sampleReshapedLabel, type DecodedIdRaster } from './labelSampling.mjs';
+
+export { sampleReshapedLabel } from './labelSampling.mjs';
+export type {
+  DecodedIdRaster,
+  ReshapedRasterSample,
+} from './labelSampling.mjs';
 
 export { decodePngRgb } from './pngCore.mjs';
 export interface ReshapedUnit {
@@ -44,12 +51,6 @@ export interface ReshapedValueRow {
     >
   >;
   year: number;
-}
-export interface DecodedIdRaster {
-  width: number;
-  height: number;
-  ids: Uint32Array;
-  padding?: Uint8Array;
 }
 export interface ReshapedDataset {
   units: readonly ReshapedUnit[];
@@ -103,7 +104,7 @@ export async function loadReshapedData(
   signal?: AbortSignal,
   previous?: ReshapedDataset,
 ): Promise<ReshapedDataset> {
-  if (!('formatVersion' in manifest) || manifest.formatVersion !== 4)
+  if (!('formatVersion' in manifest) || manifest.formatVersion !== 5)
     throw new Error('Reshaped Earth production assets have not been published');
   let units = previous?.units;
   let values = previous?.values;
@@ -158,13 +159,25 @@ export function displayIdRaster(
     throw new Error('Invalid Reshaped Earth low-resolution ID raster');
   const ids = new Uint32Array(width * height);
   const padding = raster.padding ? new Uint8Array(width * height) : undefined;
+  const distance = raster.distance ? new Uint8Array(width * height) : undefined;
   for (let y = 0; y < height; y += 1)
     for (let x = 0; x < width; x += 1) {
       const source = (y * 2 + 1) * raster.width + x * 2 + 1;
       ids[y * width + x] = raster.ids[source]!;
       if (padding) padding[y * width + x] = raster.padding![source]!;
+      if (distance)
+        distance[y * width + x] = Math.round(raster.distance![source]! / 2);
     }
-  return { width, height, ids, padding };
+  return {
+    width,
+    height,
+    ids,
+    padding,
+    distance,
+    ...(distance
+      ? { distanceCap: Math.round((raster.distanceCap ?? 255) / 2) }
+      : {}),
+  };
 }
 export async function decodeCountryPaddingRaster(
   buffer: ArrayBuffer,
@@ -172,22 +185,20 @@ export async function decodeCountryPaddingRaster(
   const raster = await decodePngRgb(buffer);
   const ids = new Uint32Array(raster.ids.length);
   const padding = new Uint8Array(ids.length);
+  const distance = new Uint8Array(ids.length);
   for (let i = 0; i < ids.length; i += 1) {
     const pixel = raster.ids[i]!;
     const id = pixel >>> 16,
       bits = (pixel >>> 8) & 255;
-    if (
-      (pixel & 255) !== 0 ||
-      id > 239 ||
-      bits > 15 ||
-      (id === 0 && bits !== 0)
-    )
+    if (id > 239 || bits > 15 || (id === 0 && bits !== 0))
       throw new Error('Invalid country/padding PNG channels');
     ids[i] = id;
     padding[i] = bits;
+    distance[i] = pixel & 255;
   }
-  return { width: raster.width, height: raster.height, ids, padding };
+  return { width: raster.width, height: raster.height, ids, padding, distance };
 }
+
 export function sampleReshapedPadding(
   raster: DecodedIdRaster | null,
   latitude: number,
@@ -195,15 +206,8 @@ export function sampleReshapedPadding(
   metric: ReshapedMetricId,
 ): boolean {
   if (!raster?.padding) return false;
-  const x = Math.floor(
-    (((((longitude + 180) % 360) + 360) % 360) / 360) * raster.width,
-  );
-  const y = Math.min(
-    raster.height - 1,
-    Math.max(0, Math.floor(((90 - latitude) / 180) * raster.height)),
-  );
   return (
-    ((raster.padding[y * raster.width + x] ?? 0) &
+    (sampleReshapedLabel(raster, latitude, longitude).padding &
       (1 << RESHAPED_METRIC_BITS[metric])) !==
     0
   );
@@ -213,13 +217,5 @@ export function sampleReshapedId(
   latitude: number,
   longitude: number,
 ): number {
-  if (!raster) return 0;
-  const x = Math.floor(
-    (((((longitude + 180) % 360) + 360) % 360) / 360) * raster.width,
-  );
-  const y = Math.min(
-    raster.height - 1,
-    Math.max(0, Math.floor(((90 - latitude) / 180) * raster.height)),
-  );
-  return raster.ids[y * raster.width + x] ?? 0;
+  return sampleReshapedLabel(raster, latitude, longitude).id;
 }

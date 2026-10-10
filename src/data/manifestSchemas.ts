@@ -175,7 +175,7 @@ const reshapedDerivedAssetSchema = z.discriminatedUnion('kind', [
       kind: z.literal('id-raster'),
       width: z.literal(4096),
       height: z.literal(2048),
-      encoding: z.literal('country-padding-rg8'),
+      encoding: z.literal('country-padding-distance-rgb8'),
     })
     .strict(),
   reshapedAssetIdentitySchema
@@ -283,7 +283,7 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
   .omit({ derivedAssets: true, sourceAssets: true })
   .extend({
     id: z.literal('reshaped-earth'),
-    formatVersion: z.literal(4),
+    formatVersion: z.literal(5),
     publishedMetrics: z.array(z.enum(reshapedMetrics)).min(3).max(4),
     unpublishedMetrics: z.array(z.literal('gdp')).max(1),
     metricBits: z
@@ -464,15 +464,15 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
           'Metadata has no GPU texture',
         );
       if (asset.kind === 'id-raster') {
-        if (asset.rawBytes > 900_000)
+        if (asset.gzipBytes > 1_200_000)
           issue(
-            ['derivedAssets', name, 'rawBytes'],
-            'ID raster exceeds 900000 bytes',
+            ['derivedAssets', name, 'gzipBytes'],
+            'ID raster exceeds 1200000 gzip bytes',
           );
-        if (asset.gpuBytes !== 4096 * 2048 * 2)
+        if (asset.gpuBytes !== 4096 * 2048 * 3)
           issue(
             ['derivedAssets', name, 'gpuBytes'],
-            'IDs use lossless RG8 bytes',
+            'IDs and padding use RG8; vector distance uses R8',
           );
       }
       if (asset.kind === 'inverse-field') {
@@ -519,11 +519,11 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
         .filter((asset) => asset.kind === 'inverse-field')
         .map((asset) => asset.gpuBytes),
     );
-    const paletteBytes = Math.ceil((239 + 1) / 256) * 256 * 16;
-    if (2 * largestInverse + 4096 * 2048 * 2 + paletteBytes > 40 * 1024 ** 2)
+    const paletteBytes = Math.ceil((239 + 1) / 256) * 256 * 4 * 16;
+    if (2 * largestInverse + 4096 * 2048 * 3 + paletteBytes > 40 * 1024 ** 2)
       issue(
         ['derivedAssets'],
-        'Current and preceding inverses, RG8 IDs and palette exceed 40 MiB',
+        'Current and preceding inverses, RG8 IDs, R8 distance and palette exceed 40 MiB',
       );
     for (const metric of manifest.publishedMetrics) {
       const result = manifest.acceptance[metric],

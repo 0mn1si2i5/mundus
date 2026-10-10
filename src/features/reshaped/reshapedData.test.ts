@@ -19,6 +19,19 @@ afterEach(() => {
 });
 
 describe('shared Reshaped Earth display raster', () => {
+  it('reduces the saturated distance lower bound along with low-quality bytes', () => {
+    const raster = {
+      width: 4,
+      height: 2,
+      ids: new Uint32Array([1, 1, 0, 0, 1, 1, 0, 0]),
+      distance: new Uint8Array([255, 255, 255, 255, 64, 255, 255, 254]),
+    };
+    const low = displayIdRaster(raster, true);
+    expect(low.distance).toEqual(new Uint8Array([128, 127]));
+    expect(low.distanceCap).toBe(128);
+    expect(low.ids).toEqual(new Uint32Array([1, 0]));
+  });
+
   it('keeps country identity separate from the stable padding bits at the seam and after downsampling', () => {
     const raster = {
       width: 4,

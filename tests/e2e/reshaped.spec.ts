@@ -21,6 +21,75 @@ function result(page: Page) {
   return page.getByRole('complementary', { name: '变形地球结果' });
 }
 
+test('area legend, dark-earth theme and small GDP results are readable', async ({
+  page,
+}) => {
+  await page.goto('./?v=2&mode=reshaped&metric=gdp&point=47.2292,99.8375');
+  await ready(page);
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-reshaped-renderer-active', 'true');
+  for (const layer of ['base-surface', 'drag-shell', 'highlight'])
+    await expect(globe).toHaveAttribute(
+      `data-raster-${layer}-visible`,
+      'false',
+    );
+  await expect(globe).toHaveAttribute(
+    'data-vector-raster-fallback-visible',
+    'false',
+  );
+  const legend = controls(page).getByLabel(
+    '颜色表示面积放大或缩小倍数（以 1× 为中心）',
+  );
+  for (const band of [
+    '≤1/10×',
+    '1/10–1/4×',
+    '1/4–1/2×',
+    '≈1×',
+    '2–4×',
+    '4–10×',
+    '≥10×',
+    '无数据',
+    '未纳入',
+  ])
+    await expect(legend.getByText(band, { exact: true })).toBeVisible();
+  await expect(result(page)).toContainText('蒙古国');
+  await expect(result(page)).toContainText('1/');
+  await expect(result(page)).not.toContainText('0.0%');
+  await controls(page)
+    .getByRole('radio', { name: '夜光', exact: true })
+    .check();
+  await ready(page);
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-reshaped-theme',
+    'lights',
+  );
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await controls(page)
+    .getByRole('radio', { name: '人口', exact: true })
+    .check();
+  await ready(page);
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-reshaped-theme',
+    'population',
+  );
+  await controls(page)
+    .getByRole('button', { name: '真实形状', exact: true })
+    .click();
+  await expect(globe).toHaveAttribute('data-raster-highlight-visible', 'false');
+  await controls(page)
+    .getByRole('radio', { name: '夜光', exact: true })
+    .check();
+  await ready(page);
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-reshaped-theme',
+    'lights',
+  );
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-morph-state',
+    'settled',
+  );
+});
+
 async function ready(page: Page) {
   await expect(result(page)).toBeVisible();
   await expect(globeRegion(page)).toHaveAttribute(
@@ -309,7 +378,7 @@ test('ranking selection, value, share and area ratio survive a share-link roundt
 
 test('a measure switch keeps the old map during loading and disposes its inverse after the transition', async ({
   page,
-}) => {
+}, testInfo) => {
   await page.addInitScript(() => {
     const state = { fields: 0, peakFields: 0, peakBytes: 0, blended: false };
     (
@@ -357,11 +426,12 @@ test('a measure switch keeps the old map during loading and disposes its inverse
     ) => {
       const field = format === gl.RG32F && width === 1025 && height === 513;
       const ids = format === gl.RG8 && [2048, 4096].includes(width);
-      const palette = format === gl.RGBA32F && width === 256 && height === 1;
-      if (field || ids || palette) {
+      const distance = format === gl.R8 && [2048, 4096].includes(width);
+      const palette = format === gl.RGBA32F && width === 256 && height === 4;
+      if (field || ids || distance || palette) {
         // Storage and subsequent uploads identify the same allocation.
         textures.set(texture, {
-          bytes: width * height * (field ? 8 : ids ? 2 : 16),
+          bytes: width * height * (field ? 8 : ids ? 2 : distance ? 1 : 16),
           field,
         });
         update();
@@ -495,13 +565,28 @@ test('a measure switch keeps the old map during loading and disposes its inverse
   await ready(page);
   await expect.poll(async () => (await probe()).fields).toBe(1);
   expect((await probe()).peakFields).toBe(2);
+  const rasterWidth =
+    (await globeRegion(page).getAttribute('data-quality')) === 'low'
+      ? 2048
+      : 4096;
+  const expectedTextureBytes =
+    rasterWidth * (rasterWidth / 2) * 3 + 2 * 1025 * 513 * 8 + 256 * 4 * 16;
+  expect((await probe()).peakBytes).toBe(expectedTextureBytes);
   expect((await probe()).peakBytes).toBeLessThanOrEqual(40 * 1024 ** 2);
+  await testInfo.attach('reshaped-gpu-allocation', {
+    body: JSON.stringify({ rasterWidth, ...(await probe()) }, null, 2),
+    contentType: 'application/json',
+  });
   await page.route(/\/inverse-co2[^/]*\.bin(?:\?|$)/u, (route) =>
     route.abort(),
   );
   await controls(page).getByRole('radio', { name: 'CO₂', exact: true }).check();
   await expect(page.getByText('变形地球数据暂时不可用。')).toBeVisible();
   await expect(globeRegion(page)).toHaveAttribute('data-vector-state', 'ready');
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-reshaped-renderer-active',
+    'false',
+  );
   await expect.poll(async () => (await probe()).fields).toBe(0);
 });
 
@@ -559,6 +644,10 @@ test('an aborted cartogram asset exposes retry, recovers and leaves Other Side u
   await page.goto('./?v=2&mode=reshaped');
   await expect(page.getByText('变形地球数据暂时不可用。')).toBeVisible();
   await expect(globeRegion(page)).toHaveAttribute('data-vector-state', 'ready');
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-reshaped-renderer-active',
+    'false',
+  );
   await switchMode(page, '地球另一端');
   await expect(page.getByText('穿过地心', { exact: true })).toBeVisible();
   await switchMode(page, '变形地球');
@@ -566,6 +655,10 @@ test('an aborted cartogram asset exposes retry, recovers and leaves Other Side u
   await page.unroute(inverseAsset);
   await page.getByRole('button', { name: '重新载入', exact: true }).click();
   await ready(page);
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-reshaped-renderer-active',
+    'true',
+  );
 });
 
 test('without DecompressionStream the real metadata and ranking remain usable', async ({
@@ -583,6 +676,11 @@ test('without DecompressionStream the real metadata and ranking remain usable', 
   await expect(
     page.getByText('此设备无法显示变形地图，仍可查看数值和排行。'),
   ).toBeVisible();
+  await expect(globeRegion(page)).toHaveAttribute('data-vector-state', 'ready');
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-reshaped-renderer-active',
+    'false',
+  );
   await expect(result(page).getByRole('list').getByRole('button')).toHaveCount(
     10,
   );

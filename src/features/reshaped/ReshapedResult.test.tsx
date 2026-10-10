@@ -142,7 +142,7 @@ describe('ReshapedResult', () => {
       );
       expect(
         screen.getByText(
-          messages[locale].reshapedPaddingNote.replace('{percent}', '25.0'),
+          messages[locale].reshapedPaddingNote.replace('{percent}', '25.0%'),
         ),
       ).toBeVisible();
       expect(
@@ -263,7 +263,7 @@ describe('ReshapedResult', () => {
       />,
     );
     const result = screen.getByRole('complementary');
-    expect(result).toHaveTextContent('Australia holds 0.0%');
+    expect(result).toHaveTextContent('Australia holds 0%');
     expect(within(result).getByText('0')).toBeVisible();
     expect(
       screen.queryByText(messages.en.reshapedMissingShape),
@@ -272,7 +272,9 @@ describe('ReshapedResult', () => {
 
   it('selects a ranked unit with its real representative point and current-state semantics', () => {
     render(<ReshapedResult locale="en" presentation={presentation()} />);
-    const alphaButton = screen.getByRole('button', { name: 'China · 18.0%' });
+    const alphaButton = screen.getByRole('button', {
+      name: 'China · 18.0% area 2.7×',
+    });
     expect(alphaButton).toHaveAttribute('aria-current', 'true');
     alphaButton.focus();
     expect(alphaButton).toHaveFocus();
@@ -328,7 +330,9 @@ describe('ReshapedResult', () => {
       messages.en.reshapedDeviceUnavailable,
     );
     expect(screen.getByText(messages.en.reshapedLightsCaveat)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'China · 18.0%' })).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'China · 18.0% area 2.7×' }),
+    ).toBeEnabled();
     expect(
       screen.queryByText('Cartogram displayed for Night lights.'),
     ).not.toBeInTheDocument();
@@ -359,7 +363,10 @@ describe('ReshapedResult', () => {
       ).not.toBeInTheDocument();
       expect(
         screen.getByRole('button', {
-          name: locale === 'zh' ? '中国 · 18.0%' : 'China · 18.0%',
+          name:
+            locale === 'zh'
+              ? '中国 · 18.0% 面积 2.7×'
+              : 'China · 18.0% area 2.7×',
         }),
       ).toBeEnabled();
     },

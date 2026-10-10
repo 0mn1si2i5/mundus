@@ -2,7 +2,14 @@ import type { Locale } from '../../i18n/messages';
 import { messages } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
 import type { ModePresentation } from '../modes/useModePresentation';
-import { formatReshapedValue, RESHAPED_METRICS } from './metrics';
+import {
+  areaRatioBand,
+  formatReshapedAreaRatio,
+  formatReshapedShare,
+  formatReshapedValue,
+  RESHAPED_METRICS,
+  RESHAPED_METRIC_THEMES,
+} from './metrics';
 import type { ReshapedUnit } from './reshapedData';
 import styles from './ReshapedResult.module.css';
 
@@ -60,8 +67,8 @@ export function ReshapedResult({
         : t.reshapedFinding
             .replace('{name}', selectedName)
             .replace('{metric}', definition.title[locale])
-            .replace('{share}', share === null ? '—' : (share * 100).toFixed(1))
-            .replace('{ratio}', ratio === null ? '—' : ratio.toFixed(1));
+            .replace('{share}', formatReshapedShare(share, locale))
+            .replace('{ratio}', formatReshapedAreaRatio(ratio, locale));
   return (
     <aside
       className={styles.result}
@@ -89,13 +96,15 @@ export function ReshapedResult({
             <dd>
               {share === null
                 ? t.reshapedMissing
-                : `${(share * 100).toFixed(1)}%`}
+                : formatReshapedShare(share, locale)}
             </dd>
           </div>
           <div>
             <dt>{t.reshapedAreaRatio}</dt>
             <dd>
-              {ratio === null ? t.reshapedMissing : `${ratio.toFixed(1)}×`}
+              {ratio === null
+                ? t.reshapedMissing
+                : formatReshapedAreaRatio(ratio, locale)}
             </dd>
           </div>
           <div>
@@ -112,7 +121,7 @@ export function ReshapedResult({
         <p className={styles.note}>
           {t.reshapedPaddingNote.replace(
             '{percent}',
-            (padding.paddingFraction * 100).toFixed(1),
+            formatReshapedShare(padding.paddingFraction, locale),
           )}
         </p>
       ) : null}
@@ -144,7 +153,23 @@ export function ReshapedResult({
                   {unitName(unit)} ·{' '}
                   {row.worldShare[metric] === null
                     ? t.reshapedMissing
-                    : `${(row.worldShare[metric]! * 100).toFixed(1)}%`}
+                    : formatReshapedShare(row.worldShare[metric], locale)}{' '}
+                  <span className={styles.rankBand}>
+                    <i
+                      className={styles.rankSwatch}
+                      aria-hidden="true"
+                      style={{
+                        backgroundColor:
+                          RESHAPED_METRIC_THEMES[metric].palette[
+                            areaRatioBand(row.areaRatio[metric])
+                          ] ?? '#a9a7a0',
+                      }}
+                    />
+                    {t.reshapedAreaBand.replace(
+                      '{band}',
+                      formatReshapedAreaRatio(row.areaRatio[metric], locale),
+                    )}
+                  </span>
                   {row.padding?.[metric] ? ` · ${t.reshapedPaddingMark}` : ''}
                 </button>
               </li>

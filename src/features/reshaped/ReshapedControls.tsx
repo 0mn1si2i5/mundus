@@ -3,7 +3,11 @@ import { messages } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
 import { ModePanel } from '../controls/ModePanel';
 import type { ModePresentation } from '../modes/useModePresentation';
-import { RESHAPED_METRICS } from './metrics';
+import {
+  RESHAPED_AREA_RATIO_BANDS,
+  RESHAPED_METRIC_THEMES,
+  RESHAPED_METRICS,
+} from './metrics';
 import styles from './ReshapedControls.module.css';
 
 export function ReshapedControls({
@@ -51,6 +55,29 @@ export function ReshapedControls({
         <span className={styles.paddingSample} aria-hidden="true" />
         {t.reshapedPaddingLegend}
       </p>
+      <div className={styles.areaLegend} aria-label={t.reshapedAreaLegend}>
+        <p>{t.reshapedAreaLegend}</p>
+        <div className={styles.areaBands}>
+          {RESHAPED_AREA_RATIO_BANDS.map((band, index) => (
+            <span key={band.max} className={styles.areaBand}>
+              <i
+                aria-hidden="true"
+                style={{
+                  backgroundColor:
+                    RESHAPED_METRIC_THEMES[presentation.metric].palette[index],
+                }}
+              />
+              <span>{t.reshapedAreaBands[index]}</span>
+            </span>
+          ))}
+        </div>
+        <span className={styles.specialLegend}>
+          <i className={styles.missingSample} aria-hidden="true" />
+          <span>{t.reshapedMissingLegend}</span>
+          <i className={styles.excludedSample} aria-hidden="true" />
+          <span>{t.reshapedExcludedLegend}</span>
+        </span>
+      </div>
       <div className={styles.actions}>
         <button
           type="button"

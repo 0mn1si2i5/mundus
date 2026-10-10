@@ -237,7 +237,7 @@ try {
 if (failed) process.exitCode = 1;
 
 async function verifyReshapedData(manifest) {
-  assert.equal(manifest.formatVersion, 4, 'Manifest format version must be 4');
+  assert.equal(manifest.formatVersion, 5, 'Manifest format version must be 5');
   assert.deepEqual(
     Object.keys(manifest.sourceAssets).sort(),
     Object.keys(SOURCES).sort(),
@@ -302,7 +302,7 @@ async function verifyReshapedData(manifest) {
       unit.id === 'ne-010',
       'Only Antarctica is excluded',
     );
-    assert.ok(unit.rasterId <= 65535, 'GPU country IDs fit lossless RG8');
+    assert.ok(unit.rasterId <= 255, 'GPU country IDs fit lossless R8');
     rasterIds.add(unit.rasterId);
   }
   const relative = (actual, expected) =>
@@ -352,8 +352,16 @@ async function verifyReshapedData(manifest) {
   assert.equal(raster.width, rasterAsset.width);
   assert.equal(raster.height, rasterAsset.height);
   assert.ok(
-    raster.ids.some((id) => id !== 0),
+    raster.ids.some((pixel) => pixel >>> 16 !== 0),
     'Country raster must contain land',
+  );
+  assert.ok(
+    raster.ids.some((pixel) => pixel >>> 16 !== 0 && (pixel & 255) > 0),
+    'Land labels must contain vector-boundary distances',
+  );
+  assert.ok(
+    raster.ids.some((pixel) => pixel >>> 16 === 0 && (pixel & 255) > 0),
+    'Ocean label must contain vector-coast distances',
   );
   const allowedBits = manifest.publishedMetrics.reduce(
     (bits, metric) => bits | (1 << manifest.metricBits[metric]),
@@ -362,7 +370,6 @@ async function verifyReshapedData(manifest) {
   for (const pixel of raster.ids) {
     const id = pixel >>> 16,
       bits = (pixel >>> 8) & 255;
-    assert.equal(pixel & 255, 0, 'Country PNG reserved B must be zero');
     assert.ok(id === 0 || rasterIds.has(id), `Unknown country raster ID ${id}`);
     assert.equal(
       bits & ~allowedBits,

@@ -76,3 +76,51 @@
   );
   opacity: 0.75;
 }
+.areaLegend {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.25rem 0;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+.areaLegend p {
+  margin: 0;
+}
+.areaBands {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.2rem;
+}
+.areaBand {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.2;
+}
+.areaBand i,
+.missingSample,
+.excludedSample {
+  display: block;
+  height: 0.65rem;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+}
+.areaBand span {
+  overflow-wrap: anywhere;
+}
+.specialLegend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.specialLegend i {
+  width: 1.1rem;
+  flex: 0 0 1.1rem;
+}
+.missingSample {
+  background: #a9a7a0;
+}
+.excludedSample {
+  background: #d4d0c5;
+}

@@ -30,8 +30,8 @@ function reshapedManifestFixture() {
     kind: 'id-raster',
     width: 4096,
     height: 2048,
-    encoding: 'country-padding-rg8',
-    gpuBytes: 4096 * 2048 * 2,
+    encoding: 'country-padding-distance-rgb8',
+    gpuBytes: 4096 * 2048 * 3,
   };
   for (const metric of metrics)
     derivedAssets[`inverse-${metric}.bin`] = {
@@ -58,7 +58,7 @@ function reshapedManifestFixture() {
     transformations: ['synthetic schema test'],
     missingValuePolicy: 'null remains missing',
     boundaryPolicy: 'Mundus view',
-    formatVersion: 4,
+    formatVersion: 5,
     publishedMetrics: metrics,
     unpublishedMetrics: [],
     metricBits: { population: 0, gdp: 1, co2: 2, lights: 3 },
@@ -273,7 +273,7 @@ describe('data registry', () => {
     );
     expect(published).toBeDefined();
     expect(published).toEqual(reshapedEarthManifestSchema.parse(published));
-    expect(manifest.formatVersion).toBe(4);
+    expect(manifest.formatVersion).toBe(5);
     expect(Object.keys(manifest.derivedAssets)).toHaveLength(7);
     expect(Object.keys(manifest.acceptance)).toEqual([
       'population',
@@ -403,6 +403,9 @@ describe('data registry', () => {
   });
 
   it('checks gzip-6 and raw limits separately and counts both transition inverse textures', () => {
+    const atIdBudget = reshapedManifestFixture();
+    atIdBudget.derivedAssets['ids-country.png']!.gzipBytes = 1_200_000;
+    expect(dataManifestSchema.safeParse(atIdBudget).success).toBe(true);
     const manifest = reshapedManifestFixture();
     const inverse = manifest.derivedAssets['inverse-population.bin']!;
     if (inverse.kind !== 'inverse-field')
@@ -417,7 +420,7 @@ describe('data registry', () => {
     const metadata = structuredClone(manifest);
     metadata.derivedAssets['units.json']!.gzipBytes = 60_000;
     const png = structuredClone(manifest);
-    png.derivedAssets['ids-country.png']!.rawBytes = 900_001;
+    png.derivedAssets['ids-country.png']!.gzipBytes = 1_200_001;
     const gpu = structuredClone(manifest);
     gpu.derivedAssets['inverse-population.bin']!.gpuBytes -= 1;
     for (const invalid of [raw, gzip, metadata, png, gpu])
@@ -429,7 +432,7 @@ describe('data registry', () => {
     expect(parsed.success).toBe(false);
     if (!parsed.success)
       expect(parsed.error.issues.map((issue) => issue.message)).toContain(
-        'Current and preceding inverses, RG8 IDs and palette exceed 40 MiB',
+        'Current and preceding inverses, RG8 IDs, R8 distance and palette exceed 40 MiB',
       );
   });
 

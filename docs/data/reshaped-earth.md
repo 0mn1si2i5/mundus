@@ -4,6 +4,8 @@ Reshaped Earth compares four **2020** country totals by continuously changing
 country areas on the globe. The shared point keeps its real longitude and
 latitude. Only `metric` enters the URL; shape progress remains local and old
 `level` parameters are ignored. Admin-1 is reserved for a separate proposal.
+Globe colours use the same area multiplier as the cartogram, with a diverging
+seven-band scale centred on 1×; night lights use a dark-earth theme.
 
 ## Sources and interpretation
 
@@ -90,8 +92,8 @@ Positive forward triangles are rasterized with barycentric interpolation onto
 Int16 delta longitude in degrees and delta sine latitude; meshopt
 `encodeVertexBuffer` compresses the pairs. The binary header uses magic `MRE3`,
 format version 3, metric, cell dimensions, stride, payload size and both
-quantization steps. Runtime reads only MRE3. Metadata, the country-ID layout
-and manifest use format version 4; old prototype metadata and ID layouts are
+quantization steps. Runtime reads only MRE3. Country metadata uses format version 4; the country-ID distance layout
+and manifest use format version 5; old prototype metadata and ID layouts are
 rejected rather than interpreted. PNG keeps the standard RGB8 IHDR, with
 its application layout/version specified by the manifest.
 
@@ -134,15 +136,92 @@ display raster and fine classification have different coastline resolution.
 Acceptance uses core area for padded countries and raw actual area otherwise;
 the original raw median and p90 remain visible alongside the effective errors.
 
-No file or texture is added: `ids-country.png` stores country ID in R,
-padding bits in G, and zero in B. Stable metric bits are population 0, GDP 1,
-CO₂ 2 and night lights 3; a withheld metric's bit stays empty. The shader
+`ids-country.png` stores country ID in R, padding bits in G, and the quantised
+distance to the nearest vector boundary in B. B stores `round(clamp(d,0,4) ×
+63.75)` where d is measured in display-raster pixels from the full precision
+10m vector geometry, using cos(latitude) for longitude and periodic seam
+handling. ID 0 (ocean) is also a boundary label. A pixel whose raster ID does
+not agree with vector containment gets distance zero. Stable metric bits are
+population 0, GDP 1, CO₂ 2 and night lights 3; a withheld metric's bit stays
+empty. The shader
 desaturates padding and overlays antialiased diagonal stripes generated in
 the deformed globe's coordinates. Their strength follows shape progress and
 the transition between metrics, so the true shape has no hatching. Picking
 the ring selects the same country. A bilingual legend, a percentage in the
 result and readable ranking labels explain that the continuous reshaping
 could not remove this excess area.
+
+## Boundary sampling and globe colours
+
+For the four texels around a source UV, each distinct label c gets score
+`m(c) = Σ weight(k) × (id(k) == c ? d(k) : −d(k))`. The largest score chooses
+the label, including ocean. Padding bits come from the highest-weight texel
+belonging to that selected label; bitmasks are never interpolated numerically.
+The CPU picker and production GLSL compare weighted raw B bytes before
+converting the winning score to pixels. This preserves the same first-candidate
+tie rule without normalized-distance rounding reversing a tied coast label.
+Longitude wraps; latitude clamps at the pole rows. A screen footprint larger
+than one raster pixel uses four rotated samples, each independently classified
+and coloured before averaging. Smaller footprints use one sample. The border
+uses the winning score divided by the screen footprint and an antialiased
+approximately 1.2 px line. Four same-label texels whose distances all saturate
+at 4 pixels mark an interior lower bound, rather than a measured boundary;
+they suppress border and selection ink so distant oceans stay dark when the
+globe shrinks. Selection adds a 3 px outline and preserves the country's band
+colour.
+
+The seven shared bands have exact bounds `r ≤ 0.1`, `0.1 < r ≤ 0.25`,
+`0.25 < r ≤ 0.5`, `0.5 < r < 2`, `2 ≤ r < 4`, `4 ≤ r < 10`, and `r ≥ 10`.
+Here r is the existing published `areaRatio`: effective transformed area divided
+by true classified area, approximating the intended density multiplier within
+the recorded area error. The solid core supplies effective area for padded
+countries. True shape uses the same classes. Missing values use `#a9a7a0`
+and excluded Antarctica uses `#d4d0c5`. True observed zero uses the first band
+and retains its explicit zero-value caveat.
+
+| Metric       | ≤0.1×   | ≤0.25×  | ≤0.5×   | Around 1× | ≥2×     | ≥4×     | ≥10×    |
+| ------------ | ------- | ------- | ------- | --------- | ------- | ------- | ------- |
+| Population   | #1f6f78 | #4f9a9f | #93c3c2 | #e8dfc8   | #e3a67f | #c8673f | #8f3b22 |
+| GDP          | #5b418f | #8973b4 | #c6bcd2 | #eef4ce   | #e6c66d | #c9982c | #8c6118 |
+| CO₂          | #465773 | #7290a7 | #b3c5db | #f1dbdc   | #d9a77c | #b16e38 | #6d411e |
+| Night lights | #31424f | #455f7a | #768fb2 | #a39595   | #bfad39 | #f1ba89 | #ffefc6 |
+
+Population, GDP and CO₂ retain ocean `#c7d2cd`, graticule `#6b6258`, ambient
+light 0.72 and directional light 0.30. Night lights use ocean `#0b1424`, cool
+grey graticule `#718096`, ambient 0.72 and directional 0.18; band luminance
+increases strictly. Selection ink is `#6b261c`, or ice blue `#bdeaff` for lights.
+All colour, ocean, graticule and lighting tokens transition together; reduced
+motion applies them immediately, including in true shape. The page retains
+its parchment appearance.
+
+One fixed border ink cannot maintain 3:1 against both palette extremes. Each
+side instead uses white below linear luminance 0.179, otherwise black. Padding
+mixes 70% neutral luminance and then 15% white in linear RGB before hatching.
+The checks below measure unhatched padding against both adjacent bands, and
+opaque border centres after the minimum/maximum sphere lighting. Antialiased
+edge pixels intentionally blend with the surface.
+
+`node scripts/check-reshaped-colors.mjs` reproduces the following minimum
+values, using dependency-free D65 sRGB/Lab/CIEDE2000 and full-severity Machado
+protan/deutan/tritan simulations in linear RGB. Unit tests include published
+CIEDE2000 reference pairs as well as the palette acceptance bounds.
+
+| Metric       | Protan ΔE00 | Deutan ΔE00 | Tritan ΔE00 | Padding ΔE00 | Border contrast after lighting |
+| ------------ | ----------: | ----------: | ----------: | -----------: | -----------------------------: |
+| Population   |      12.695 |      13.536 |      14.040 |       11.378 |                        4.217:1 |
+| GDP          |      12.798 |      11.168 |      12.208 |       11.052 |                        4.006:1 |
+| CO₂          |      12.281 |      15.880 |      16.530 |       10.215 |                        3.993:1 |
+| Night lights |      11.541 |      10.429 |      10.531 |       10.101 |                        4.846:1 |
+
+The darkest night-light band contrasts with ocean at 1.775:1 before lighting,
+and 1.578–1.706:1 across the actual sphere-light range, above 1.5:1. These
+checks validate the tokens and shader's linear lighting, not a physical-device
+colour calibration. Legends and ranking text also describe each class.
+
+Shares use `0%`, `<0.001%`, two significant digits below 10%, and one decimal
+place from 10% upward. Area ratios use an integer from 10×, one decimal from
+1× to 10×, two decimals below 1×, and a localized `about 1/N` form below
+0.1×. The same functions format result facts, rankings and padding notes.
 
 ## Acceptance and budgets
 
@@ -171,20 +250,30 @@ stored in the manifest's `acceptance`, `parameters` and `determinism` records.
 | CO₂          | 8 / raw pass  | 0.741% / 11.357% | 0.449% / 7.632%        | 40               | 97.735%                  |
 | Night lights | 6 / raw pass  | 0.473% / 4.593%  | 0.293% / 3.094%        | 29               | 97.973%                  |
 
-| Asset                                                            | Format                                                                                        | Budget                                      |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| `units.json` + `values.json`                                     | 239 country records, four values/shares/area ratios, bilingual names and source/year metadata | Combined gzip-6 ≤60,000 B                   |
-| `ids-country.png`                                                | 4096×2048 RGB8; R=country ID, G=metric padding bits, B=0; R=0 ocean                           | Raw ≤900,000 B                              |
-| `inverse-{population,gdp,co2,lights}.bin`                        | MRE3 uniform node pairs, meshopt                                                              | Each gzip-6 ≤700,000 B and raw ≤1,200,000 B |
-| Entering mode: metadata + default population inverse + ID raster | Actual asset gzip-6 sum                                                                       | ≤1,800,000 B                                |
-| Morph GPU textures                                               | Two RG32F inverse textures, RG8 IDs and padded RGBA32F palette                                | ≤40 MiB                                     |
+| Asset                                                            | Format                                                                                               | Budget                                      |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `units.json` + `values.json`                                     | 239 country records, four values/shares/area ratios, bilingual names and source/year metadata        | Combined gzip-6 ≤60,000 B                   |
+| `ids-country.png`                                                | 4096×2048 RGB8; R=country ID, G=metric padding bits, B=quantised 0–4 px boundary distance; R=0 ocean | gzip-6 ≤1,200,000 B                         |
+| `inverse-{population,gdp,co2,lights}.bin`                        | MRE3 uniform node pairs, meshopt                                                                     | Each gzip-6 ≤700,000 B and raw ≤1,200,000 B |
+| Entering mode: metadata + default population inverse + ID raster | Actual asset gzip-6 sum                                                                              | ≤1,800,000 B                                |
+| Morph GPU textures                                               | Two RG32F inverse textures, RG8 IDs, R8 distance and palette                                         | ≤40 MiB                                     |
 
 Transfer budgets use gzip level 6. The GitHub Pages host was checked to return
 `content-encoding: gzip` for the existing `application/octet-stream` vector
 asset; raw-file bounds remain independently enforced. PNG decoding checks CRCs
-and reads raw RGB bytes without canvas colour management. Low quality reduces
-the ID texture by nearest-neighbour sampling. The lobby requests no mode code
+and reads raw RGB bytes without canvas colour management. Low quality takes every other ID/padding texel and scales its distance by
+one half. Country selection then uses the same bilinear classifier. The lobby requests no mode code
 or data; entering requests only the active metric inverse.
+
+The owner approved the ID-raster cap of 1,200,000 B on 2026-10-11 because the
+complete ocean/land vector distance field cannot fit the earlier 900,000 B
+cap losslessly. The initial population transfer cap remains 1,800,000 B.
+The PNG uses deterministic Sub row filtering and filtered deflate; decoded
+R/G bytes, four inverse fields and all scientific acceptance records remain
+unchanged. The published PNG is 1,182,541 B raw / 1,162,743 B gzip-6;
+initial population data totals 1,720,407 B gzip-6. Full-resolution morph textures occupy 33,595,408 B (32.04 MiB):
+25,165,824 B for RG8 IDs/padding plus R8 distances, 8,413,200 B for two
+RG32F inverses, and 16,384 B for the four-row RGBA32F palette.
 
 ## Rebuild and verification
 

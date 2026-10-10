@@ -40,6 +40,7 @@ import {
 import {
   GlobeScene,
   type GlobeKeyboardController,
+  type RasterLayerVisibility,
   type SunlineRenderState,
 } from './GlobeScene';
 
@@ -102,6 +103,12 @@ export function GlobeViewport({
   const [contextLost, setContextLost] = useState(false);
   const [vectorRenderSampleKey, setVectorRenderSampleKey] = useState(0);
   const [vectorState, setVectorState] = useState<VectorGlobeState>('loading');
+  const [rasterLayers, setRasterLayers] = useState<RasterLayerVisibility>({
+    reshaped: false,
+    baseSurface: true,
+    outerShell: false,
+    highlight: true,
+  });
   const [fieldRenderedAlpha, setFieldRenderedAlpha] = useState<number | null>(
     null,
   );
@@ -348,8 +355,17 @@ export function GlobeViewport({
       data-vector-palette-version={
         vectorState === 'ready' ? vectorPaletteVersion : undefined
       }
-      data-vector-raster-fallback-visible={String(vectorState !== 'ready')}
+      data-vector-raster-fallback-visible={String(
+        rasterLayers.baseSurface || rasterLayers.outerShell,
+      )}
+      data-raster-base-surface-visible={String(rasterLayers.baseSurface)}
+      data-raster-drag-shell-visible={String(rasterLayers.outerShell)}
+      data-raster-highlight-visible={String(rasterLayers.highlight)}
+      data-reshaped-renderer-active={
+        reshaped ? String(rasterLayers.reshaped) : undefined
+      }
       data-reshaped-mode={reshaped ? 'active' : undefined}
+      data-reshaped-theme={reshaped ? reshaped.metric : undefined}
       data-morph-state={reshaped ? reshapedMorphState : undefined}
       data-vector-render-draws={vectorRenderEvidence?.vectorDraws}
       data-vector-renderer-calls={vectorRenderEvidence?.rendererCalls}
@@ -559,6 +575,7 @@ export function GlobeViewport({
           onSurnameLabelLayoutChange={setSurnameLabelLayout}
           diagnostics={diagnostics}
           onVectorStateChange={handleVectorStateChange}
+          onRasterLayerVisibilityChange={setRasterLayers}
           onVectorPaletteUpdate={setVectorPaletteVersion}
           onVectorDragMaterialChange={setVectorDragTransparent}
           onVectorSunlineHighlightChange={setVectorSunlineHighlight}

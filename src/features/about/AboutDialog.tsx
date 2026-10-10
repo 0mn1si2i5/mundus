@@ -1,4 +1,5 @@
 import type { Locale } from '../../i18n/messages';
+import { messages } from '../../i18n/messages';
 import urbanIsolationManifest from '../../data/manifests/urban-isolation.json';
 import { Dialog } from '../controls/Dialog';
 import styles from './AboutDialog.module.css';
@@ -320,7 +321,12 @@ export function AboutDialog({
           {copy.methodItems.map(([name, text]) => (
             <div key={name}>
               <dt>{name}</dt>
-              <dd>{text}</dd>
+              <dd>
+                {text}
+                {name === '变形地球' || name === 'Reshaped Earth'
+                  ? ` ${messages[locale].reshapedColorAbout}`
+                  : ''}
+              </dd>
             </div>
           ))}
         </dl>

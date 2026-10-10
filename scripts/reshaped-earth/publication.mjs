@@ -19,6 +19,9 @@ import { encodeUnits, encodeValues, loadCountryNames } from './metadata.mjs';
 import { inverseTextureBytesFromDescriptor } from '../../src/features/reshaped/inverseSampling.mjs';
 import { reshapedEarthManifestSchema } from '../../src/data/manifestSchemas.ts';
 import { loadCountryRaster } from './padding.mjs';
+import { mundusCountryFeatures } from '../build-mundus-countries.mjs';
+import { buildCountryDistanceField } from './distance-field.mjs';
+import { resourceMonitor } from './resources.mjs';
 
 const METRICS = ['population', 'gdp', 'co2', 'lights'];
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
@@ -44,8 +47,22 @@ const paddingCountry = (country) =>
   );
 
 /** Retain the proven coastal label ties, then publish only country IDs. */
-export async function buildIdRasters(c, masks = {}) {
+export async function buildIdRasters(
+  c,
+  masks = {},
+  { countryFeatures, onProgress } = {},
+) {
   const { width, height, ids } = await loadCountryRaster(c);
+  const distances = countryFeatures
+    ? buildCountryDistanceField({
+        width,
+        height,
+        ids,
+        countries: c.countries,
+        features: countryFeatures,
+        onProgress,
+      }).distances
+    : new Uint8Array(ids.length);
   if (c.countries.length > 255) throw new Error('Country IDs exceed R8');
   const country = new Uint8Array(width * height * 3);
   for (const [metric, mask] of Object.entries(masks)) {
@@ -57,6 +74,7 @@ export async function buildIdRasters(c, masks = {}) {
     if (!Number.isInteger(id) || id < 0 || id > c.countries.length)
       throw new Error(`Unknown country raster ID ${id}`);
     country[i * 3] = id;
+    country[i * 3 + 2] = distances[i];
     for (const [metric, mask] of Object.entries(masks)) {
       if (mask[i] !== 0 && mask[i] !== 1)
         throw new Error(`Invalid padding byte ${metric}:${i}`);
@@ -65,9 +83,20 @@ export async function buildIdRasters(c, masks = {}) {
     }
   }
   const bytes = writeRgbPng(width, height, country);
-  if (bytes.length > 900_000)
-    throw new Error(`ID raster exceeds budget: ${bytes.length}/900000`);
+  const transferredBytes = gzipBytes(bytes);
+  if (transferredBytes > 1_200_000)
+    throw new Error(
+      `ID raster exceeds gzip budget: ${transferredBytes}/1200000`,
+    );
   return { 'ids-country.png': bytes };
+}
+
+async function loadCountryFeatures(cacheDir) {
+  const [chn, defaultView] = await Promise.all([
+    readFile(join(cacheDir, SOURCES.chn.fileName), 'utf8').then(JSON.parse),
+    readFile(join(cacheDir, SOURCES.default.fileName), 'utf8').then(JSON.parse),
+  ]);
+  return mundusCountryFeatures(chn, defaultView);
 }
 
 export function assertProductionFields(
@@ -233,13 +262,20 @@ export async function publishProductionAssets({
     if (sha(masks[key]) !== fields[key].paddingSha256)
       throw new Error(`Padding cache identity mismatch: ${key}`);
   }
-  for (const [name, bytes] of Object.entries(await buildIdRasters(c, masks)))
+  const countryFeatures = await loadCountryFeatures(cacheDir);
+  const distanceMonitor = resourceMonitor('country-distance-publication');
+  const idRasters = await buildIdRasters(c, masks, {
+    countryFeatures,
+    onProgress: distanceMonitor.progress,
+  });
+  distanceMonitor.finish();
+  for (const [name, bytes] of Object.entries(idRasters))
     await describe(name, bytes, {
       kind: 'id-raster',
       width: 4096,
       height: 2048,
-      encoding: 'country-padding-rg8',
-      gpuBytes: 4096 * 2048 * 2,
+      encoding: 'country-padding-distance-rgb8',
+      gpuBytes: 4096 * 2048 * 3,
     });
   for (const key of publishedMetrics) {
     const name = `inverse-${key}.bin`,
@@ -295,7 +331,7 @@ export async function publishProductionAssets({
     };
   const manifest = reshapedEarthManifestSchema.parse({
     id: 'reshaped-earth',
-    formatVersion: 4,
+    formatVersion: 5,
     publishedMetrics,
     unpublishedMetrics: publishedMetrics.includes('gdp') ? [] : ['gdp'],
     metricBits: { population: 0, gdp: 1, co2: 2, lights: 3 },
@@ -313,7 +349,7 @@ export async function publishProductionAssets({
       'Offline JS GSM2018 flow with bounded residual-density corrections',
       'MRE3 uniform 1024×512 periodic node inverse; Int16 delta longitude and sine latitude, meshopt vertex encoding',
       'Lossless country JSON metadata; budgets measured with gzip level 6',
-      'Spherical 8-neighbour chamfer selects the intended solid core; country ID in R, stable metric padding bits in G, reserved B=0',
+      'Spherical 8-neighbour chamfer selects the intended solid core; country ID in R, stable metric padding bits in G, vector boundary distance in B quantized to 0-4 pixels',
     ],
     missingValuePolicy:
       'Missing is null; true zero uses 0.01 mean density; ocean, Antarctica and missing receive mean density.',
