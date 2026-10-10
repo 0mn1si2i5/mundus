@@ -1,0 +1,105 @@
+import { SOURCES as countrySources } from '../build-mundus-countries.mjs';
+
+export const YEAR = 2020;
+const cc = 'https://creativecommons.org/licenses/by/4.0/';
+const pd = 'https://www.naturalearthdata.com/about/terms-of-use/';
+// --capture reports identities for review. Ordinary builds reject unpinned
+// identities, including a previously downloaded file whose hash differs.
+export const SOURCES = {
+  population: {
+    id: 'ghs-pop-r2023a',
+    year: YEAR,
+    version: 'R2023A V1-0',
+    fileName: 'GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.zip',
+    url: 'https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E2020_GLOBE_R2023A_4326_30ss/V1-0/GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.zip',
+    landingUrl:
+      'https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php',
+    licence: 'CC BY 4.0',
+    licenceUrl: cc,
+    bytes: 482351880,
+    sha256: null,
+    retrievedAt: '2026-10-10',
+    selection: 'Single population-count band, epoch 2020; nodata -200.',
+  },
+  gdp: {
+    id: 'kummu-gdp-v4',
+    year: YEAR,
+    version: 'v4',
+    fileName: 'rast_gdpTot_1990_2024_5arcmin.tif',
+    url: 'https://zenodo.org/api/records/18429133/files/rast_gdpTot_1990_2024_5arcmin.tif/content',
+    landingUrl: 'https://zenodo.org/records/18429133',
+    licence: 'CC BY 4.0',
+    licenceUrl: cc,
+    bytes: 184157771,
+    md5: '25b38c030acb6c528bfb9c72970c2876',
+    sha256: null,
+    retrievedAt: '2026-10-10',
+    selection:
+      'Band whose GDAL description is 2020; 2021 international dollars (PPP), as explicitly stated by v4 metadata.',
+  },
+  co2: {
+    id: 'gridfed-v2025-1',
+    year: YEAR,
+    version: 'GCP-GridFEDv2025.1',
+    fileName: 'GCP-GridFEDv2025.1_2020.zip',
+    url: 'https://opendap.uea.ac.uk/opendap/hyrax/greenocean/GridFED/GridFEDv2025.1/GCP-GridFEDv2025.1_2020.zip',
+    landingUrl: 'https://zenodo.org/records/17467681',
+    licence: 'CC BY 4.0',
+    licenceUrl: cc,
+    bytes: 1329127164,
+    sha256: null,
+    retrievedAt: '2026-10-10',
+    selection:
+      'Twelve months; CO2 oil, coal, gas and cement calcination; exclude bunkers and cement carbonation; inspect variable units before conversion to tonnes CO2/year.',
+  },
+  lights: {
+    id: 'harmonized-ntl-v10',
+    year: YEAR,
+    version: 'v10',
+    fileName: 'Harmonized_DN_NTL_2020_simVIIRS.tif',
+    url: 'https://ndownloader.figshare.com/files/57065297',
+    downloadUrl: 'https://api.figshare.com/v2/file/download/57065297',
+    landingUrl: 'https://figshare.com/articles/dataset/9828827/10',
+    licence: 'CC BY 4.0',
+    licenceUrl: cc,
+    bytes: 24996479,
+    md5: '5b83de86be4303810f6dcf3a1d8185e9',
+    sha256: '099d73bb65c7f399feec58cf28a9f119e2e9bcd339be03b03f2b0c5860ab466d',
+    retrievedAt: '2026-10-10',
+    selection: 'DN sum, relative index, 0-63; not radiance.',
+  },
+  admin1: {
+    id: 'natural-earth-admin1',
+    version: '5.1.2',
+    fileName: 'ne_10m_admin_1_states_provinces.geojson',
+    url: 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson',
+    landingUrl: pd,
+    licence: 'Public domain',
+    licenceUrl: pd,
+    bytes: 40726851,
+    sha256: '22d0e3ad85eb3e27f17cabf8ba2d50e554fbc27a87796ff891d958185da62fb5',
+    retrievedAt: '2026-10-10',
+    selection:
+      'Full-detail admin-1; name and name_zh; Mundus raster reassignment policy.',
+  },
+  chn: {
+    ...countrySources.chn,
+    id: 'mundus-countries-chn',
+    version: '5.1.2',
+    fileName: 'ne_10m_admin_0_countries_chn.geojson',
+    landingUrl: pd,
+    licence: 'Public domain',
+    licenceUrl: pd,
+    retrievedAt: '2026-10-10',
+  },
+  default: {
+    ...countrySources.default,
+    id: 'mundus-countries-default',
+    version: '5.1.2',
+    fileName: 'ne_10m_admin_0_countries.geojson',
+    landingUrl: pd,
+    licence: 'Public domain',
+    licenceUrl: pd,
+    retrievedAt: '2026-10-10',
+  },
+};
