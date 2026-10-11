@@ -1,4 +1,80 @@
 const METRICS = ['population', 'gdp', 'co2', 'lights'];
+
+/** Build-side JSON encoders live beside the runtime validators. */
+export function encodeUnits(classification, countryNames) {
+  const units = classification.countries.map((u, i) => {
+    if (u.paletteIndex !== i + 1)
+      throw new Error('Country palette order mismatch');
+    return {
+      id: u.id,
+      name: countryNames?.get(u.id) ?? u.name,
+      areaKm2: u.areaKm2,
+      representativePoint: u.representativePoint,
+      paletteIndex: i + 1,
+      rasterId: i + 1,
+      excluded: u.excluded,
+    };
+  });
+  const asset = {
+    formatVersion: 4,
+    encoding: 'country-json',
+    year: 2020,
+    units,
+  };
+  decodeUnits(asset);
+  return asset;
+}
+
+export function encodeValues(
+  classification,
+  metrics,
+  fields,
+  countryNames,
+  publishedMetrics = Object.keys(metrics),
+  sourceIds = {},
+) {
+  const keys = publishedMetrics;
+  const totals = Object.fromEntries(
+    keys.map((key) => [key, metrics[key].diagnostics.assignedTotal]),
+  );
+  const rows = classification.countries.map((u) => {
+    const values = {},
+      worldShare = {},
+      areaRatio = {},
+      padding = {};
+    for (const key of keys) {
+      const value = metrics[key].countryValues[u.paletteIndex];
+      values[key] = value;
+      worldShare[key] =
+        value === null || u.excluded ? null : value / totals[key];
+      areaRatio[key] =
+        value === null || u.excluded
+          ? null
+          : (fields[key].effectiveAreas ?? fields[key].actualAreas)[
+              u.paletteIndex
+            ] / fields[key].trueAreas[u.paletteIndex];
+      padding[key] =
+        fields[key].padding?.countries.find(
+          (entry) => entry.paletteIndex === u.paletteIndex,
+        ) ?? null;
+    }
+    return { id: u.id, values, worldShare, areaRatio, padding, year: 2020 };
+  });
+  const asset = {
+    formatVersion: 4,
+    encoding: 'country-json',
+    year: 2020,
+    metrics: keys,
+    sourceIds: Object.fromEntries(
+      keys.map((key) => [key, sourceIds[key] ?? key]),
+    ),
+    totals,
+    rows,
+  };
+  decodeValues(asset, decodeUnits(encodeUnits(classification, countryNames)));
+  return asset;
+}
+
 export function decodeUnits(asset) {
   if (
     asset?.formatVersion !== 4 ||

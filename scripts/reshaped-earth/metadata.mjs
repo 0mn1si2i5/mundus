@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import {
   decodeUnits,
   decodeValues,
+  encodeUnits as encodeUnitsAsset,
+  encodeValues as encodeValuesAsset,
 } from '../../src/features/reshaped/metadata.mjs';
 import { SOURCES } from './sources.mjs';
 import {
@@ -47,27 +49,7 @@ export async function loadCountryNames(cacheDir, countries) {
 
 /** Country records are small enough to retain lossless JSON numbers. */
 export function encodeUnits(classification, countryNames) {
-  const units = classification.countries.map((u, i) => {
-    if (u.paletteIndex !== i + 1)
-      throw new Error('Country palette order mismatch');
-    return {
-      id: u.id,
-      name: countryNames?.get(u.id) ?? u.name,
-      areaKm2: u.areaKm2,
-      representativePoint: u.representativePoint,
-      paletteIndex: i + 1,
-      rasterId: i + 1,
-      excluded: u.excluded,
-    };
-  });
-  const asset = {
-    formatVersion: 4,
-    encoding: 'country-json',
-    year: 2020,
-    units,
-  };
-  decodeUnits(asset);
-  return asset;
+  return encodeUnitsAsset(classification, countryNames);
 }
 export function encodeValues(
   classification,
@@ -76,42 +58,12 @@ export function encodeValues(
   countryNames,
   publishedMetrics = Object.keys(metrics),
 ) {
-  const keys = publishedMetrics;
-  const totals = Object.fromEntries(
-    keys.map((key) => [key, metrics[key].diagnostics.assignedTotal]),
+  return encodeValuesAsset(
+    classification,
+    metrics,
+    fields,
+    countryNames,
+    publishedMetrics,
+    Object.fromEntries(publishedMetrics.map((key) => [key, SOURCES[key].id])),
   );
-  const rows = classification.countries.map((u) => {
-    const values = {},
-      worldShare = {},
-      areaRatio = {},
-      padding = {};
-    for (const key of keys) {
-      const value = metrics[key].countryValues[u.paletteIndex];
-      values[key] = value;
-      worldShare[key] =
-        value === null || u.excluded ? null : value / totals[key];
-      areaRatio[key] =
-        value === null || u.excluded
-          ? null
-          : (fields[key].effectiveAreas ?? fields[key].actualAreas)[
-              u.paletteIndex
-            ] / fields[key].trueAreas[u.paletteIndex];
-      padding[key] =
-        fields[key].padding?.countries.find(
-          (entry) => entry.paletteIndex === u.paletteIndex,
-        ) ?? null;
-    }
-    return { id: u.id, values, worldShare, areaRatio, padding, year: 2020 };
-  });
-  const asset = {
-    formatVersion: 4,
-    encoding: 'country-json',
-    year: 2020,
-    metrics: keys,
-    sourceIds: Object.fromEntries(keys.map((k) => [k, SOURCES[k].id])),
-    totals,
-    rows,
-  };
-  decodeValues(asset, decodeUnits(encodeUnits(classification, countryNames)));
-  return asset;
 }
