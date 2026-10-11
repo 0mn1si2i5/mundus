@@ -1,8 +1,11 @@
+import type { ReshapedMetricId } from '../reshaped/metrics';
 import type { InverseField } from '../reshaped/inverseFormat.mjs';
 import {
   MORPH_DURATION_MS,
   type MorphMapping,
 } from '../reshaped/reshapedMapping';
+
+const smoothStep = (t: number) => t * t * (3 - 2 * t);
 
 /** Own only the current field and, during a measure change, its predecessor. */
 export class ReshapedTransition<Texture> {
@@ -99,7 +102,7 @@ export class ReshapedTransition<Texture> {
       1,
       Math.max(0, (now - this.animation.startedAt) / MORPH_DURATION_MS),
     );
-    const eased = elapsed * elapsed * (3 - 2 * elapsed);
+    const eased = smoothStep(elapsed);
     this.mapping.t =
       this.animation.from + (this.animation.to - this.animation.from) * eased;
     if (elapsed === 1) this.settle(this.shape);
@@ -140,5 +143,39 @@ export class ReshapedTransition<Texture> {
     this.mapping.from = null;
     this.mapping.to = this.current?.field ?? null;
     this.mapping.t = shape === 'reshaped' ? 1 : 0;
+  }
+}
+
+/** A true-shape measure change animates colour without animating geometry. */
+export class ReshapedThemeTransition {
+  from: ReshapedMetricId;
+  to: ReshapedMetricId;
+  t = 1;
+  private startedAt = 0;
+
+  constructor(metric: ReshapedMetricId) {
+    this.from = metric;
+    this.to = metric;
+  }
+
+  get active() {
+    return this.t < 1;
+  }
+
+  sync(metric: ReshapedMetricId, reducedMotion: boolean, now: number) {
+    if (metric !== this.to) {
+      this.from = this.to;
+      this.to = metric;
+      this.startedAt = now;
+      this.t = reducedMotion ? 1 : 0;
+    } else if (reducedMotion) this.t = 1;
+  }
+
+  tick(now: number) {
+    const elapsed = Math.max(
+      0,
+      Math.min(1, (now - this.startedAt) / MORPH_DURATION_MS),
+    );
+    this.t = smoothStep(elapsed);
   }
 }

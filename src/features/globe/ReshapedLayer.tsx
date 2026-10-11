@@ -42,8 +42,10 @@ import {
 } from '../reshaped/reshapedData';
 import { buildReshapedPatchBins } from '../reshaped/patchSampling.mjs';
 import type { InverseField } from '../reshaped/inverseFormat.mjs';
-import { ReshapedTransition } from './reshapedTransition';
-import { ReshapedThemeTransition } from './reshapedThemeTransition';
+import {
+  ReshapedTransition,
+  ReshapedThemeTransition,
+} from './reshapedTransition';
 import {
   RESHAPED_METRIC_BITS,
   RESHAPED_METRIC_THEMES,
