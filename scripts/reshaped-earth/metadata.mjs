@@ -10,7 +10,7 @@ import {
 } from '../build-mundus-countries.mjs';
 
 /** Exact identifiers and the existing Mundus English wording; no name matching. */
-export function countryNamesFromSource(countries, defaultView) {
+function countryNamesFromSource(countries, defaultView) {
   const names = new Map();
   for (const feature of defaultView.features) {
     const p = feature.properties;
@@ -60,3 +60,8 @@ export function encodeValues(
     Object.fromEntries(publishedMetrics.map((key) => [key, SOURCES[key].id])),
   );
 }
+
+// Internal production paths exposed only for focused boundary tests.
+export const __test = Object.freeze({
+  countryNamesFromSource,
+});

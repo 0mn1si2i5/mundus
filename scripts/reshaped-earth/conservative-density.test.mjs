@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  depositTriangle,
   conservativeMappedDensity,
+  __test as conservativedensityTest,
 } from './conservative-density.mjs';
+const { depositTriangle } = conservativedensityTest;
 import { __test as cartogramTest } from './cartogram.mjs';
 const { cartogramFromForwardGrid } = cartogramTest;
 

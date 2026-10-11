@@ -32,7 +32,7 @@ function area(polygon) {
 
 /** Integrate a triangle's constant density over each intersected output cell.
  * Longitude remains unfolded while clipping, then cell columns wrap. */
-export function depositTriangle(output, width, height, points, mass) {
+function depositTriangle(output, width, height, points, mass) {
   const polygon = points.map(([x, y]) => [x * width, y * height]);
   const wholeArea = area(polygon);
   if (!(wholeArea > 0) || !(mass > 0))
@@ -131,3 +131,8 @@ export function conservativeMappedDensity(
     conservationRelativeError,
   };
 }
+
+// Internal production paths exposed only for focused boundary tests.
+export const __test = Object.freeze({
+  depositTriangle,
+});

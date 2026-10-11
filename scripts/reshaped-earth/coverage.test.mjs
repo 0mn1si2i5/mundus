@@ -12,9 +12,10 @@ import {
   computeCoveredUnitAreas,
   densityFromCoverage,
   loadCoverage,
-  rectangleTriangleAreas,
   saveCoverage,
+  __test as coverageTest,
 } from './coverage.mjs';
+const { rectangleTriangleAreas } = coverageTest;
 
 const run = promisify(execFile);
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resourceStopReason } from './resources.mjs';
+import { __test as resourcesTest } from './resources.mjs';
+const { resourceStopReason } = resourcesTest;
 const baseline = {
   peakRSS: 0.7 * 1024 ** 3,
   swapMiB: 8000,

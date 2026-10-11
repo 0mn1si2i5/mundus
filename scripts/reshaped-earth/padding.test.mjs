@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  computeCountryPadding,
-  countryBoundaryDistances,
-  METRIC_BITS,
-} from './padding.mjs';
+import { computeCountryPadding, __test as paddingTest } from './padding.mjs';
+const { countryBoundaryDistances, METRIC_BITS } = paddingTest;
 import { __test as productionfieldTest } from './production-field.mjs';
 const { iterationStopReason, largestCountryErrors } = productionfieldTest;
 

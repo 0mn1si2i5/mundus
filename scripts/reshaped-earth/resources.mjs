@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 
 const GiB = 1024 ** 3;
-export function resourceStopReason({
+function resourceStopReason({
   peakRSS,
   swapMiB,
   swapBaselineMiB,
@@ -103,3 +103,8 @@ export function resourceMonitor(phase) {
     },
   };
 }
+
+// Internal production paths exposed only for focused boundary tests.
+export const __test = Object.freeze({
+  resourceStopReason,
+});

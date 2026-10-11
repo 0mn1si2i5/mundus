@@ -1,6 +1,6 @@
 import { open } from 'node:fs/promises';
 
-export const METRIC_BITS = { population: 0, gdp: 1, co2: 2, lights: 3 };
+const METRIC_BITS = { population: 0, gdp: 1, co2: 2, lights: 3 };
 
 /** Same nearest-centre sampling used for the published country raster. */
 export async function loadCountryRaster(
@@ -47,7 +47,7 @@ export async function loadCountryRaster(
 }
 
 /** Multi-source 8-neighbour spherical chamfer; x is periodic, distances in radians. */
-export function countryBoundaryDistances(
+function countryBoundaryDistances(
   { width, height, ids },
   { active, onProgress = () => {} } = {},
 ) {
@@ -285,3 +285,9 @@ export function computeCountryPadding({
     },
   };
 }
+
+// Internal production paths exposed only for focused boundary tests.
+export const __test = Object.freeze({
+  METRIC_BITS,
+  countryBoundaryDistances,
+});

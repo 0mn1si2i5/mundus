@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  countryNamesFromSource,
   encodeUnits,
   encodeValues,
+  __test as metadataTest,
 } from './metadata.mjs';
+const { countryNamesFromSource } = metadataTest;
 import {
   decodeUnits,
   decodeValues,

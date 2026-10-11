@@ -55,7 +55,7 @@ function kahanAdd(sums, corrections, index, value) {
 }
 
 /** Exact rectangle area below the a-to-c diagonal, in coarse-cell coordinates. */
-export function rectangleTriangleAreas(x0, y0, x1, y1) {
+function rectangleTriangleAreas(x0, y0, x1, y1) {
   const rectangle = Math.max(0, x1 - x0) * Math.max(0, y1 - y0);
   if (x0 >= y1) return [rectangle, 0];
   if (x1 <= y0) return [0, rectangle];
@@ -660,3 +660,8 @@ export async function loadCoverage(cachePath) {
     await handle.close();
   }
 }
+
+// Internal production paths exposed only for focused boundary tests.
+export const __test = Object.freeze({
+  rectangleTriangleAreas,
+});
