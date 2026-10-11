@@ -99,24 +99,35 @@ export async function decodePngRgb(buffer) {
   const previous = new Uint8Array(stride),
     row = new Uint8Array(stride);
   for (let y = 0; y < height; y += 1) {
-    const filter = inflated[y * (stride + 1)];
+    const rowOffset = y * (stride + 1);
+    const filter = inflated[rowOffset];
     if (filter > 4) throw new Error('Unsupported ID PNG filter');
-    for (let i = 0; i < stride; i += 1) {
-      const left = i >= 3 ? row[i - 3] : 0,
-        up = previous[i],
-        corner = i >= 3 ? previous[i - 3] : 0;
-      let prediction = 0;
-      if (filter === 1) prediction = left;
-      if (filter === 2) prediction = up;
-      if (filter === 3) prediction = Math.floor((left + up) / 2);
-      if (filter === 4) {
-        const p = left + up - corner,
-          a = Math.abs(p - left),
-          b = Math.abs(p - up),
-          c = Math.abs(p - corner);
-        prediction = a <= b && a <= c ? left : b <= c ? up : corner;
+    const filtered = inflated.subarray(rowOffset + 1, rowOffset + 1 + stride);
+    if (filter === 1) {
+      // Published ID rasters use Sub filtering. Keep this hot path branchless
+      // per byte; the general filters below remain for verified fixtures.
+      row[0] = filtered[0];
+      row[1] = filtered[1];
+      row[2] = filtered[2];
+      for (let i = 3; i < stride; i += 1)
+        row[i] = (filtered[i] + row[i - 3]) & 255;
+    } else {
+      for (let i = 0; i < stride; i += 1) {
+        const left = i >= 3 ? row[i - 3] : 0,
+          up = previous[i],
+          corner = i >= 3 ? previous[i - 3] : 0;
+        let prediction = 0;
+        if (filter === 2) prediction = up;
+        if (filter === 3) prediction = Math.floor((left + up) / 2);
+        if (filter === 4) {
+          const p = left + up - corner,
+            a = Math.abs(p - left),
+            b = Math.abs(p - up),
+            c = Math.abs(p - corner);
+          prediction = a <= b && a <= c ? left : b <= c ? up : corner;
+        }
+        row[i] = (filtered[i] + prediction) & 255;
       }
-      row[i] = (inflated[y * (stride + 1) + 1 + i] + prediction) & 255;
     }
     for (let x = 0; x < width; x += 1)
       ids[y * width + x] =
