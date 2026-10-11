@@ -11,6 +11,36 @@ const HOST_LITTLE_ENDIAN =
   new Uint8Array(new Uint16Array([0x0102]).buffer)[0] === 0x02;
 export const INVERSE_GRID = Object.freeze({ width: 1024, height: 512 });
 
+let meshoptWorkerEnabled = false;
+
+async function decodePayload(source, count) {
+  await MeshoptDecoder.ready;
+  if (
+    typeof Worker === 'function' &&
+    typeof MeshoptDecoder.useWorkers === 'function' &&
+    typeof MeshoptDecoder.decodeGltfBufferAsync === 'function'
+  ) {
+    if (!meshoptWorkerEnabled) {
+      MeshoptDecoder.useWorkers(1);
+      meshoptWorkerEnabled = true;
+    }
+    try {
+      return await MeshoptDecoder.decodeGltfBufferAsync(
+        count,
+        STRIDE,
+        source,
+        'ATTRIBUTES',
+      );
+    } catch {
+      // A restricted browser may reject a Blob worker. Keep the verified
+      // synchronous decoder as a portable fallback for that environment.
+    }
+  }
+  const decoded = new Uint8Array(count * STRIDE);
+  MeshoptDecoder.decodeVertexBuffer(decoded, count, STRIDE, source);
+  return decoded;
+}
+
 /** Envelope shared by the offline encoder and runtime decoder. */
 export function encodeInversePacket(payload, { metric, stepLongitude, stepS }) {
   const header = {
@@ -64,14 +94,7 @@ export async function decodeInverse(buffer, expected) {
   )
     throw new Error('Invalid cartogram header');
   const count = (h.width + 1) * (h.height + 1);
-  await MeshoptDecoder.ready;
-  const decoded = new Uint8Array(count * STRIDE);
-  MeshoptDecoder.decodeVertexBuffer(
-    decoded,
-    count,
-    STRIDE,
-    bytes.subarray(8 + length),
-  );
+  const decoded = await decodePayload(bytes.subarray(8 + length), count);
   const data = new Float32Array(count * 2);
   if (HOST_LITTLE_ENDIAN) {
     // The decoded buffer is aligned and has an even byte length, so the
