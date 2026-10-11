@@ -8,6 +8,7 @@ import {
 import {
   decodeUnits,
   decodeValues,
+  encodeValues as encodeSharedValues,
 } from '../../src/features/reshaped/metadata.mjs';
 
 const countries = Array.from({ length: 4 }, (_, i) => ({
@@ -154,6 +155,10 @@ test('metadata rejects old formats, administrative records, incomplete metrics a
     /country/,
   );
   assert.throws(() => encodeUnits(classification), /country/);
+  assert.throws(
+    () => encodeSharedValues(classification, metrics, fields, names),
+    /metric metadata/,
+  );
   const values = encodeValues(classification, metrics, fields, names);
   assert.throws(
     () => decodeValues({ ...values, metrics: ['population'] }, units),

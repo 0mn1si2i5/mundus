@@ -65,9 +65,7 @@ export function encodeValues(
     encoding: 'country-json',
     year: 2020,
     metrics: keys,
-    sourceIds: Object.fromEntries(
-      keys.map((key) => [key, sourceIds[key] ?? key]),
-    ),
+    sourceIds: Object.fromEntries(keys.map((key) => [key, sourceIds[key]])),
     totals,
     rows,
   };

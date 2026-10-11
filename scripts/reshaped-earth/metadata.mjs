@@ -1,12 +1,8 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-  decodeUnits,
-  decodeValues,
-  encodeUnits as encodeUnitsAsset,
-  encodeValues as encodeValuesAsset,
-} from '../../src/features/reshaped/metadata.mjs';
+import { encodeValues as encodeValuesAsset } from '../../src/features/reshaped/metadata.mjs';
+export { encodeUnits } from '../../src/features/reshaped/metadata.mjs';
 import { SOURCES } from './sources.mjs';
 import {
   EXCEPTION_COUNTRY_IDS,
@@ -47,10 +43,7 @@ export async function loadCountryNames(cacheDir, countries) {
   return countryNamesFromSource(countries, JSON.parse(bytes));
 }
 
-/** Country records are small enough to retain lossless JSON numbers. */
-export function encodeUnits(classification, countryNames) {
-  return encodeUnitsAsset(classification, countryNames);
-}
+/** I/O adapter: supply pinned source identities to the shared JSON codec. */
 export function encodeValues(
   classification,
   metrics,
