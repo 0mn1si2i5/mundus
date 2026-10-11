@@ -31,6 +31,9 @@ import {
 } from './reshaped-earth/inverse-encoding.mjs';
 import { resourceMonitor } from './reshaped-earth/resources.mjs';
 import { publishProductionAssets } from './reshaped-earth/publication.mjs';
+import {
+  loadAcceptedPublicationInputs,
+} from './reshaped-earth/accepted-publication.mjs';
 
 const arg = (name) =>
   process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -394,37 +397,54 @@ if (process.argv.includes('--capture')) {
         ? await classify(sources)
         : await loadClassification();
     if (phase !== 'units') {
-      const classificationHash = await classificationIdentity(c);
-      const metrics = await aggregateFresh(
-        c,
-        sources,
-        classificationHash,
-        phase === 'aggregate',
-      );
-      if (phase !== 'aggregate') {
-        const coverage = await coverageFor(c, phase === 'coverage');
-        if (phase !== 'coverage') {
-          const fingerprint = await inputFingerprint(
-            classificationHash,
-            metrics,
-          );
-          const fields = await fieldsFor(
-            c,
-            metrics,
-            coverage,
-            fingerprint,
-            process.argv.includes('--rebuild'),
-          );
-          if (phase === 'all' || phase === 'publish')
-            await publishProductionAssets({
-              cacheDir: CACHE_DIR,
-              fieldDir: BUILD_DIR,
-              classification: c,
+      if (phase === 'publish') {
+        const accepted = await loadAcceptedPublicationInputs({
+          cacheDir: CACHE_DIR,
+          fieldDir: BUILD_DIR,
+        });
+        await publishProductionAssets({
+          cacheDir: CACHE_DIR,
+          fieldDir: BUILD_DIR,
+          classification: c,
+          metrics: accepted.metrics,
+          fields: accepted.fields,
+          fingerprint: accepted.fingerprint,
+          publishedMetrics: accepted.publishedMetrics,
+          cacheBudget,
+        });
+      } else {
+        const classificationHash = await classificationIdentity(c);
+        const metrics = await aggregateFresh(
+          c,
+          sources,
+          classificationHash,
+          phase === 'aggregate',
+        );
+        if (phase !== 'aggregate') {
+          const coverage = await coverageFor(c, phase === 'coverage');
+          if (phase !== 'coverage') {
+            const fingerprint = await inputFingerprint(
+              classificationHash,
               metrics,
-              fields,
+            );
+            const fields = await fieldsFor(
+              c,
+              metrics,
+              coverage,
               fingerprint,
-              cacheBudget,
-            });
+              process.argv.includes('--rebuild'),
+            );
+            if (phase === 'all')
+              await publishProductionAssets({
+                cacheDir: CACHE_DIR,
+                fieldDir: BUILD_DIR,
+                classification: c,
+                metrics,
+                fields,
+                fingerprint,
+                cacheBudget,
+              });
+          }
         }
       }
     }
