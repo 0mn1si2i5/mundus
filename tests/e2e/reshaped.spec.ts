@@ -72,16 +72,26 @@ test('local ID atlas loads after the first actual globe draw and releases its te
     };
     const atlasTextures = new WeakSet<WebGLTexture>(),
       storage = proto.texStorage2D,
+      image = proto.texImage2D,
       deleteTexture = proto.deleteTexture;
-    proto.texStorage2D = function (target, levels, internal, w, h) {
-      storage.call(this, target, levels, internal, w, h);
-      if (internal === this.RGB8 && w === width && h === height) {
-        const texture = this.getParameter(
-          this.TEXTURE_BINDING_2D,
-        ) as WebGLTexture;
+    const rememberAtlasTexture = (context: WebGL2RenderingContext) => {
+      const texture = context.getParameter(
+        context.TEXTURE_BINDING_2D,
+      ) as WebGLTexture | null;
+      if (texture && !atlasTextures.has(texture)) {
         atlasTextures.add(texture);
         state.uploads++;
       }
+    };
+    proto.texStorage2D = function (target, levels, internal, w, h) {
+      storage.call(this, target, levels, internal, w, h);
+      if (internal === this.RGB8 && w === width && h === height) {
+        rememberAtlasTexture(this);
+      }
+    };
+    proto.texImage2D = function (...args) {
+      image.apply(this, args as Parameters<typeof image>);
+      if (args[3] === width && args[4] === height) rememberAtlasTexture(this);
     };
     proto.deleteTexture = function (texture) {
       if (texture && atlasTextures.has(texture)) state.releases++;
