@@ -76,38 +76,23 @@ export async function decodePngRgb(buffer, options = {}) {
   const sample = options.sample ?? 1;
   if (![1, 2].includes(sample) || width % sample || height % sample)
     throw new Error('Unsupported ID PNG sample factor');
-  const expected = (width * 3 + 1) * height;
   const reader = new Blob([compressed])
     .stream()
     .pipeThrough(new DecompressionStream('deflate'))
     .getReader();
-  const inflated = new Uint8Array(expected);
-  cursor = 0;
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (cursor + value.length > expected)
-        throw new Error('ID PNG decompressed length mismatch');
-      inflated.set(value, cursor);
-      cursor += value.length;
-    }
-  } finally {
-    await reader.cancel();
-  }
-  if (cursor !== expected)
-    throw new Error('ID PNG decompressed length mismatch');
   const outputWidth = width / sample,
     outputHeight = height / sample,
-    ids = new Uint32Array(outputWidth * outputHeight);
-  const stride = width * 3;
-  const previous = new Uint8Array(stride),
-    row = new Uint8Array(stride);
-  for (let y = 0; y < height; y += 1) {
-    const rowOffset = y * (stride + 1);
-    const filter = inflated[rowOffset];
+    ids = new Uint32Array(outputWidth * outputHeight),
+    stride = width * 3,
+    previous = new Uint8Array(stride),
+    row = new Uint8Array(stride),
+    scanline = new Uint8Array(stride + 1);
+  let scanlineOffset = 0,
+    rowIndex = 0;
+  const decodeRow = () => {
+    const filter = scanline[0];
     if (filter > 4) throw new Error('Unsupported ID PNG filter');
-    const filtered = inflated.subarray(rowOffset + 1, rowOffset + 1 + stride);
+    const filtered = scanline.subarray(1);
     if (filter === 1) {
       // Published ID rasters use Sub filtering. Keep this hot path branchless
       // per byte; the general filters below remain for verified fixtures.
@@ -134,8 +119,8 @@ export async function decodePngRgb(buffer, options = {}) {
         row[i] = (filtered[i] + prediction) & 255;
       }
     }
-    if (y % sample === sample - 1) {
-      const outputY = (y - (sample - 1)) / sample;
+    if (rowIndex % sample === sample - 1) {
+      const outputY = (rowIndex - (sample - 1)) / sample;
       for (let x = sample - 1; x < width; x += sample) {
         const outputX = (x - (sample - 1)) / sample;
         ids[outputY * outputWidth + outputX] =
@@ -143,6 +128,34 @@ export async function decodePngRgb(buffer, options = {}) {
       }
     }
     previous.set(row);
+    rowIndex += 1;
+  };
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      let valueOffset = 0;
+      while (valueOffset < value.length) {
+        const take = Math.min(
+          scanline.length - scanlineOffset,
+          value.length - valueOffset,
+        );
+        scanline.set(
+          value.subarray(valueOffset, valueOffset + take),
+          scanlineOffset,
+        );
+        scanlineOffset += take;
+        valueOffset += take;
+        if (scanlineOffset === scanline.length) {
+          decodeRow();
+          scanlineOffset = 0;
+        }
+      }
+    }
+  } finally {
+    await reader.cancel();
   }
+  if (rowIndex !== height || scanlineOffset !== 0)
+    throw new Error('ID PNG decompressed length mismatch');
   return { width: outputWidth, height: outputHeight, ids };
 }
