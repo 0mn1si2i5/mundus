@@ -1,25 +1,53 @@
 import { MeshoptDecoder } from 'meshoptimizer/decoder';
 
+const MAGIC = 'MRE3';
+const FORMAT_VERSION = 3;
+const ENCODING = 'regular-node-int16';
+const STRIDE = 4;
+export const INVERSE_GRID = Object.freeze({ width: 1024, height: 512 });
+
+/** Envelope shared by the offline encoder and runtime decoder. */
+export function encodeInversePacket(payload, { metric, stepLongitude, stepS }) {
+  const header = {
+    formatVersion: FORMAT_VERSION,
+    encoding: ENCODING,
+    width: INVERSE_GRID.width,
+    height: INVERSE_GRID.height,
+    stepLongitude,
+    stepS,
+    metric,
+    stride: STRIDE,
+    encodedBytes: payload.length,
+  };
+  const json = new TextEncoder().encode(JSON.stringify(header));
+  const bytes = new Uint8Array(8 + json.length + payload.length);
+  bytes.set(new TextEncoder().encode(MAGIC));
+  new DataView(bytes.buffer).setUint32(4, json.length, true);
+  bytes.set(json, 8);
+  bytes.set(payload, 8 + json.length);
+  return { header, bytes };
+}
+
 /** MRE3: periodic equal-area nodes, Int16 longitude/sine-latitude deltas. */
 export async function decodeInverse(buffer, expected) {
   if (buffer.byteLength < 8 || buffer.byteLength > 1_200_000)
     throw new Error('Invalid cartogram file length');
   const bytes = new Uint8Array(buffer),
     view = new DataView(buffer);
-  if (String.fromCharCode(...bytes.subarray(0, 4)) !== 'MRE3')
+  if (String.fromCharCode(...bytes.subarray(0, 4)) !== MAGIC)
     throw new Error('Invalid cartogram magic');
   const length = view.getUint32(4, true);
   if (!length || length > 4096 || length + 8 >= bytes.length)
     throw new Error('Invalid cartogram header length');
   const h = JSON.parse(new TextDecoder().decode(bytes.subarray(8, 8 + length)));
   if (
-    h.formatVersion !== 3 ||
-    h.encoding !== 'regular-node-int16' ||
-    h.width !== 1024 ||
-    h.height !== 512 ||
+    h.formatVersion !== FORMAT_VERSION ||
+    h.encoding !== ENCODING ||
+    h.width !== INVERSE_GRID.width ||
+    h.height !== INVERSE_GRID.height ||
     h.metric !== expected.metric ||
     !['population', 'gdp', 'co2', 'lights'].includes(h.metric) ||
-    h.stride !== 4 ||
+    h.stride !== STRIDE ||
     h.encodedBytes !== bytes.length - 8 - length ||
     !Number.isFinite(h.stepLongitude) ||
     h.stepLongitude <= 0 ||
@@ -32,18 +60,18 @@ export async function decodeInverse(buffer, expected) {
     throw new Error('Invalid cartogram header');
   const count = (h.width + 1) * (h.height + 1);
   await MeshoptDecoder.ready;
-  const decoded = new Uint8Array(count * 4);
+  const decoded = new Uint8Array(count * STRIDE);
   MeshoptDecoder.decodeVertexBuffer(
     decoded,
     count,
-    4,
+    STRIDE,
     bytes.subarray(8 + length),
   );
   const values = new DataView(decoded.buffer),
     data = new Float32Array(count * 2);
   for (let i = 0; i < count; i += 1) {
-    data[i * 2] = values.getInt16(i * 4, true) * h.stepLongitude;
-    data[i * 2 + 1] = values.getInt16(i * 4 + 2, true) * h.stepS;
+    data[i * 2] = values.getInt16(i * STRIDE, true) * h.stepLongitude;
+    data[i * 2 + 1] = values.getInt16(i * STRIDE + 2, true) * h.stepS;
   }
   for (let y = 0; y <= h.height; y += 1) {
     const a = y * (h.width + 1) * 2,

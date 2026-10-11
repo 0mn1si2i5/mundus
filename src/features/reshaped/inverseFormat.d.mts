@@ -16,6 +16,11 @@ export interface InverseField {
   data: Float32Array;
   header?: InverseHeader;
 }
+export const INVERSE_GRID: Readonly<{ width: 1024; height: 512 }>;
+export function encodeInversePacket(
+  payload: Uint8Array,
+  descriptor: { metric: string; stepLongitude: number; stepS: number },
+): { header: InverseHeader; bytes: Uint8Array };
 export function decodeInverse(
   buffer: ArrayBuffer,
   expected: { metric: string },

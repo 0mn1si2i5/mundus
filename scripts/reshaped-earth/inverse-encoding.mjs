@@ -1,7 +1,11 @@
 import { gzipSync } from 'node:zlib';
 import { MeshoptEncoder } from 'meshoptimizer/encoder';
 import { rasterizeInverseMap } from './cartogram.mjs';
-import { decodeInverse } from '../../src/features/reshaped/inverseFormat.mjs';
+import {
+  decodeInverse,
+  encodeInversePacket,
+  INVERSE_GRID,
+} from '../../src/features/reshaped/inverseFormat.mjs';
 import {
   sampleInverseCoordinates,
   inverseTextureBytes,
@@ -100,9 +104,8 @@ export function chooseInverseCandidate(candidates) {
 
 /** Fixed periodic node grid, with automatic selection from the reviewed 15 step choices. */
 export async function encodeInverseField(map, { metric, onProgress } = {}) {
-  const width = 1024,
-    height = 512,
-    cols = width + 1,
+  const { width, height } = INVERSE_GRID;
+  const cols = width + 1,
     count = cols * (height + 1);
   onProgress?.({ stage: 'inverse-rasterize' });
   const raster = rasterizeInverseMap(map, { width, height, centers: false });
@@ -139,22 +142,11 @@ export async function encodeInverseField(map, { metric, onProgress } = {}) {
       quantized.writeInt16LE(Math.round(data[i * 2 + 1] / stepS), i * 4 + 2);
     }
     const payload = MeshoptEncoder.encodeVertexBuffer(quantized, count, 4);
-    const header = {
-      formatVersion: 3,
-      encoding: 'regular-node-int16',
-      width,
-      height,
+    const { header, bytes } = encodeInversePacket(payload, {
+      metric,
       stepLongitude,
       stepS,
-      metric,
-      stride: 4,
-      encodedBytes: payload.length,
-    };
-    const json = Buffer.from(JSON.stringify(header)),
-      prefix = Buffer.alloc(8);
-    prefix.write('MRE3');
-    prefix.writeUInt32LE(json.length, 4);
-    const bytes = Buffer.concat([prefix, json, payload]);
+    });
     const gzipBytes = gzipSync(bytes, { level: 6 }).length;
     if (bytes.length > 1_200_000) {
       candidates.push({
