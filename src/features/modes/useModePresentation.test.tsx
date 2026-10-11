@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAppStore } from '../../state/appStore';
 import type { ReshapedDataset } from '../reshaped/reshapedData';
 import {
+  useModePresentation,
   useGlobePresentation,
   useSharedReshapedData,
 } from './useModePresentation';
@@ -82,6 +83,51 @@ describe('useGlobePresentation', () => {
 describe('current Reshaped Earth field', () => {
   beforeEach(() => {
     loadReshapedData.mockReset();
+  });
+
+  it('uses the semantic country selection when a low-quality raster samples ocean', () => {
+    const unit = {
+      id: 'ne-048',
+      rasterId: 48,
+      name: { en: 'Bahrain', zh: '巴林' },
+      areaKm2: 1,
+      representativePoint: null,
+      paletteIndex: 1,
+    };
+    const value = {
+      id: unit.id,
+      values: { population: 1, gdp: null, co2: null, lights: null },
+      worldShare: { population: 1, gdp: null, co2: null, lights: null },
+      areaRatio: { population: 1, gdp: null, co2: null, lights: null },
+      year: 2020,
+    };
+    const dataset = {
+      metric: 'population',
+      units: [unit],
+      unitsById: new Map([[unit.id, unit]]),
+      unitsByRasterId: new Map([[unit.rasterId, unit]]),
+      values: new Map([[unit.id, value]]),
+      ids: { width: 1, height: 1, ids: new Uint32Array([0]) },
+      inverse: null,
+      graphicsUnavailable: false,
+    } satisfies ReshapedDataset;
+    useAppStore.setState({
+      activeMode: 'reshaped',
+      point: { latitude: 26.2822, longitude: 50.6152 },
+      selectedCountry: { countryId: unit.id, name: 'Bahrain' },
+      reshapedMetric: 'population',
+    });
+    const { result } = renderHook(() =>
+      useModePresentation({
+        status: 'ready',
+        data: dataset,
+        retry: vi.fn(),
+      }),
+    );
+    expect(result.current?.id).toBe('reshaped');
+    expect(
+      result.current?.id === 'reshaped' && result.current.selectedUnit,
+    ).toBe(unit);
   });
 
   it('keeps the previous metric during loading and rejects an aborted late response', async () => {

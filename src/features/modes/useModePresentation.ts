@@ -269,13 +269,14 @@ export function useModePresentation(
           point.latitude,
           point.longitude,
         ).id;
+      const rasterUnit = dataset?.unitsByRasterId.get(selectedId);
       const unit =
         selectedUnitId !== undefined
           ? selectedUnitId === null
             ? null
             : (dataset?.unitsById.get(selectedUnitId) ?? null)
-          : (dataset?.unitsByRasterId.get(selectedId) ??
-            (!dataset?.ids && selectedCountry
+          : (rasterUnit ??
+            (selectedCountry
               ? dataset?.unitsById.get(selectedCountry.countryId)
               : null) ??
             null);
