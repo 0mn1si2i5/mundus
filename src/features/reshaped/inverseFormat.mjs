@@ -4,6 +4,11 @@ const MAGIC = 'MRE3';
 const FORMAT_VERSION = 3;
 const ENCODING = 'regular-node-int16';
 const STRIDE = 4;
+// Typed-array integer reads use the host byte order. Browsers and Node run on
+// little-endian machines today, but keep the DataView path for portability so
+// the on-disk little-endian format remains unambiguous.
+const HOST_LITTLE_ENDIAN =
+  new Uint8Array(new Uint16Array([0x0102]).buffer)[0] === 0x02;
 export const INVERSE_GRID = Object.freeze({ width: 1024, height: 512 });
 
 /** Envelope shared by the offline encoder and runtime decoder. */
@@ -67,11 +72,27 @@ export async function decodeInverse(buffer, expected) {
     STRIDE,
     bytes.subarray(8 + length),
   );
-  const values = new DataView(decoded.buffer),
-    data = new Float32Array(count * 2);
-  for (let i = 0; i < count; i += 1) {
-    data[i * 2] = values.getInt16(i * STRIDE, true) * h.stepLongitude;
-    data[i * 2 + 1] = values.getInt16(i * STRIDE + 2, true) * h.stepS;
+  const data = new Float32Array(count * 2);
+  if (HOST_LITTLE_ENDIAN) {
+    // The decoded buffer is aligned and has an even byte length, so the
+    // native Int16 view removes roughly one million DataView calls per field.
+    const values = new Int16Array(decoded.buffer, decoded.byteOffset);
+    for (let i = 0; i < count; i += 1) {
+      const value = i * 2;
+      data[value] = values[value] * h.stepLongitude;
+      data[value + 1] = values[value + 1] * h.stepS;
+    }
+  } else {
+    const values = new DataView(
+      decoded.buffer,
+      decoded.byteOffset,
+      decoded.byteLength,
+    );
+    for (let i = 0; i < count; i += 1) {
+      const value = i * 2;
+      data[value] = values.getInt16(value * 2, true) * h.stepLongitude;
+      data[value + 1] = values.getInt16(value * 2 + 2, true) * h.stepS;
+    }
   }
   for (let y = 0; y <= h.height; y += 1) {
     const a = y * (h.width + 1) * 2,
