@@ -73,6 +73,7 @@ test('local ID atlas loads after the first actual globe draw and releases its te
     const atlasTextures = new WeakSet<WebGLTexture>(),
       storage = proto.texStorage2D,
       image = proto.texImage2D,
+      subImage = proto.texSubImage2D,
       deleteTexture = proto.deleteTexture;
     const rememberAtlasTexture = (context: WebGL2RenderingContext) => {
       const texture = context.getParameter(
@@ -88,6 +89,10 @@ test('local ID atlas loads after the first actual globe draw and releases its te
       args: unknown[],
     ) => {
       if (args[0] !== context.TEXTURE_2D) return false;
+      // Three.js may resize the atlas to the implementation's maximum
+      // texture size. Its RGB8 allocation and three-byte upload remain
+      // unique among the reshaped textures even after that resize.
+      if (args[2] === context.RGB8) return true;
       if (args[3] === width && args[4] === height) return true;
       const source = args[5] as {
         width?: unknown;
@@ -108,6 +113,17 @@ test('local ID atlas loads after the first actual globe draw and releases its te
     proto.texImage2D = function (...args) {
       image.apply(this, args as Parameters<typeof image>);
       if (matchesAtlasUpload(this, args)) rememberAtlasTexture(this);
+    };
+    proto.texSubImage2D = function (...args) {
+      subImage.apply(this, args as Parameters<typeof subImage>);
+      if (
+        args[0] === this.TEXTURE_2D &&
+        typeof args[4] === 'number' &&
+        typeof args[5] === 'number' &&
+        (args[8] as ArrayBufferView | null | undefined)?.byteLength ===
+          args[4] * args[5] * 3
+      )
+        rememberAtlasTexture(this);
     };
     proto.deleteTexture = function (texture) {
       if (texture && atlasTextures.has(texture)) state.releases++;
