@@ -417,6 +417,33 @@ function patchResources(atlas: ReshapedPatchAtlas | null) {
   return { texture, atlas };
 }
 
+function syncPatchUniforms(
+  material: ShaderMaterial,
+  patches: ReturnType<typeof patchResources>,
+) {
+  const uniforms = material.uniforms;
+  uniforms.uPatchAtlas!.value = patches?.texture ?? null;
+  uniforms.uPatchCount!.value = patches?.atlas.patches.length ?? 0;
+  uniforms.uPatchBins!.value = buildReshapedPatchBins(patches?.atlas ?? null);
+  for (let index = 0; index < 64; index++) {
+    const patch = patches?.atlas.patches[index];
+    const box = patch?.bbox;
+    (uniforms.uPatchBboxes!.value[index] as Vector4).set(
+      box?.[0] ?? 0,
+      box?.[1] ?? 0,
+      box?.[2] ?? 0,
+      box?.[3] ?? 0,
+    );
+    const rect = patch?.atlas;
+    (uniforms.uPatchRects!.value[index] as Vector4).set(
+      rect?.x ?? 0,
+      rect?.y ?? 0,
+      rect?.width ?? 1,
+      rect?.height ?? 1,
+    );
+  }
+}
+
 function syncTransitionUniforms(
   transition: ReshapedTransition<DataTexture>,
   material: ShaderMaterial,
@@ -554,27 +581,7 @@ export function ReshapedLayer({
     [resources],
   );
   useEffect(() => {
-    const uniforms = material.uniforms;
-    uniforms.uPatchAtlas!.value = patches?.texture ?? null;
-    uniforms.uPatchCount!.value = patches?.atlas.patches.length ?? 0;
-    uniforms.uPatchBins!.value = buildReshapedPatchBins(patches?.atlas ?? null);
-    for (let index = 0; index < 64; index++) {
-      const patch = patches?.atlas.patches[index];
-      const box = patch?.bbox;
-      (uniforms.uPatchBboxes!.value[index] as Vector4).set(
-        box?.[0] ?? 0,
-        box?.[1] ?? 0,
-        box?.[2] ?? 0,
-        box?.[3] ?? 0,
-      );
-      const rect = patch?.atlas;
-      (uniforms.uPatchRects!.value[index] as Vector4).set(
-        rect?.x ?? 0,
-        rect?.y ?? 0,
-        rect?.width ?? 1,
-        rect?.height ?? 1,
-      );
-    }
+    syncPatchUniforms(material, patches);
     // Updating uniforms keeps the base shader program alive when the atlas arrives.
     invalidate();
   }, [patches, material, invalidate]);
