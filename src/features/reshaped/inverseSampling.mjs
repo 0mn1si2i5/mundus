@@ -58,7 +58,6 @@ export function morphLatitude(from, to, t) {
 export function inverseTextureBytes(field) {
   return (field.width + 1) * (field.height + 1) * 8;
 }
-export const inverseTextureBytesFromDescriptor = inverseTextureBytes;
 export function reshapedMorphTextureBytes(
   fromBytes,
   toBytes,

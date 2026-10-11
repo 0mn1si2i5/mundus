@@ -20,7 +20,6 @@ export function inverseTextureBytes(field: {
   width: number;
   height: number;
 }): number;
-export const inverseTextureBytesFromDescriptor: typeof inverseTextureBytes;
 export function reshapedMorphTextureBytes(
   fromBytes: number,
   toBytes: number,
