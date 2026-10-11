@@ -116,15 +116,6 @@ export function compactClassificationFeatures(features) {
   }));
 }
 
-/** Apply the existing country's boundary view before compacting its rings. */
-export function prepareCountryInputs(chn, defaultView) {
-  const countries = mundusCountryFeatures(chn, defaultView);
-  return {
-    countries: compactClassificationFeatures(countries),
-    a3CountryIds: countryA3Map(chn, defaultView, countries),
-  };
-}
-
 /**
  * Full-source scanline rasterizer: polygon rings use even/odd intersections,
  * so holes are independent of winding. Edges are bucketed by their first

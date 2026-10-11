@@ -235,6 +235,5 @@ export function buildCountryDistanceField({
   return { distances: result, segments: segments.length, blocks };
 }
 
-export const DISTANCE_MAX_PIXELS = MAX_DISTANCE_PIXELS;
 export const DISTANCE_QUANTIZATION = QUANTIZATION;
 import { rasterizeFeatures } from './units.mjs';

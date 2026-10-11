@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import {
@@ -6,7 +6,6 @@ import {
   composeCartograms,
   regularizeCartogram,
   measureTriangleOrientation,
-  cartogramFromForwardGrid,
   summarizeAreaErrors,
 } from './cartogram.mjs';
 import { densityFromCoverage, computeCoveredUnitAreas } from './coverage.mjs';
@@ -312,21 +311,4 @@ export async function buildProductionField({
       `S6′: ${key} fails inverse acceptance: ${JSON.stringify(acceptance)}; encoded bytes ${encoded.bytes.length}/1200000; gzip6 ${encoded.gzipBytes}/700000`,
     );
   return result;
-}
-export async function loadForwardField(cacheDir, key) {
-  const metadata = JSON.parse(
-    await readFile(join(cacheDir, `field-progress-${key}.json`), 'utf8'),
-  );
-  const buffer = await readFile(join(cacheDir, `forward-${key}.f64`));
-  if (digest(buffer) !== metadata.forwardSha256)
-    throw new Error('Forward-field cache hash mismatch');
-  return cartogramFromForwardGrid({
-    ...metadata,
-    forwardGrid: new Float64Array(
-      buffer.buffer.slice(
-        buffer.byteOffset,
-        buffer.byteOffset + buffer.byteLength,
-      ),
-    ),
-  });
 }
