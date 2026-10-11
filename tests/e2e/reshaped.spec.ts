@@ -89,14 +89,14 @@ test('local ID atlas loads after the first actual globe draw and releases its te
     ) => {
       if (args[0] !== context.TEXTURE_2D) return false;
       if (args[3] === width && args[4] === height) return true;
-      const source = args[5] as
-        | { width?: unknown; height?: unknown; data?: ArrayBufferView }
-        | null;
+      const source = args[5] as {
+        width?: unknown;
+        height?: unknown;
+        data?: ArrayBufferView;
+      } | null;
       if (source?.width === width && source.height === height) return true;
       const pixels = (args[8] ?? source?.data) as
-        | ArrayBufferView
-        | null
-        | undefined;
+        ArrayBufferView | null | undefined;
       return pixels?.byteLength === width * height * 3;
     };
     proto.texStorage2D = function (target, levels, internal, w, h) {
