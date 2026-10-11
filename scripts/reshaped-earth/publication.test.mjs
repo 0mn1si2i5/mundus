@@ -326,7 +326,10 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
       ),
       padding: Object.fromEntries(metrics.map((key) => [key, null])),
       areaRatio: Object.fromEntries(
-        metrics.map((key) => [key, unit.excluded ? null : 1]),
+        metrics.map((key) => [
+          key,
+          unit.excluded ? null : unit.rasterId === 1 && key === 'gdp' ? 10 : 1,
+        ]),
       ),
     }));
     const unitBytes = Buffer.from(
@@ -385,7 +388,23 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
       encoding: 'country-padding-distance-rgb8',
       gpuBytes: 4096 * 2048 * 3,
     });
-    const patchPng = writeRgbPng(6, 6, new Uint8Array(6 * 6 * 3).fill(1));
+    const patchPixels = new Uint8Array(6 * 6 * 3);
+    for (let i = 0; i < patchPixels.length; i += 3) {
+      patchPixels[i] = 1;
+      patchPixels[i + 2] = 255;
+    }
+    const patchPng = writeRgbPng(6, 6, patchPixels);
+    const patchSelection = [
+      {
+        countryId: units[0].id,
+        rasterId: units[0].rasterId,
+        areaKm2: units[0].areaKm2,
+        maxAreaRatio: 10,
+        areaRatios: rows[0].areaRatio,
+        basePixelCount: 1,
+        basePaddingBits: 0,
+      },
+    ];
     await add('ids-patches.png', patchPng, {
       kind: 'id-patch-atlas',
       width: 6,
@@ -416,6 +435,8 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
         width: 6,
         height: 6,
         scale: 8,
+        selection: patchSelection,
+        retainedSelection: patchSelection,
         removals: patchBudget.removals,
         budgetSteps: patchBudget.steps,
         patches: [
@@ -425,10 +446,12 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
             groupIndex: 0,
             areaKm2: 1,
             maxAreaRatio: 10,
-            areaRatios: Object.fromEntries(metrics.map((key) => [key, 10])),
+            areaRatios: rows[0].areaRatio,
             bbox: [0, 0, 1, 1],
             width: 6,
             height: 6,
+            blockWidth: 6,
+            blockHeight: 6,
             innerWidth: 4,
             innerHeight: 4,
             transitionWidthPixels: 16,
@@ -436,6 +459,7 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
             labelMismatchPixels: 0,
             edgeClearancePixels: 20,
             countryPaddingBits: 0,
+            countryPaddingBitsById: { [units[0].id]: 0 },
             atlas: { x: 0, y: 0, width: 6, height: 6 },
           },
         ],
