@@ -4,9 +4,9 @@ import { gzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 
-export const ACCEPTED_PUBLICATION_FINGERPRINT =
+const ACCEPTED_PUBLICATION_FINGERPRINT =
   '2605b3ab1aff7793deb5c5ef4e3e883853c37c5af54ea76813eefdc84fc5cad3';
-export const PUBLICATION_METRICS = ['population', 'gdp', 'co2', 'lights'];
+const PUBLICATION_METRICS = ['population', 'gdp', 'co2', 'lights'];
 
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const readJson = async (path) => JSON.parse(await readFile(path, 'utf8'));
@@ -117,3 +117,5 @@ export async function loadAcceptedPublicationInputs({
     publishedMetrics: PUBLICATION_METRICS.filter((key) => fields[key]),
   };
 }
+
+export const __test = Object.freeze({ PUBLICATION_METRICS });

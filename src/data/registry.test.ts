@@ -1,200 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
-import { inverseTextureBytesFromDescriptor } from '../features/reshaped/inverseSampling.mjs';
+import acceptedReshapedManifest from './manifests/reshaped-earth.json';
 import {
   DATA_MANIFESTS,
   dataManifestSchema,
   reshapedEarthManifestSchema,
 } from './registry';
 
-// Synthetic manifests test rejection paths; they are not published cartograms.
+// Mutate a clone of the real contract to exercise independent rejection paths.
 function reshapedManifestFixture() {
-  const metrics = ['population', 'gdp', 'co2', 'lights'];
-  const sourceKeys = [...metrics, 'admin1', 'chn', 'default'];
-  const identity = (name: string) => ({
-    path: `src/data/generated/reshaped-earth/${name}`,
-    sha256: 'a'.repeat(64),
-    rawBytes: 1024,
-    gzipBytes: 512,
-    gpuBytes: 0,
-  });
-  const derivedAssets: Record<string, unknown> = {};
-  for (const content of ['units', 'values'])
-    derivedAssets[`${content}.json`] = {
-      ...identity(`${content}.json`),
-      kind: 'metadata',
-      content,
-    };
-  derivedAssets['ids-country.png'] = {
-    ...identity('ids-country.png'),
-    kind: 'id-raster',
-    width: 4096,
-    height: 2048,
-    encoding: 'country-padding-distance-rgb8',
-    gpuBytes: 4096 * 2048 * 3,
-  };
-  derivedAssets['ids-patches.json'] = {
-    ...identity('ids-patches.json'),
-    kind: 'metadata',
-    content: 'patches',
-  };
-  derivedAssets['ids-patches.png'] = {
-    ...identity('ids-patches.png'),
-    kind: 'id-patch-atlas',
-    width: 64,
-    height: 32,
-    encoding: 'country-padding-distance-rgb8-atlas',
-    patches: 2,
-    gpuBytes: 64 * 32 * 3,
-  };
-  for (const metric of metrics)
-    derivedAssets[`inverse-${metric}.bin`] = {
-      ...identity(`inverse-${metric}.bin`),
-      kind: 'inverse-field',
-      metric,
-      width: 1024,
-      height: 512,
-      encoding: 'regular-node-int16',
-      stepLongitude: 0.001,
-      stepS: 0.00001,
-      gpuBytes: inverseTextureBytesFromDescriptor({ width: 1024, height: 512 }),
-    };
-  return reshapedEarthManifestSchema.parse({
-    id: 'reshaped-earth',
-    sourceName: 'Synthetic manifest contract fixture',
-    sourceUrl: 'https://example.com/source',
-    licenseName: 'CC BY 4.0',
-    licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
-    version: 'synthetic',
-    retrievedAt: '2026-10-10',
-    attribution: 'Synthetic source',
-    redistribution: 'allowed',
-    transformations: ['synthetic schema test'],
-    missingValuePolicy: 'null remains missing',
-    boundaryPolicy: 'Mundus view',
-    formatVersion: 5,
-    publishedMetrics: metrics,
-    unpublishedMetrics: [],
-    metricBits: { population: 0, gdp: 1, co2: 2, lights: 3 },
-    year: 2020,
-    grid: { projection: 'cylindrical-equal-area', width: 2048, height: 1024 },
-    sources: sourceKeys.map((key) => ({
-      id: key,
-      name: key,
-      url: 'https://example.com/source',
-      license: 'CC BY 4.0',
-      ...(metrics.includes(key) ? { year: 2020 } : {}),
-    })),
-    sourceAssets: Object.fromEntries(
-      sourceKeys.map((key) => [
-        key,
-        {
-          key,
-          published: true,
-          fileName: `${key}.source`,
-          distributionUrl: 'https://example.com/source',
-          sha256: 'b'.repeat(64),
-          rawBytes: 1024,
-          licenseName: 'CC BY 4.0',
-          licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
-          version: 'synthetic',
-          retrievedAt: '2026-10-10',
-          selection: 'synthetic schema test',
-          ...(metrics.includes(key) ? { year: 2020 } : {}),
-        },
-      ]),
-    ),
-    derivedAssets,
-    acceptance: Object.fromEntries(
-      metrics.map((metric) => [
-        metric,
-        {
-          triangleOrientation: true,
-          minimumTriangleArea: 1e-8,
-          medianAreaError: 0.01,
-          p90AreaError: 0.03,
-          rawMedianAreaError: 0.01,
-          rawP90AreaError: 0.03,
-          totalAreaRelativeError: 1e-10,
-          quantizationMaxDegrees: 0.005,
-          iterations: 2,
-          unitsChecked: 100,
-          displaySamples: 400_000,
-          displaySeed: 17,
-          displayP50Degrees: 0.001,
-          displayP99Degrees: 0.01,
-          displayP999Degrees: 0.02,
-          displayMaxDegrees: 0.04,
-        },
-      ]),
-    ),
-    parameters: Object.fromEntries(
-      metrics.map((metric) => [
-        metric,
-        {
-          algorithm: 'gsm2018-fast-flow',
-          grid: [2048, 1024],
-          initialBlur: 32,
-          blurSchedule: [32, 16],
-          integrationTolerance: 0.02 / 2048,
-          maxRounds: 16,
-          stopReason: 'raw-pass',
-          minimumJacobian: 0.001,
-          regularizationPasses: 8,
-          quantization: {
-            rule: 'minimum-gzip6-among-15-choices-with-source-quantization-lt-0.01-and-display-p99-le-0.1-p999-le-0.5',
-            stepLongitudeFactor: 2,
-            stepSFactor: 1,
-            stepLongitude: 0.001,
-            stepS: 0.00001,
-          },
-        },
-      ]),
-    ),
-    determinism: Object.fromEntries(
-      metrics.map((metric) => [
-        metric,
-        {
-          builds: 2,
-          byteIdentical: true,
-          forwardSha256: 'c'.repeat(64),
-          inverseSha256: 'a'.repeat(64),
-          paddingSha256: 'd'.repeat(64),
-        },
-      ]),
-    ),
-    padding: Object.fromEntries(
-      metrics.map((metric) => [
-        metric,
-        {
-          countries: [],
-          skippedCountries: [],
-          maxFraction: 0,
-          algorithm: 'spherical-chamfer-8',
-          triggerRatio: 1.1,
-          minimumPixels: 64,
-        },
-      ]),
-    ),
-    nameCoverage: { countries: 239, chinese: 239, fraction: 1 },
-    unassigned: Object.fromEntries(metrics.map((metric) => [metric, 0.001])),
-    aggregation: Object.fromEntries(
-      metrics.map((metric) => [
-        metric,
-        {
-          published: true,
-          diagnostics: {
-            validTotal: 1000,
-            assignedTotal: 999,
-            unassigned: 1,
-            relativeError: 0,
-            unassignedFraction: 0.001,
-          },
-          metadata: { year: 2020 },
-        },
-      ]),
-    ),
-  });
+  const manifest = structuredClone(acceptedReshapedManifest);
+  for (const asset of Object.values(manifest.derivedAssets)) {
+    asset.rawBytes = 1024;
+    asset.gzipBytes = 512;
+  }
+  return reshapedEarthManifestSchema.parse(manifest);
 }
 
 describe('data registry', () => {
@@ -392,7 +212,9 @@ describe('data registry', () => {
     const manifest = reshapedManifestFixture();
     manifest.publishedMetrics = ['population', 'co2', 'lights'];
     manifest.unpublishedMetrics = ['gdp'];
-    manifest.sources = manifest.sources.filter((source) => source.id !== 'gdp');
+    manifest.sources = manifest.sources.filter(
+      (source) => source.id !== 'kummu-gdp-v4',
+    );
     manifest.sourceAssets.gdp!.published = false;
     manifest.aggregation.gdp.published = false;
     delete manifest.derivedAssets['inverse-gdp.bin'];
@@ -403,8 +225,11 @@ describe('data registry', () => {
     expect(dataManifestSchema.safeParse(manifest).success).toBe(true);
     const phantom = structuredClone(manifest);
     phantom.padding.gdp = {
-      countries: [],
-      skippedCountries: [],
+      countryCount: 0,
+      skippedCountryCount: 0,
+      maxOnePixelRelativeError: 0,
+      maxCoreTargetRelativeError: 0,
+      detailSha256: 'a'.repeat(64),
       maxFraction: 0,
       algorithm: 'spherical-chamfer-8',
       triggerRatio: 1.1,

@@ -16,7 +16,7 @@ import { format, resolveConfig } from 'prettier';
 import { SOURCES } from './sources.mjs';
 import { writeRgbPng } from './png.mjs';
 import { encodeUnits, encodeValues, loadCountryNames } from './metadata.mjs';
-import { inverseTextureBytesFromDescriptor } from '../../src/features/reshaped/inverseSampling.mjs';
+import { inverseTextureBytes } from '../../src/features/reshaped/inverseSampling.mjs';
 import { reshapedEarthManifestSchema } from '../../src/data/manifestSchemas.ts';
 import { loadCountryRaster } from './padding.mjs';
 import { mundusCountryFeatures } from '../build-mundus-countries.mjs';
@@ -32,23 +32,34 @@ const publishedFieldMetrics = (fields) =>
   METRICS.filter(
     (key) => fields[key]?.passes && fields[key].published !== false,
   );
-const paddingCountry = (country) =>
-  Object.fromEntries(
-    [
-      'id',
-      'paletteIndex',
-      'actualArea',
-      'targetArea',
-      'coreArea',
-      'paddingArea',
-      'paddingFraction',
-      'onePixelRelativeError',
-      'rasterActualArea',
-    ].map((key) => [key, country[key]]),
-  );
+const paddingSummary = (field, rows, key) => {
+  const countries = field.padding.countries;
+  const details = rows.map((row) => row.padding[key]);
+  const present = details.filter(Boolean);
+  return {
+    countryCount: countries.length,
+    skippedCountryCount: field.padding.skippedCountries.length,
+    maxFraction: field.padding.maxFraction,
+    maxOnePixelRelativeError: Math.max(
+      0,
+      ...present.map((entry) => entry.onePixelRelativeError),
+    ),
+    maxCoreTargetRelativeError: Math.max(
+      0,
+      ...present.map(
+        (entry) =>
+          Math.abs(entry.coreArea - entry.targetArea) / entry.targetArea,
+      ),
+    ),
+    detailSha256: sha(Buffer.from(JSON.stringify(details))),
+    algorithm: 'spherical-chamfer-8',
+    triggerRatio: 1.1,
+    minimumPixels: 64,
+  };
+};
 
 /** Retain the proven coastal label ties, then publish only country IDs. */
-export async function buildIdRasters(
+async function buildIdRasters(
   c,
   masks = {},
   { countryFeatures, onProgress, returnRaster = false } = {},
@@ -107,7 +118,7 @@ async function loadCountryFeatures(cacheDir) {
   return mundusCountryFeatures(chn, defaultView);
 }
 
-export function assertProductionFields(
+function assertProductionFields(
   fields,
   fingerprint,
   publishedMetrics = publishedFieldMetrics(fields),
@@ -141,7 +152,7 @@ export function assertProductionFields(
  * filesystem that owns its destination. The cache copy is retained for
  * recovery and inspection, but is never part of the atomic swap.
  */
-export async function publishVerifiedAssets({
+async function publishVerifiedAssets({
   target,
   prepared,
   manifestPath,
@@ -229,6 +240,7 @@ export async function publishProductionAssets({
   fields,
   fingerprint,
   cacheBudget,
+  expectedAssets,
   publishedMetrics = publishedFieldMetrics(fields),
 }) {
   assertProductionFields(fields, fingerprint, publishedMetrics);
@@ -246,6 +258,10 @@ export async function publishProductionAssets({
     );
   const derivedAssets = {};
   const describe = async (name, bytes, descriptor) => {
+    if (expectedAssets && sha(bytes) !== expectedAssets[name]?.sha256)
+      throw new Error(
+        `Repackaged asset differs from accepted publication: ${name}`,
+      );
     await writeFile(join(stage, name), bytes);
     derivedAssets[name] = {
       path: `src/data/generated/reshaped-earth/${name}`,
@@ -350,7 +366,7 @@ export async function publishProductionAssets({
     };
     await describe(name, bytes, {
       ...descriptor,
-      gpuBytes: inverseTextureBytesFromDescriptor(descriptor),
+      gpuBytes: inverseTextureBytes(descriptor),
     });
   }
   const sourceNames = {
@@ -381,6 +397,7 @@ export async function publishProductionAssets({
   const manifest = reshapedEarthManifestSchema.parse({
     id: 'reshaped-earth',
     formatVersion: 5,
+    buildFingerprint: fingerprint,
     publishedMetrics,
     unpublishedMetrics: publishedMetrics.includes('gdp') ? [] : ['gdp'],
     metricBits: { population: 0, gdp: 1, co2: 2, lights: 3 },
@@ -435,20 +452,7 @@ export async function publishProductionAssets({
     padding: Object.fromEntries(
       publishedMetrics.map((key) => [
         key,
-        {
-          countries: fields[key].padding.countries.map(paddingCountry),
-          skippedCountries: fields[key].padding.skippedCountries.map(
-            ({ id, paletteIndex, pixelCount }) => ({
-              id,
-              paletteIndex,
-              pixelCount,
-            }),
-          ),
-          maxFraction: fields[key].padding.maxFraction,
-          algorithm: 'spherical-chamfer-8',
-          triggerRatio: 1.1,
-          minimumPixels: 64,
-        },
+        paddingSummary(fields[key], valueAsset.rows, key),
       ]),
     ),
     nameCoverage: {
@@ -465,7 +469,9 @@ export async function publishProductionAssets({
         {
           published: publishedMetrics.includes(key),
           diagnostics: metrics[key].diagnostics,
-          metadata: metrics[key].metadata,
+          metadataSha256: sha(
+            Buffer.from(JSON.stringify(metrics[key].metadata)),
+          ),
         },
       ]),
     ),
@@ -519,3 +525,9 @@ export async function publishProductionAssets({
   );
   return manifest;
 }
+
+export const __test = Object.freeze({
+  buildIdRasters,
+  assertProductionFields,
+  publishVerifiedAssets,
+});

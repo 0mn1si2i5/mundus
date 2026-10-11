@@ -13,15 +13,12 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { gzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import {
-  assertProductionFields,
-  buildIdRasters,
-  publishProductionAssets,
-  publishVerifiedAssets,
-} from './publication.mjs';
+import { __test, publishProductionAssets } from './publication.mjs';
 import { decodeRgbPng } from './png-test-helpers.mjs';
 
 const fingerprint = 'f'.repeat(64);
+const { assertProductionFields, buildIdRasters, publishVerifiedAssets } =
+  __test;
 
 test('published distance PNG retains the accepted country and padding channels', async () => {
   const bytes = await readFile(
@@ -560,8 +557,13 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
         metrics.map((metric) => [
           metric,
           {
-            countries: [],
-            skippedCountries: [],
+            countryCount: 0,
+            skippedCountryCount: 0,
+            maxOnePixelRelativeError: 0,
+            maxCoreTargetRelativeError: 0,
+            detailSha256: createHash('sha256')
+              .update(JSON.stringify(rows.map(() => null)))
+              .digest('hex'),
             maxFraction: 0,
             algorithm: 'spherical-chamfer-8',
             triggerRatio: 1.1,
@@ -645,7 +647,7 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
               relativeError: 0,
               unassignedFraction: 0,
             },
-            metadata: { year: 2020 },
+            metadataSha256: 'e'.repeat(64),
           },
         ]),
       ),

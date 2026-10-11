@@ -7,10 +7,11 @@ import { gzipSync } from 'node:zlib';
 import { test } from 'node:test';
 import {
   loadAcceptedPublicationInputs,
-  PUBLICATION_METRICS,
+  __test,
 } from './accepted-publication.mjs';
 
 const fingerprint = 'f'.repeat(64);
+const { PUBLICATION_METRICS } = __test;
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 async function fixture({ stale, omit, unpublishedGdp = false } = {}) {

@@ -608,9 +608,53 @@ async function verifyReshapedData(manifest) {
     }
   for (const metric of manifest.publishedMetrics) {
     const summary = manifest.padding[metric];
-    const padded = new Set(
-      summary.countries.map((country) => country.paletteIndex),
+    const details = rows.map((row) => row.padding[metric]);
+    const present = details.filter(Boolean);
+    const padded = new Set(present.map((country) => country.paletteIndex));
+    assert.equal(
+      new Set(present.map((country) => country.id)).size,
+      present.length,
     );
+    assert.equal(padded.size, present.length);
+    assert.equal(present.length, summary.countryCount);
+    assert.equal(
+      createHash('sha256').update(JSON.stringify(details)).digest('hex'),
+      summary.detailSha256,
+    );
+    assert.equal(
+      summary.maxFraction,
+      Math.max(0, ...present.map((entry) => entry.paddingFraction)),
+    );
+    assert.equal(
+      summary.maxOnePixelRelativeError,
+      Math.max(0, ...present.map((entry) => entry.onePixelRelativeError)),
+    );
+    assert.equal(
+      summary.maxCoreTargetRelativeError,
+      Math.max(
+        0,
+        ...present.map(
+          (entry) =>
+            Math.abs(entry.coreArea - entry.targetArea) / entry.targetArea,
+        ),
+      ),
+    );
+    for (const entry of present) {
+      assert.ok(entry.actualArea > 1.1 * entry.targetArea);
+      assert.ok(
+        Math.abs(
+          entry.paddingFraction - entry.paddingArea / entry.actualArea,
+        ) <= 1e-10,
+      );
+      assert.ok(
+        Math.abs(entry.coreArea - entry.targetArea) / entry.targetArea <=
+          entry.onePixelRelativeError + 1e-10,
+      );
+      assert.ok(
+        Math.abs(entry.actualArea - entry.coreArea - entry.paddingArea) <=
+          1e-10,
+      );
+    }
     const observed = new Set();
     const mask = Buffer.alloc(raster.ids.length);
     const bit = 1 << manifest.metricBits[metric];
@@ -631,26 +675,6 @@ async function verifyReshapedData(manifest) {
       createHash('sha256').update(mask).digest('hex'),
       manifest.determinism[metric].paddingSha256,
     );
-    assert.equal(
-      summary.maxFraction,
-      Math.max(
-        0,
-        ...summary.countries.map((country) => country.paddingFraction),
-      ),
-    );
-    for (const row of rows) {
-      const entry = summary.countries.find((country) => country.id === row.id);
-      const value = row.padding[metric];
-      if (!entry)
-        assert.equal(value, null, `${metric}: unexpected row padding`);
-      else
-        for (const [key, expected] of Object.entries(entry))
-          assert.equal(
-            value?.[key],
-            expected,
-            `${metric}: padding metadata differs for ${row.id}:${key}`,
-          );
-    }
     const name = `inverse-${metric}.bin`,
       asset = manifest.derivedAssets[name];
     const bytes = await readFile(reshapedPath(name, manifest));

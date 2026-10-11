@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { inverseTextureBytesFromDescriptor } from '../features/reshaped/inverseSampling.mjs';
+import { inverseTextureBytes } from '../features/reshaped/inverseSampling.mjs';
 
 const auxiliarySourceSchema = z.object({
   sourceName: z.string().min(1),
@@ -254,34 +254,14 @@ const reshapedDeterminismSchema = z
     paddingSha256: sha256Schema,
   })
   .strict();
-const reshapedPaddingCountrySchema = z
+const reshapedPaddingSummarySchema = z
   .object({
-    id: z.string().min(1),
-    paletteIndex: z.number().int().min(1).max(239),
-    actualArea: z.number().positive(),
-    targetArea: z.number().positive(),
-    coreArea: z.number().positive(),
-    paddingArea: z.number().positive(),
-    rasterActualArea: z.number().positive(),
-    paddingFraction: z.number().positive().max(1),
-    onePixelRelativeError: z.number().nonnegative(),
-  })
-  .strict();
-const reshapedPaddingSchema = z
-  .object({
-    countries: z.array(reshapedPaddingCountrySchema).max(239),
-    skippedCountries: z
-      .array(
-        z
-          .object({
-            id: z.string().min(1),
-            paletteIndex: z.number().int().min(1).max(239),
-            pixelCount: z.number().int().nonnegative().max(63),
-          })
-          .strict(),
-      )
-      .max(239),
+    countryCount: z.number().int().nonnegative().max(239),
+    skippedCountryCount: z.number().int().nonnegative().max(239),
     maxFraction: z.number().min(0).max(1),
+    maxOnePixelRelativeError: z.number().nonnegative(),
+    maxCoreTargetRelativeError: z.number().nonnegative(),
+    detailSha256: sha256Schema,
     algorithm: z.literal('spherical-chamfer-8'),
     triggerRatio: z.literal(1.1),
     minimumPixels: z.literal(64),
@@ -293,6 +273,7 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
   .extend({
     id: z.literal('reshaped-earth'),
     formatVersion: z.literal(5),
+    buildFingerprint: sha256Schema.optional(),
     publishedMetrics: z.array(z.enum(reshapedMetrics)).min(3).max(4),
     unpublishedMetrics: z.array(z.literal('gdp')).max(1),
     metricBits: z
@@ -389,7 +370,10 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
       z.enum(reshapedMetrics),
       reshapedDeterminismSchema,
     ),
-    padding: z.partialRecord(z.enum(reshapedMetrics), reshapedPaddingSchema),
+    padding: z.partialRecord(
+      z.enum(reshapedMetrics),
+      reshapedPaddingSummarySchema,
+    ),
     nameCoverage: z
       .object({
         countries: z.literal(239),
@@ -410,7 +394,7 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
             relativeError: z.number().nonnegative().lt(1e-9),
             unassignedFraction: z.number().min(0).max(1),
           }),
-          metadata: z.record(z.string(), z.unknown()),
+          metadataSha256: sha256Schema,
         })
         .strict(),
     ),
@@ -540,7 +524,7 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
             ['derivedAssets', name],
             'Inverse raw or gzip-6 transfer budget exceeded',
           );
-        if (asset.gpuBytes !== inverseTextureBytesFromDescriptor(asset))
+        if (asset.gpuBytes !== inverseTextureBytes(asset))
           issue(
             ['derivedAssets', name, 'gpuBytes'],
             'Inverse GPU budget uses all periodic nodes',
@@ -598,44 +582,15 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
         parameters = manifest.parameters[metric];
       if (!result || !parameters) continue;
       const padding = manifest.padding[metric];
-      if (padding) {
-        if (
-          new Set(padding.countries.map((country) => country.id)).size !==
-            padding.countries.length ||
-          new Set(padding.countries.map((country) => country.paletteIndex))
-            .size !== padding.countries.length
-        )
-          issue(['padding', metric], 'Padding countries must be unique');
-        for (const country of padding.countries)
-          if (
-            !(country.actualArea > 1.1 * country.targetArea) ||
-            Math.abs(
-              country.paddingFraction -
-                country.paddingArea / country.actualArea,
-            ) > 1e-10 ||
-            Math.abs(country.coreArea - country.targetArea) /
-              country.targetArea >
-              country.onePixelRelativeError + 1e-10 ||
-            Math.abs(
-              country.actualArea - country.coreArea - country.paddingArea,
-            ) > 1e-10
-          )
-            issue(
-              ['padding', metric, country.id],
-              'Padding must preserve the intended core within one pixel',
-            );
-        if (
-          padding.maxFraction !==
-          Math.max(
-            0,
-            ...padding.countries.map((country) => country.paddingFraction),
-          )
-        )
-          issue(
-            ['padding', metric, 'maxFraction'],
-            'Maximum padding fraction differs from country records',
-          );
-      }
+      if (
+        padding &&
+        padding.maxCoreTargetRelativeError >
+          padding.maxOnePixelRelativeError + 1e-10
+      )
+        issue(
+          ['padding', metric],
+          'Padding core summary exceeds its one-pixel bound',
+        );
       if (
         result.displayP50Degrees > result.displayP99Degrees ||
         result.displayP99Degrees > result.displayP999Degrees ||
