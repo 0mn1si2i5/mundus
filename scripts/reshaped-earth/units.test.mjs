@@ -7,12 +7,12 @@ import test from 'node:test';
 import { promisify } from 'node:util';
 import {
   buildUnits,
-  cellAreaKm2,
-  compactClassificationFeatures,
   rasterizeFeatures,
   readLabelStripes,
-  resolveClassification,
+  __test as unitsTest,
 } from './units.mjs';
+const { cellAreaKm2, compactClassificationFeatures, resolveClassification } =
+  unitsTest;
 
 const run = promisify(execFile);
 

@@ -15,8 +15,8 @@ import { conservativeMappedDensity } from './conservative-density.mjs';
 import { computeCountryPadding, loadCountryRaster } from './padding.mjs';
 
 export const METRIC_KEYS = ['population', 'gdp', 'co2', 'lights'];
-export const BLUR_SCHEDULE = [32, 16, 8, 4, 2, 1, 0.5, 0.25];
-export function iterationStopReason(history, maxRounds = 16) {
+const BLUR_SCHEDULE = [32, 16, 8, 4, 2, 1, 0.5, 0.25];
+function iterationStopReason(history, maxRounds = 16) {
   const last = history.at(-1);
   if (!last) return null;
   if (last.areaErrors.median < 0.05 && last.areaErrors.p90 < 0.15)
@@ -35,7 +35,7 @@ export function iterationStopReason(history, maxRounds = 16) {
     return 'plateau';
   return last.iteration >= maxRounds ? 'max-rounds' : null;
 }
-export function largestCountryErrors(actualAreas, targets, shares, countries) {
+function largestCountryErrors(actualAreas, targets, shares, countries) {
   return countries
     .filter((country) => targets.get(country.paletteIndex) > 0)
     .map((country) => ({
@@ -55,10 +55,10 @@ export function largestCountryErrors(actualAreas, targets, shares, countries) {
     .slice(0, 10);
 }
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
-export function fieldDensity(coverage, classification, metric) {
+function fieldDensity(coverage, classification, metric) {
   return densityFromCoverage(coverage, { ...classification, ...metric });
 }
-export function evaluateField(map, coverage, model, classification) {
+function evaluateField(map, coverage, model, classification) {
   const actualAreas = computeCoveredUnitAreas(map, coverage, {
     parent: classification.adminToCountryIndex,
   });
@@ -312,3 +312,9 @@ export async function buildProductionField({
     );
   return result;
 }
+
+// Numerical and format probes for boundary tests; not a supported build API.
+export const __test = Object.freeze({
+  iterationStopReason,
+  largestCountryErrors,
+});

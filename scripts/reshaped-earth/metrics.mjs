@@ -88,7 +88,7 @@ function metadataDescription(metadata) {
 }
 
 /** Match a YEAR TOKEN in a band's own description, never an unverified index. */
-export function selectYearBand(descriptions, year = 2020) {
+function selectYearBand(descriptions, year = 2020) {
   const token = new RegExp(`(^|[^0-9])${year}([^0-9]|$)`);
   const matches = descriptions.flatMap((description, sample) =>
     token.test(String(description)) ? [sample] : [],
@@ -101,7 +101,7 @@ export function selectYearBand(descriptions, year = 2020) {
 }
 
 /** Preserve the signed affine axes; geotiff's transform helper negates Y. */
-export function geographicGridFromTags({
+function geographicGridFromTags({
   width,
   height,
   transformation,
@@ -167,7 +167,7 @@ export function geographicGridFromTags({
  * sample descriptions, select 2020, then decode ONE sample in row stripes.
  * Reversed affine axes are normalized. Rotated/projected inputs fail visibly.
  */
-export async function openGeoTiffReader(path, { key, stripeRows } = {}) {
+async function openGeoTiffReader(path, { key, stripeRows } = {}) {
   if (!['population', 'gdp', 'lights'].includes(key))
     throw new Error(`No approved GeoTIFF reader for ${key}`);
   if (!path) throw new TypeError('GeoTIFF path is required');
@@ -398,7 +398,7 @@ async function openGridFedReader(path, { stripeRows = 8 } = {}) {
 }
 
 /** Sum GridFED monthly kg values into tonnes, reversing south→north rows. */
-export function sumMonthlyCo2Slice({ slices, width, rows, months = 12 } = {}) {
+function sumMonthlyCo2Slice({ slices, width, rows, months = 12 } = {}) {
   if (
     !Array.isArray(slices) ||
     slices.length === 0 ||
@@ -919,3 +919,11 @@ export async function aggregateMetric({
     }
   }
 }
+
+// Numerical and format probes for boundary tests; not a supported build API.
+export const __test = Object.freeze({
+  selectYearBand,
+  geographicGridFromTags,
+  openGeoTiffReader,
+  sumMonthlyCo2Slice,
+});

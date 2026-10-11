@@ -80,11 +80,7 @@ function fftInPlace(real, imag, plan, inverse = false) {
 }
 
 /** Radix-2 complex FFT, with inverse 1/N normalisation; inputs are copied. */
-export function fftRadix2(
-  realInput,
-  imaginaryOrInverse = false,
-  inverse = false,
-) {
+function fftRadix2(realInput, imaginaryOrInverse = false, inverse = false) {
   let real;
   let imag;
   if (realInput && typeof realInput === 'object' && 'real' in realInput) {
@@ -106,7 +102,7 @@ export function fftRadix2(
   return { real, imag, imaginary: imag };
 }
 
-export function ifftRadix2(spectrum, imaginary) {
+function ifftRadix2(spectrum, imaginary) {
   return (
     imaginary === undefined
       ? fftRadix2(spectrum, true)
@@ -177,7 +173,7 @@ function dctComplex(real, imag, plan, inverse, workReal, workImag) {
 }
 
 /** O(N log N) DCT-II: C_k = 2 sum_i f_i cos(pi (i+.5) k/N). */
-export function dct(values) {
+function dct(values) {
   const real = asFloat64(values);
   if (!real.length) return real;
   dctComplex(
@@ -192,7 +188,7 @@ export function dct(values) {
 }
 
 /** Inverse of {@link dct}, with C_0/(2N) normalisation. */
-export function idct(values) {
+function idct(values) {
   const real = asFloat64(values);
   if (!real.length) return real;
   dctComplex(
@@ -206,7 +202,7 @@ export function idct(values) {
   return real;
 }
 
-export function fft2d(values, width, height, inverse = false) {
+function fft2d(values, width, height, inverse = false) {
   assertPowerOfTwo(width, 'width');
   assertPowerOfTwo(height, 'height');
   const real = asFloat64(values?.real ?? values);
@@ -444,7 +440,7 @@ function createSpectralSolver({
   };
 }
 
-export function createDiffusionSolver(options = {}) {
+function createDiffusionSolver(options = {}) {
   const solver = createSpectralSolver(options);
   return {
     width: solver.width,
@@ -484,7 +480,7 @@ function sampleScalar(values, width, height, x, y) {
  * survive spectral preparation. Each time field samples J and rho separately
  * before division, without running another FFT or allocating world arrays.
  */
-export function createGsm2018Solver(options = {}) {
+function createGsm2018Solver(options = {}) {
   const spectral = createSpectralSolver(options);
   const { width, height, mean, flooredCells } = spectral;
   const {
@@ -669,7 +665,7 @@ function sampleNodeDisplacement(raster, x, y) {
 }
 
 /** Create a piecewise-affine map from a positive periodic forward node mesh. */
-export function cartogramFromForwardGrid({
+function cartogramFromForwardGrid({
   width,
   height,
   forwardGrid,
@@ -1162,7 +1158,7 @@ export function regularizeCartogram(
  * The density transforms as rho'(F(p)) = rho(p)/det(DF(p)); omitting the
  * Jacobian would repeatedly transport mass already equalized in earlier rounds.
  */
-export function densityInMappedSpace(
+function densityInMappedSpace(
   map,
   density,
   { width = map.width, height = map.height } = {},
@@ -1192,7 +1188,7 @@ export function densityInMappedSpace(
 }
 
 /** Mapped areas of original raster-labelled cells, measured from every triangle. */
-export function computeUnitAreas(map, unitIds) {
+function computeUnitAreas(map, unitIds) {
   if (unitIds?.length !== map.width * map.height)
     throw new RangeError('unit ID grid size mismatch');
   const areas = new Map();
@@ -1223,7 +1219,7 @@ function angularDistanceDegrees(a, b) {
 }
 
 /** Sample an ENCODED/RESAMPLED inverse field, including periodic displacements. */
-export function sampleInverseRaster(raster, x, y) {
+function sampleInverseRaster(raster, x, y) {
   if (!raster.centers) return sampleNodeDisplacement(raster, x, y);
   const px = wrap01(x) * raster.width - 0.5;
   const py = clamp01(y) * raster.height - 0.5;
@@ -1250,7 +1246,7 @@ export function sampleInverseRaster(raster, x, y) {
 }
 
 /** Measure roundtrips on ALL source grid nodes; inverse may be a runtime field. */
-export function measureRoundTrip(map, inverse = map.inverse) {
+function measureRoundTrip(map, inverse = map.inverse) {
   const errors = new Float64Array((map.width + 1) * (map.height + 1));
   let index = 0;
   for (let y = 0; y <= map.height; y += 1)
@@ -1269,7 +1265,7 @@ export function measureRoundTrip(map, inverse = map.inverse) {
   };
 }
 
-export function validateCartogram(
+function validateCartogram(
   map,
   {
     unitIds,
@@ -1297,7 +1293,7 @@ export function validateCartogram(
   return { passes, orientation, roundTrip, areaErrors };
 }
 
-export function polygonSignedArea(points) {
+function polygonSignedArea(points) {
   let area = 0;
   for (let i = 0; i < points.length; i += 1) {
     const next = points[(i + 1) % points.length];
@@ -1305,7 +1301,7 @@ export function polygonSignedArea(points) {
   }
   return area / 2;
 }
-export function areaRelativeError(actual, target) {
+function areaRelativeError(actual, target) {
   if (!Number.isFinite(actual) || !Number.isFinite(target)) return Infinity;
   return Math.abs(actual - target) / Math.max(Math.abs(target), EPSILON);
 }
@@ -1350,3 +1346,22 @@ export function summarizeAreaErrors(actualByUnit, targetByUnit, options = {}) {
     max: errors.length ? errors[errors.length - 1] : 0,
   };
 }
+
+// Numerical and format probes for boundary tests; not a supported build API.
+export const __test = Object.freeze({
+  fftRadix2,
+  ifftRadix2,
+  dct,
+  idct,
+  fft2d,
+  createDiffusionSolver,
+  createGsm2018Solver,
+  cartogramFromForwardGrid,
+  densityInMappedSpace,
+  computeUnitAreas,
+  sampleInverseRaster,
+  measureRoundTrip,
+  validateCartogram,
+  polygonSignedArea,
+  areaRelativeError,
+});

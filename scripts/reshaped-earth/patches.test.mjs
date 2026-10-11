@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { decodeRgbPng } from './png-test-helpers.mjs';
-import {
+import { buildPatchAtlas, __test as patchesTest } from './patches.mjs';
+const {
   assertPatchBoundsDisjoint,
-  buildPatchAtlas,
   circularBounds,
   clusterPatchGroups,
   clusterPatchPolygons,
@@ -11,7 +11,7 @@ import {
   orderPatchRemovals,
   patchBoundsForFeature,
   selectPatchCountries,
-} from './patches.mjs';
+} = patchesTest;
 
 const rect = (west, south, east, north) => [
   [

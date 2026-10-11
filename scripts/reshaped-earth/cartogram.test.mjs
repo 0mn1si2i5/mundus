@@ -1,10 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  areaRelativeError,
   composeCartograms,
-  computeUnitAreas,
   createCartogram,
+  measureTriangleOrientation,
+  rasterizeInverseMap,
+  regularizeCartogram,
+  summarizeAreaErrors,
+  __test as cartogramTest,
+} from './cartogram.mjs';
+const {
+  areaRelativeError,
+  computeUnitAreas,
   createDiffusionSolver,
   createGsm2018Solver,
   dct,
@@ -14,15 +21,11 @@ import {
   idct,
   ifftRadix2,
   measureRoundTrip,
-  measureTriangleOrientation,
   polygonSignedArea,
-  rasterizeInverseMap,
-  regularizeCartogram,
   cartogramFromForwardGrid,
   sampleInverseRaster,
-  summarizeAreaErrors,
   validateCartogram,
-} from './cartogram.mjs';
+} = cartogramTest;
 
 function close(actual, expected, tolerance = 1e-10) {
   assert.ok(

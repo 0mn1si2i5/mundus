@@ -35,7 +35,7 @@ const integer64 = (buffer, offset) => {
 };
 
 /** Inspect the central directory, including ZIP64 sizes, without loading data. */
-export async function inspectArchive(path) {
+async function inspectArchive(path) {
   const file = await open(path, 'r');
   try {
     const size = (await file.stat()).size;
@@ -360,3 +360,8 @@ export async function extractSparseMember({
     throw error;
   }
 }
+
+// Numerical and format probes for boundary tests; not a supported build API.
+export const __test = Object.freeze({
+  inspectArchive,
+});

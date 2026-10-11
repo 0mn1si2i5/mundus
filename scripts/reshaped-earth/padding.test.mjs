@@ -5,10 +5,8 @@ import {
   countryBoundaryDistances,
   METRIC_BITS,
 } from './padding.mjs';
-import {
-  iterationStopReason,
-  largestCountryErrors,
-} from './production-field.mjs';
+import { __test as productionfieldTest } from './production-field.mjs';
+const { iterationStopReason, largestCountryErrors } = productionfieldTest;
 
 function fixture(width = 32, height = 16) {
   const ids = new Uint8Array(width * height);

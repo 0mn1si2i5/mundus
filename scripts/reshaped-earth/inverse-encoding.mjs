@@ -13,7 +13,7 @@ import {
 
 const wrap = (x) => x - Math.floor(x + 0.5);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
-export function angularErrorDegrees(a, b) {
+function angularErrorDegrees(a, b) {
   const lon = wrap(a[0] - b[0]) * 2 * Math.PI;
   const la = Math.asin(clamp(2 * a[1] - 1, -1, 1));
   const lb = Math.asin(clamp(2 * b[1] - 1, -1, 1));
@@ -23,7 +23,7 @@ export function angularErrorDegrees(a, b) {
   return (360 / Math.PI) * Math.asin(Math.sqrt(clamp(h, 0, 1)));
 }
 /** Fixed seed and uniform x/sin(latitude) give equal-area display samples. */
-export function measureDisplayRoundTrip(
+function measureDisplayRoundTrip(
   map,
   field,
   { samples = 400_000, seed = 0x4d524533, reference, onProgress } = {},
@@ -82,7 +82,7 @@ export const QUANTIZATION_CHOICES = [1, 1.25, 1.5].flatMap((stepSFactor) =>
 export const QUANTIZATION_SELECTION_RULE =
   'minimum-gzip6-among-15-choices-with-source-quantization-lt-0.01-and-display-p99-le-0.1-p999-le-0.5';
 
-export function chooseInverseCandidate(candidates) {
+function chooseInverseCandidate(candidates) {
   const accepted = candidates.filter(
     (r) =>
       r.roundTrip &&
@@ -215,3 +215,10 @@ export async function encodeInverseField(map, { metric, onProgress } = {}) {
     },
   };
 }
+
+// Numerical and format probes for boundary tests; not a supported build API.
+export const __test = Object.freeze({
+  angularErrorDegrees,
+  measureDisplayRoundTrip,
+  chooseInverseCandidate,
+});

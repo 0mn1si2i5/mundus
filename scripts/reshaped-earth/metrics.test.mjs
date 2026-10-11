@@ -5,13 +5,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { promisify } from 'node:util';
-import {
-  aggregateMetric,
+import { aggregateMetric, __test as metricsTest } from './metrics.mjs';
+const {
   geographicGridFromTags,
   openGeoTiffReader,
   selectYearBand,
   sumMonthlyCo2Slice,
-} from './metrics.mjs';
+} = metricsTest;
 
 const run = promisify(execFile);
 const countries = [

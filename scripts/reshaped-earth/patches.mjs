@@ -64,7 +64,7 @@ function pointInPolygon(lon, lat, polygon) {
 }
 
 /** The smallest periodic longitude interval containing all vector vertices. */
-export function circularBounds(feature) {
+function circularBounds(feature) {
   const all = rings(feature)
     .flatMap((ring) => ring ?? [])
     .filter(
@@ -102,7 +102,7 @@ export function circularBounds(feature) {
 }
 
 /** Touching expanded boxes belong to one group, including at +/-180 degrees. */
-export function patchBoundsIntersect(first, second) {
+function patchBoundsIntersect(first, second) {
   const a = toBounds(first),
     b = toBounds(second);
   if (a.north < b.south || a.south > b.north) return false;
@@ -113,7 +113,7 @@ export function patchBoundsIntersect(first, second) {
 }
 
 /** Each original polygon gets a 10%/one-base-pixel margin plus the soft seam. */
-export function patchBoundsForFeature(feature) {
+function patchBoundsForFeature(feature) {
   const raw = circularBounds(feature);
   const marginX = Math.max((raw.east - raw.west) * 0.1, DEG_X) + DEG_X * 2;
   const marginY = Math.max((raw.north - raw.south) * 0.1, DEG_Y) + DEG_Y * 2;
@@ -209,7 +209,7 @@ function clusterMembers(members) {
 }
 
 /** Cluster all selected countries together, rather than one atlas block per country. */
-export function clusterPatchGroups({ selection, countryFeatures }) {
+function clusterPatchGroups({ selection, countryFeatures }) {
   const byId = new Map(
     countryFeatures.map((feature) => [countryId(feature), feature]),
   );
@@ -228,7 +228,7 @@ export function clusterPatchGroups({ selection, countryFeatures }) {
 }
 
 /** Single-country helper retained for small, direct clustering tests. */
-export function clusterPatchPolygons(feature) {
+function clusterPatchPolygons(feature) {
   return clusterPatchGroups({
     selection: [{ countryId: countryId(feature), rasterId: 1 }],
     countryFeatures: [feature],
@@ -238,7 +238,7 @@ export function clusterPatchPolygons(feature) {
   }));
 }
 
-export function assertPatchBoundsDisjoint(patches) {
+function assertPatchBoundsDisjoint(patches) {
   for (let i = 0; i < patches.length; i += 1)
     for (let j = i + 1; j < patches.length; j += 1)
       if (
@@ -257,7 +257,7 @@ function ratioFor(field, id) {
 }
 
 /** Select countries; the 64-block limit is checked after global clustering. */
-export function selectPatchCountries({
+function selectPatchCountries({
   classification,
   fields,
   publishedMetrics = METRICS,
@@ -313,7 +313,7 @@ function withBaseEvidence(selection, base) {
 }
 
 /** A large base footprint is the first candidate for the deterministic fallback. */
-export function orderPatchRemovals(selection) {
+function orderPatchRemovals(selection) {
   return [...selection].sort(
     (a, b) =>
       b.basePixelCount - a.basePixelCount ||
@@ -471,7 +471,7 @@ function groupClearance(group, bounds, dx, dy) {
 }
 
 /** Vector RGB labels for one globally disjoint local block. */
-export function makePatch({
+function makePatch({
   group,
   allFeatures,
   labelsById,
@@ -802,3 +802,15 @@ export async function buildPatchAtlas({
     );
   }
 }
+
+// Numerical and format probes for boundary tests; not a supported build API.
+export const __test = Object.freeze({
+  circularBounds,
+  patchBoundsForFeature,
+  clusterPatchGroups,
+  clusterPatchPolygons,
+  assertPatchBoundsDisjoint,
+  selectPatchCountries,
+  orderPatchRemovals,
+  makePatch,
+});

@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cartogramFromForwardGrid } from './cartogram.mjs';
+import { __test as cartogramTest } from './cartogram.mjs';
+const { cartogramFromForwardGrid } = cartogramTest;
 import {
-  angularErrorDegrees,
-  chooseInverseCandidate,
   encodeInverseField,
-  measureDisplayRoundTrip,
   QUANTIZATION_CHOICES,
+  __test as inverseencodingTest,
 } from './inverse-encoding.mjs';
+const { angularErrorDegrees, chooseInverseCandidate, measureDisplayRoundTrip } =
+  inverseencodingTest;
 import { decodeInverse } from '../../src/features/reshaped/inverseFormat.mjs';
 import {
   sampleInverseCoordinates,

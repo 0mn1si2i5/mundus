@@ -4,7 +4,8 @@ import {
   depositTriangle,
   conservativeMappedDensity,
 } from './conservative-density.mjs';
-import { cartogramFromForwardGrid } from './cartogram.mjs';
+import { __test as cartogramTest } from './cartogram.mjs';
+const { cartogramFromForwardGrid } = cartogramTest;
 
 test('finite-volume triangle transport conserves mass across the periodic seam', () => {
   const output = new Float64Array(8);

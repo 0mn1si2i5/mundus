@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { inspectArchive, extractArchive } from './archive.mjs';
+import { extractArchive, __test as archiveTest } from './archive.mjs';
+const { inspectArchive } = archiveTest;
 const run = promisify(execFile);
 
 test('ZIP inspection bounds extraction and CRC-verified cache resumes by identity', async (t) => {

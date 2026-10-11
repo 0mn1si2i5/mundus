@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { promisify } from 'node:util';
-import { cartogramFromForwardGrid } from './cartogram.mjs';
+import { __test as cartogramTest } from './cartogram.mjs';
+const { cartogramFromForwardGrid } = cartogramTest;
 import {
   buildCoverage,
   computeCoveredUnitAreas,

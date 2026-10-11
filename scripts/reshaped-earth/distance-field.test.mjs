@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  buildCountryDistanceField,
-  DISTANCE_QUANTIZATION,
-} from './distance-field.mjs';
+import { buildCountryDistanceField } from './distance-field.mjs';
 import { sampleReshapedLabel } from '../../src/features/reshaped/labelSampling.mjs';
+
+// The published RGB8 contract maps four raster pixels to all 255 byte steps.
+const DISTANCE_QUANTIZATION = 255 / 4;
 
 function squareFeature() {
   return {

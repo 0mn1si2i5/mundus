@@ -49,7 +49,7 @@ function gridSpec({ width, height, bounds = [-180, -90, 180, 90] }) {
   };
 }
 
-export function cellAreaKm2(
+function cellAreaKm2(
   row,
   { width, height, bounds, radiusKm = EARTH_RADIUS_KM },
 ) {
@@ -93,7 +93,7 @@ function unwrappedRing(ring) {
 }
 
 /** Retain full precision while releasing the millions of parsed point arrays. */
-export function compactClassificationFeatures(features) {
+function compactClassificationFeatures(features) {
   const packPolygon = (polygon) =>
     polygon.map((ring) => {
       if (ring instanceof Float64Array) return ring;
@@ -121,7 +121,7 @@ export function compactClassificationFeatures(features) {
  * so holes are independent of winding. Edges are bucketed by their first
  * intersecting row and only active edges are inspected. No vector clipping.
  */
-export function createScanlineRasterizer(features, options = {}) {
+function createScanlineRasterizer(features, options = {}) {
   const g = gridSpec(options);
   const buckets = Array.from({ length: g.height }, () => []);
   let polygonCount = 0;
@@ -381,7 +381,7 @@ function adjacencyIncrement(adjacency, first, second) {
  * The 95% test is against ALL of A's rasterized area, including overlap with
  * ocean. Remnant ties stay in C and use covered area, then stable adm1_code.
  */
-export function resolveClassification({
+function resolveClassification({
   countries,
   adminFeatures,
   originalParents,
@@ -1059,3 +1059,10 @@ export async function buildUnits({
     retainedTemporaryPaths,
   };
 }
+
+// Numerical and format probes for boundary tests; not a supported build API.
+export const __test = Object.freeze({
+  cellAreaKm2,
+  compactClassificationFeatures,
+  resolveClassification,
+});
