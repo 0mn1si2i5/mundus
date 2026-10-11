@@ -50,15 +50,12 @@ Observation contracts:
   centre of at least one million people to the nearest centre meeting the
   visible α population threshold; it describes geometry and size, not travel
   accessibility.
-- **Reshaped Earth** — offline continuous area cartograms of 2020 population,
-  PPP GDP (2021 international dollars), fossil CO₂ and relative nightlight DN
-  at country level. Excess area that continuous reshaping cannot remove is
-  shown as hatched padding; the solid core represents the target area.
-  Globe colours encode the same area multiplier with a diverging scale centred
-  on 1×; night lights use a dark-earth theme.
-  Real coordinates remain shareable through shape changes. Rebuilds,
-  missing values and numerical acceptance:
-  `docs/data/reshaped-earth.md`.
+- **Reshaped Earth** — offline country-level cartograms for 2020 population,
+  PPP GDP (2021 international dollars), fossil CO₂ and relative nightlight DN.
+  Excess area that continuous reshaping cannot remove is hatched as padding;
+  its solid core represents the target area. Colours encode the area multiplier
+  around 1×, while night lights use a dark-earth theme; real coordinates remain
+  shareable. Rebuild and acceptance details: `docs/data/reshaped-earth.md`.
 
 Experience requirements: the first screen is the globe; Chinese and English
 agree in meaning; desktop and mobile complete the same loop; keyboard, focus
