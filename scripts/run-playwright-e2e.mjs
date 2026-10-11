@@ -54,6 +54,40 @@ function signalProcess(child, signal) {
   }
 }
 
+function reshapedTestTitles(playwrightOptions) {
+  const listed = spawnSync(
+    'pnpm',
+    [
+      'exec',
+      'playwright',
+      'test',
+      'tests/e2e/reshaped.spec.ts',
+      ...playwrightOptions,
+      '--list',
+      '--reporter=json',
+    ],
+    { env: environment, encoding: 'utf8' },
+  );
+  if (listed.error) throw listed.error;
+  if (listed.status !== 0)
+    throw new Error('Unable to enumerate Reshaped Earth E2E tests.');
+  const report = JSON.parse(listed.stdout);
+  const titles = [];
+  const visit = (suites) => {
+    for (const suite of suites) {
+      for (const spec of suite.specs ?? []) titles.push(spec.title);
+      visit(suite.suites ?? []);
+    }
+  };
+  visit(report.suites ?? []);
+  if (!titles.length) throw new Error('No Reshaped Earth E2E tests found.');
+  return titles;
+}
+
+function grepLiteral(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function terminate(child, signal = 'SIGTERM') {
   if (!child?.pid || child.exitCode !== null) return;
   signalProcess(child, signal);
@@ -179,13 +213,29 @@ if (arguments_.includes('--list')) {
         const remaining = specs.filter(
           (file) => !file.endsWith('/reshaped.spec.ts'),
         );
-        for (const files of [remaining, reshaped]) {
-          if (!files.length) continue;
+        if (remaining.length) {
           await run(
             'pnpm',
-            ['exec', 'playwright', 'test', ...playwrightOptions, ...files],
+            ['exec', 'playwright', 'test', ...playwrightOptions, ...remaining],
             { env: environment },
           );
+        }
+        if (reshaped.length) {
+          for (const title of reshapedTestTitles(playwrightOptions)) {
+            await run(
+              'pnpm',
+              [
+                'exec',
+                'playwright',
+                'test',
+                ...playwrightOptions,
+                '--grep',
+                grepLiteral(title),
+                'tests/e2e/reshaped.spec.ts',
+              ],
+              { env: environment },
+            );
+          }
         }
       } else {
         await run(
