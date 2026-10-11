@@ -20,11 +20,11 @@ async function decodePayload(source, count) {
     typeof MeshoptDecoder.useWorkers === 'function' &&
     typeof MeshoptDecoder.decodeGltfBufferAsync === 'function'
   ) {
-    if (!meshoptWorkerEnabled) {
-      MeshoptDecoder.useWorkers(1);
-      meshoptWorkerEnabled = true;
-    }
     try {
+      if (!meshoptWorkerEnabled) {
+        MeshoptDecoder.useWorkers(1);
+        meshoptWorkerEnabled = true;
+      }
       return await MeshoptDecoder.decodeGltfBufferAsync(
         count,
         STRIDE,
@@ -34,6 +34,7 @@ async function decodePayload(source, count) {
     } catch {
       // A restricted browser may reject a Blob worker. Keep the verified
       // synchronous decoder as a portable fallback for that environment.
+      meshoptWorkerEnabled = false;
     }
   }
   const decoded = new Uint8Array(count * STRIDE);
