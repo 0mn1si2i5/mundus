@@ -1,11 +1,13 @@
 import { spawn, spawnSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 import { createConnection } from 'node:net';
 
 const arguments_ = process.argv.slice(2);
 if (arguments_[0] === '--') arguments_.shift();
 const skipBuild = arguments_.includes('--skip-build');
+const splitReshaped = arguments_.includes('--split-reshaped');
 const playwrightArguments = arguments_.filter(
-  (argument) => argument !== '--skip-build',
+  (argument) => argument !== '--skip-build' && argument !== '--split-reshaped',
 );
 
 const environment = { ...process.env, MUNDUS_E2E_EXTERNAL_SERVER: '1' };
@@ -159,13 +161,41 @@ if (arguments_.includes('--list')) {
     );
 
     if (hasExplicitProject) {
-      await run(
-        'pnpm',
-        ['exec', 'playwright', 'test', ...playwrightArguments],
-        {
-          env: environment,
-        },
-      );
+      if (splitReshaped) {
+        const specFiles = readdirSync(new URL('../tests/e2e/', import.meta.url))
+          .filter((file) => file.endsWith('.spec.ts'))
+          .sort()
+          .map((file) => `tests/e2e/${file}`);
+        const requestedSpecs = playwrightArguments.filter((argument) =>
+          argument.endsWith('.spec.ts'),
+        );
+        const playwrightOptions = playwrightArguments.filter(
+          (argument) => !argument.endsWith('.spec.ts'),
+        );
+        const specs = requestedSpecs.length ? requestedSpecs : specFiles;
+        const reshaped = specs.filter((file) =>
+          file.endsWith('/reshaped.spec.ts'),
+        );
+        const remaining = specs.filter(
+          (file) => !file.endsWith('/reshaped.spec.ts'),
+        );
+        for (const files of [remaining, reshaped]) {
+          if (!files.length) continue;
+          await run(
+            'pnpm',
+            ['exec', 'playwright', 'test', ...playwrightOptions, ...files],
+            { env: environment },
+          );
+        }
+      } else {
+        await run(
+          'pnpm',
+          ['exec', 'playwright', 'test', ...playwrightArguments],
+          {
+            env: environment,
+          },
+        );
+      }
     } else {
       // SwiftShader degrades when both GPU-heavy projects share one browser
       // lifetime. Keep tests serial, but give each device project a fresh process.
