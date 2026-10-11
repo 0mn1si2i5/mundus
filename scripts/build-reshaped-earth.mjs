@@ -31,9 +31,7 @@ import {
 } from './reshaped-earth/inverse-encoding.mjs';
 import { resourceMonitor } from './reshaped-earth/resources.mjs';
 import { publishProductionAssets } from './reshaped-earth/publication.mjs';
-import {
-  loadAcceptedPublicationInputs,
-} from './reshaped-earth/accepted-publication.mjs';
+import { loadAcceptedPublicationInputs } from './reshaped-earth/accepted-publication.mjs';
 
 const arg = (name) =>
   process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -392,15 +390,29 @@ if (process.argv.includes('--capture')) {
     }
     monitor.finish();
     cacheBudget();
+    if (
+      phase === 'publish' &&
+      !(await exists(join(CACHE_DIR, 'units-build.json')))
+    )
+      throw new Error(
+        'Publish requires accepted classification cache units-build.json',
+      );
     const c =
       phase === 'units' || !(await exists(join(CACHE_DIR, 'units-build.json')))
         ? await classify(sources)
         : await loadClassification();
     if (phase !== 'units') {
       if (phase === 'publish') {
+        const expectedManifest = await json(
+          'src/data/manifests/reshaped-earth.json',
+        );
         const accepted = await loadAcceptedPublicationInputs({
           cacheDir: CACHE_DIR,
           fieldDir: BUILD_DIR,
+          expectedManifest,
+          ...(expectedManifest.buildFingerprint
+            ? { expectedFingerprint: expectedManifest.buildFingerprint }
+            : {}),
         });
         await publishProductionAssets({
           cacheDir: CACHE_DIR,
@@ -411,6 +423,7 @@ if (process.argv.includes('--capture')) {
           fingerprint: accepted.fingerprint,
           publishedMetrics: accepted.publishedMetrics,
           cacheBudget,
+          expectedAssets: expectedManifest.derivedAssets,
         });
       } else {
         const classificationHash = await classificationIdentity(c);

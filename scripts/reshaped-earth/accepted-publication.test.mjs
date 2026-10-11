@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -54,12 +54,8 @@ test('publish inputs accept only deterministic cached fields and allow GDP fallb
       fieldDir,
       expectedFingerprint: fingerprint,
     });
-    assert.deepEqual(result.publishedMetrics, [
-      'population',
-      'co2',
-      'lights',
-    ]);
-    assert.deepEqual(Object.keys(result.metrics), result.publishedMetrics);
+    assert.deepEqual(result.publishedMetrics, ['population', 'co2', 'lights']);
+    assert.deepEqual(Object.keys(result.metrics), PUBLICATION_METRICS);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -80,5 +76,69 @@ test('publish inputs reject missing or stale accepted caches', async () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  }
+});
+
+test('compact manifest diagnostics and metadata hashes validate the accepted cache', async () => {
+  const { root, fieldDir } = await fixture();
+  try {
+    const expectedManifest = {
+      publishedMetrics: PUBLICATION_METRICS,
+      aggregation: {},
+      acceptance: {},
+      parameters: {},
+      determinism: {},
+      derivedAssets: {},
+    };
+    for (const key of PUBLICATION_METRICS) {
+      const field = JSON.parse(
+        await readFile(join(fieldDir, `field-${key}.json`), 'utf8'),
+      );
+      const metadata = { key, source: 'accepted' };
+      await writeFile(
+        join(fieldDir, `metric-${key}.json`),
+        JSON.stringify({
+          metadata,
+          diagnostics: { assignedTotal: 42, validCells: 100 },
+        }),
+      );
+      expectedManifest.aggregation[key] = {
+        diagnostics: { assignedTotal: 42 },
+        metadataSha256: hash(JSON.stringify(metadata)),
+      };
+      expectedManifest.determinism[key] = field.determinism;
+      expectedManifest.derivedAssets[`inverse-${key}.bin`] = {
+        sha256: field.inverseSha256,
+      };
+    }
+    await loadAcceptedPublicationInputs({
+      cacheDir: root,
+      fieldDir,
+      expectedFingerprint: fingerprint,
+      expectedManifest,
+    });
+    expectedManifest.aggregation.population.diagnostics.assignedTotal = 41;
+    await assert.rejects(
+      loadAcceptedPublicationInputs({
+        cacheDir: root,
+        fieldDir,
+        expectedFingerprint: fingerprint,
+        expectedManifest,
+      }),
+      /diagnostics mismatch/,
+    );
+    expectedManifest.aggregation.population.diagnostics.assignedTotal = 42;
+    expectedManifest.aggregation.population.metadataSha256 = '0'.repeat(64);
+    await assert.rejects(
+      loadAcceptedPublicationInputs({
+        cacheDir: root,
+        fieldDir,
+        expectedFingerprint: fingerprint,
+        expectedManifest,
+      }),
+      /metadata mismatch/,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });

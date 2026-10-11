@@ -2,6 +2,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { join } from 'node:path';
+import assert from 'node:assert/strict';
 
 export const ACCEPTED_PUBLICATION_FINGERPRINT =
   '2605b3ab1aff7793deb5c5ef4e3e883853c37c5af54ea76813eefdc84fc5cad3';
@@ -27,6 +28,7 @@ export async function loadAcceptedPublicationInputs({
   cacheDir,
   fieldDir = join(cacheDir, 'country-v4'),
   expectedFingerprint = ACCEPTED_PUBLICATION_FINGERPRINT,
+  expectedManifest,
 }) {
   const metrics = {};
   const fields = {};
@@ -41,8 +43,39 @@ export async function loadAcceptedPublicationInputs({
     ]);
     if (field.fingerprint !== expectedFingerprint)
       throw new Error(`Stale accepted field fingerprint: ${key}`);
-    if (!field.passes || field.published === false)
-      continue;
+    metrics[key] = metric;
+    if (expectedManifest) {
+      assert.deepEqual(
+        Object.fromEntries(
+          Object.keys(expectedManifest.aggregation[key].diagnostics).map(
+            (name) => [name, metric.diagnostics[name]],
+          ),
+        ),
+        expectedManifest.aggregation[key].diagnostics,
+        `Accepted aggregation diagnostics mismatch: ${key}`,
+      );
+      const metadataHash =
+        expectedManifest.aggregation[key].metadataSha256 ??
+        sha(JSON.stringify(expectedManifest.aggregation[key].metadata));
+      assert.equal(
+        sha(JSON.stringify(metric.metadata)),
+        metadataHash,
+        `Accepted aggregation metadata mismatch: ${key}`,
+      );
+      if (expectedManifest.publishedMetrics.includes(key)) {
+        for (const name of ['acceptance', 'parameters', 'determinism'])
+          assert.deepEqual(
+            field[name],
+            expectedManifest[name][key],
+            `Accepted ${name} mismatch: ${key}`,
+          );
+        assert.equal(
+          field.inverseSha256,
+          expectedManifest.derivedAssets[`inverse-${key}.bin`].sha256,
+        );
+      }
+    }
+    if (!field.passes || field.published === false) continue;
     if (
       field.determinism?.builds !== 2 ||
       field.determinism.byteIdentical !== true ||
@@ -66,12 +99,17 @@ export async function loadAcceptedPublicationInputs({
       throw new Error(`Accepted inverse cache identity mismatch: ${key}`);
     if (sha(padding) !== field.paddingSha256)
       throw new Error(`Accepted padding cache identity mismatch: ${key}`);
-    metrics[key] = metric;
     fields[key] = field;
   }
   for (const key of ['population', 'co2', 'lights'])
     if (!fields[key])
       throw new Error(`Accepted publication is missing required field: ${key}`);
+  if (expectedManifest)
+    assert.deepEqual(
+      PUBLICATION_METRICS.filter((key) => fields[key]),
+      expectedManifest.publishedMetrics,
+      'Accepted publication metric set differs',
+    );
   return {
     metrics,
     fields,
