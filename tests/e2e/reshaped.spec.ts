@@ -83,6 +83,15 @@ test('local ID atlas loads after the first actual globe draw and releases its te
         state.uploads++;
       }
     };
+    const matchesAtlasUpload = (
+      context: WebGL2RenderingContext,
+      args: unknown[],
+    ) => {
+      if (args[0] !== context.TEXTURE_2D) return false;
+      if (args[3] === width && args[4] === height) return true;
+      const source = args[5] as { width?: unknown; height?: unknown } | null;
+      return source?.width === width && source.height === height;
+    };
     proto.texStorage2D = function (target, levels, internal, w, h) {
       storage.call(this, target, levels, internal, w, h);
       if (internal === this.RGB8 && w === width && h === height) {
@@ -91,7 +100,7 @@ test('local ID atlas loads after the first actual globe draw and releases its te
     };
     proto.texImage2D = function (...args) {
       image.apply(this, args as Parameters<typeof image>);
-      if (args[3] === width && args[4] === height) rememberAtlasTexture(this);
+      if (matchesAtlasUpload(this, args)) rememberAtlasTexture(this);
     };
     proto.deleteTexture = function (texture) {
       if (texture && atlasTextures.has(texture)) state.releases++;
