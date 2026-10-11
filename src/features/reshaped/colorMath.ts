@@ -47,6 +47,31 @@ function lab(rgb: Rgb): [number, number, number] {
   return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
 }
 
+/** CIELCh in degrees, using the same D65 CIELAB conversion as ΔE00. */
+export function rgbToLch(rgb: Rgb): [number, number, number] {
+  const [lightness, a, b] = lab(rgb);
+  const hue = (Math.atan2(b, a) * 180) / Math.PI;
+  return [lightness, Math.hypot(a, b), (hue + 360) % 360];
+}
+
+export function hueDifference(first: number, second: number): number {
+  const difference = Math.abs(first - second) % 360;
+  return Math.min(difference, 360 - difference);
+}
+
+/** The map shader blends casing in linear RGB before sRGB output conversion. */
+export function compositeLinear(
+  foreground: Rgb,
+  background: Rgb,
+  opacity: number,
+): Rgb {
+  return foreground.map((value, channel) =>
+    srgb(
+      linear(value) * opacity + linear(background[channel]!) * (1 - opacity),
+    ),
+  ) as Rgb;
+}
+
 export function deltaE2000(first: Rgb, second: Rgb): number {
   return deltaE2000Lab(lab(first), lab(second));
 }

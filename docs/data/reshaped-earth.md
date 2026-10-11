@@ -162,13 +162,17 @@ converting the winning score to pixels. This preserves the same first-candidate
 tie rule without normalized-distance rounding reversing a tied coast label.
 Longitude wraps; latitude clamps at the pole rows. A screen footprint larger
 than one raster pixel uses four rotated samples, each independently classified
-and coloured before averaging. Smaller footprints use one sample. The border
-uses the winning score divided by the screen footprint and an antialiased
-approximately 1.2 px line. Four same-label texels whose distances all saturate
+and coloured before averaging; near a boundary or selected ring it adds four
+samples to stabilize the thin casing. Smaller footprints use one sample. The winning
+score supplies the unsigned distance used to shade the boundary. Four same-label texels whose distances all saturate
 at 4 pixels mark an interior lower bound, rather than a measured boundary;
 they suppress border and selection ink so distant oceans stay dark when the
-globe shrinks. Selection adds an approximately 3 px emphasis ring between
-inner and outer border ink and preserves the country's band colour.
+globe shrinks. A 1 CSS-pixel ink line has identical 0.75 CSS-pixel casing on both sides,
+using `fwidth` antialiasing and the actual renderer DPR. Derivatives run before
+label, patch and sampling branches so every fragment has defined derivatives.
+Base and local rasters
+share this shading path. Selection preserves the fill and adds a 3 CSS-pixel
+emphasis ring, with ink and casing along its outer edge.
 
 At GDP maximum zoom, the former Hong Kong/Pearl River coast showed enlarged
 raster steps and dark wedges. A direct pixel-centre comparison against the
@@ -210,46 +214,54 @@ and retains its explicit zero-value caveat.
 
 | Metric       | ≤0.1×   | ≤0.25×  | ≤0.5×   | Around 1× | ≥2×     | ≥4×     | ≥10×    |
 | ------------ | ------- | ------- | ------- | --------- | ------- | ------- | ------- |
-| Population   | #b82fdd | #4f9a9f | #93c3c2 | #e8dfc8   | #e3a67f | #c8673f | #60887a |
-| GDP          | #477e13 | #8973b4 | #c6bcd2 | #eef4ce   | #e6c66d | #c9982c | #2d8479 |
-| CO₂          | #b3803f | #7290a7 | #b3c5db | #f1dbdc   | #d9a77c | #b16e38 | #d31fd8 |
-| Night lights | #217f8d | #c27070 | #768fb2 | #a39595   | #bfad39 | #f1ba89 | #ffefc6 |
+| Population   | #08201e | #469b82 | #64d3cc | #fbf6ec   | #f89986 | #c5523c | #6e2e21 |
+| GDP          | #49446e | #9e62c2 | #ada4ef | #f6f3ee   | #d4a541 | #8e6d16 | #544309 |
+| CO₂          | #1b3340 | #3d8fb5 | #85c6eb | #f5f0e9   | #e4a275 | #a5693c | #663d1e |
+| Night lights | #09456a | #5772a2 | #579eea | #9b9c9e   | #d59102 | #eebb77 | #fcf9f5 |
 
 Population, GDP and CO₂ retain ocean `#c7d2cd`, graticule `#6b6258`, ambient
 light 0.72 and directional light 0.30. Night lights use ocean `#0b1424`, cool
 grey graticule `#718096`, ambient 0.72 and directional 0.18; band luminance
 increases strictly. Country borders and coasts use one ink per theme:
 warm brown `#241f18` for population, GDP and CO₂, and navy `#0b1424` for lights.
-The emphasis ring is `#e8562a`, or ice blue `#7fd3ff` for lights.
+Casing is warm white `#fbf7ee` at 85% opacity, or cool grey `#9aa7b8` at
+35% opacity for lights. The emphasis ring is `#e8562a`, or ice blue `#7fd3ff`
+for lights.
 All colour, ocean, graticule and lighting tokens transition together; reduced
 motion applies them immediately, including in true shape. The page retains
 its parchment appearance.
 
-Each ink must contrast at least 3:1 with every band and every unhatched padding
-colour; the emphasis colour must also contrast at least 3:1 with the ink.
-Population, GDP and CO₂ luminance increases toward the neutral band, then
-decreases on the enlarged side. Night-light luminance increases throughout.
-Padding mixes 70% neutral luminance and then 15% white in linear RGB before
-hatching. Adjacent bands require ΔE00 ≥10 under each of the three colour-blind
-simulations; padding requires ΔE00 ≥10 against both neighbouring bands. These
-token checks exclude antialiased edge pixels, which blend with the surface.
+The smaller/larger CIELCh hue centres are population 180°/45° (teal/ochre
+red), GDP 305°/80° (purple/gold), CO₂ 245°/60° (grey blue/smoky orange),
+and lights 265°/80° (slate blue/amber to near white). Every side band stays
+within 25° of its centre; neutral chroma is lower than every side band.
+Parchment luminance increases toward the neutral band, then decreases;
+night-light luminance increases throughout. Padding mixes 70% neutral
+luminance and then 15% white in linear RGB before hatching.
 
-`node scripts/check-reshaped-colors.mjs` reproduces the following minimum
-values, using dependency-free D65 sRGB/Lab/CIEDE2000 and full-severity Machado
-protan/deutan/tritan simulations in linear RGB. Unit tests include published
-CIEDE2000 reference pairs as well as the palette acceptance bounds.
+Both adjacent bands and unhatched padding against both neighbouring bands
+require ΔE00 ≥10 under full-severity Machado protan/deutan/tritan simulations.
+Padding is also checked without simulation. Casing is composited in linear RGB
+over all bands, padding and ocean before measuring contrast to ink: ≥3:1
+on parchment, ≥2:1 at night. Emphasis/ink requires ≥3:1. These checks include
+minimum and maximum shader lighting; antialiased edge pixels blend with their
+background and are excluded.
 
-| Metric       | Protan ΔE00 | Deutan ΔE00 | Tritan ΔE00 | Padding ΔE00 | Ink / band | Ink / padding | Ink / emphasis |
-| ------------ | ----------: | ----------: | ----------: | -----------: | ---------: | ------------: | -------------: |
-| Population   |      12.695 |      13.536 |      14.040 |       11.378 |    3.495:1 |       5.424:1 |        4.513:1 |
-| GDP          |      12.798 |      11.168 |      12.208 |       11.052 |    3.319:1 |       5.274:1 |        4.513:1 |
-| CO₂          |      12.281 |      15.880 |      12.812 |       10.215 |    3.860:1 |       5.734:1 |        4.513:1 |
-| Night lights |      11.870 |      10.429 |      10.531 |       10.101 |    3.935:1 |       6.109:1 |       11.111:1 |
+`node scripts/check-reshaped-colors.mjs` reproduces the minimum values below;
+Vitest runs the same contracts as part of `pnpm check:source`. D65
+sRGB/Lab/CIEDE2000 math is checked against published CIEDE2000 reference pairs.
 
-The darkest night-light band contrasts with ocean at 3.935:1, meeting the
-3:1 bound. These checks validate the colour tokens in linear RGB; they do not
-measure physical-device colour calibration or performance. Legends and
-ranking text also describe each class.
+| Metric       | Max hue deviation | Adjacent CVD ΔE00 | Padding CVD ΔE00 | Padding plain ΔE00 | Lit casing/ink | Emphasis/ink |
+| ------------ | ----------------: | ----------------: | ---------------: | -----------------: | -------------: | -----------: |
+| Population   |           10.587° |            11.676 |           10.120 |             14.242 |       10.322:1 |      4.513:1 |
+| GDP          |           10.447° |            15.318 |           13.544 |             13.911 |       10.407:1 |      4.513:1 |
+| CO₂          |            0.813° |            15.871 |           11.468 |             12.715 |       10.354:1 |      4.513:1 |
+| Night lights |           12.050° |            11.495 |           10.173 |             10.014 |        2.707:1 |     11.111:1 |
+
+The darkest night-light band contrasts with ocean at 1.817:1 before lighting
+and at least 1.609:1 under lighting, exceeding the 1.5:1 bound. These checks
+do not measure physical-device calibration. Legends and ranking text also
+describe each class.
 
 Shares use `0%`, `<0.001%`, two significant digits below 10%, and one decimal
 place from 10% upward. Area ratios use an integer from 10×, one decimal from
@@ -445,11 +457,11 @@ population West Africa, CO₂ Europe, night lights Southeast Asia, and a
 night-light Hong Kong selection. Desktop and Pixel 7 emulation share the same
 interaction path and use reduced motion.
 
-| Evidence             | Desktop Chromium                                                          | Pixel 7 emulation                                                        |
-| -------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Mauritius islands    | [Before / after](../images/reshaped-earth/4c-desktop-islands.jpg)         | [Before / after](../images/reshaped-earth/4c-pixel7-islands.jpg)         |
-| Small countries      | [Before / after](../images/reshaped-earth/4c-desktop-small-countries.jpg) | [Before / after](../images/reshaped-earth/4c-pixel7-small-countries.jpg) |
-| Themes and selection | [Before / after](../images/reshaped-earth/4c-desktop-themes.jpg)          | [Before / after](../images/reshaped-earth/4c-pixel7-themes.jpg)          |
+| Evidence             | Desktop Chromium                                                                                  | Pixel 7 emulation                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Mauritius islands    | [Before / after](https://github.com/user-attachments/assets/6da7e182-e284-4a7f-97dc-df086a4fa830) | [Before / after](https://github.com/user-attachments/assets/15dda41e-a107-4b8c-861c-5de196ec150a) |
+| Small countries      | [Before / after](https://github.com/user-attachments/assets/cd22a86a-4a52-4405-95e7-0cd8a2521915) | [Before / after](https://github.com/user-attachments/assets/cb814664-06a0-48c0-8ff2-f8190107545d) |
+| Themes and selection | [Before / after](https://github.com/user-attachments/assets/783adf9d-0615-4d4c-9e28-fca78979250e) | [Before / after](https://github.com/user-attachments/assets/5cfb815d-b920-4a92-b854-5243f33d4f4d) |
 
 At fixed camera focus on Germany, the same three 0°, 0.05° and 0.10° turns
 were read from the actual WebGL framebuffer. Each channel records one label

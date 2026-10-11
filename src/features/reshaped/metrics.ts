@@ -60,6 +60,8 @@ export type ReshapedMetricTheme = {
   palette: readonly string[];
   ocean: string;
   border: string;
+  casing: string;
+  casingOpacity: number;
   selection: string;
   graticule: string;
   light: { ambient: number; directional: number };
@@ -71,64 +73,72 @@ export const RESHAPED_METRIC_THEMES: Record<
 > = {
   population: {
     palette: [
-      '#b82fdd',
-      '#4f9a9f',
-      '#93c3c2',
-      '#e8dfc8',
-      '#e3a67f',
-      '#c8673f',
-      '#60887a',
+      '#08201e',
+      '#469b82',
+      '#64d3cc',
+      '#fbf6ec',
+      '#f89986',
+      '#c5523c',
+      '#6e2e21',
     ],
     ocean: '#c7d2cd',
     border: '#241f18',
+    casing: '#fbf7ee',
+    casingOpacity: 0.85,
     selection: '#e8562a',
     graticule: '#6b6258',
     light: { ambient: 0.72, directional: 0.3 },
   },
   gdp: {
     palette: [
-      '#477e13',
-      '#8973b4',
-      '#c6bcd2',
-      '#eef4ce',
-      '#e6c66d',
-      '#c9982c',
-      '#2d8479',
+      '#49446e',
+      '#9e62c2',
+      '#ada4ef',
+      '#f6f3ee',
+      '#d4a541',
+      '#8e6d16',
+      '#544309',
     ],
     ocean: '#c7d2cd',
     border: '#241f18',
+    casing: '#fbf7ee',
+    casingOpacity: 0.85,
     selection: '#e8562a',
     graticule: '#6b6258',
     light: { ambient: 0.72, directional: 0.3 },
   },
   co2: {
     palette: [
-      '#b3803f',
-      '#7290a7',
-      '#b3c5db',
-      '#f1dbdc',
-      '#d9a77c',
-      '#b16e38',
-      '#d31fd8',
+      '#1b3340',
+      '#3d8fb5',
+      '#85c6eb',
+      '#f5f0e9',
+      '#e4a275',
+      '#a5693c',
+      '#663d1e',
     ],
     ocean: '#c7d2cd',
     border: '#241f18',
+    casing: '#fbf7ee',
+    casingOpacity: 0.85,
     selection: '#e8562a',
     graticule: '#6b6258',
     light: { ambient: 0.72, directional: 0.3 },
   },
   lights: {
     palette: [
-      '#217f8d',
-      '#c27070',
-      '#768fb2',
-      '#a39595',
-      '#bfad39',
-      '#f1ba89',
-      '#ffefc6',
+      '#09456a',
+      '#5772a2',
+      '#579eea',
+      '#9b9c9e',
+      '#d59102',
+      '#eebb77',
+      '#fcf9f5',
     ],
     ocean: '#0b1424',
     border: '#0b1424',
+    casing: '#9aa7b8',
+    casingOpacity: 0.35,
     selection: '#7fd3ff',
     graticule: '#718096',
     light: { ambient: 0.72, directional: 0.18 },
@@ -136,6 +146,17 @@ export const RESHAPED_METRIC_THEMES: Record<
 };
 
 export type ReshapedMetricId = (typeof METRIC_DEFINITIONS)[number]['id'];
+
+/** CIELCh hue centres for the owner-reviewed smaller / larger colour families. */
+export const RESHAPED_METRIC_HUE_REFERENCES: Record<
+  ReshapedMetricId,
+  { smaller: number; larger: number }
+> = {
+  population: { smaller: 180, larger: 45 },
+  gdp: { smaller: 305, larger: 80 },
+  co2: { smaller: 245, larger: 60 },
+  lights: { smaller: 265, larger: 80 },
+};
 export const RESHAPED_METRIC_BITS: Record<ReshapedMetricId, number> = {
   population: 0,
   gdp: 1,

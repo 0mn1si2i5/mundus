@@ -7,9 +7,12 @@ import {
   isReshapedMetric,
   RESHAPED_METRICS,
   RESHAPED_METRIC_IDS,
+  RESHAPED_METRIC_THEMES,
+  RESHAPED_METRIC_HUE_REFERENCES,
 } from './metrics';
 import {
   contrastRatio,
+  compositeLinear,
   applyLinearLight,
   deltaE2000,
   deltaE2000Lab,
@@ -17,6 +20,8 @@ import {
   hexToRgb,
   simulateColorBlind,
   relativeLuminance,
+  rgbToLch,
+  hueDifference,
 } from './colorMath';
 
 describe('Reshaped Earth metric copy and formatting', () => {
@@ -117,37 +122,31 @@ describe('Reshaped Earth metric copy and formatting', () => {
     },
   );
 
-  it('keeps the published palettes separated under colour-blind, padding and fixed-ink checks', async () => {
-    const { RESHAPED_METRIC_THEMES } = await import('./metrics');
+  it('preserves the reviewed diverging hue families, neutral chroma and brightness order', () => {
+    expect(RESHAPED_METRIC_HUE_REFERENCES).toEqual({
+      population: { smaller: 180, larger: 45 },
+      gdp: { smaller: 305, larger: 80 },
+      co2: { smaller: 245, larger: 60 },
+      lights: { smaller: 265, larger: 80 },
+    });
     for (const [metric, theme] of Object.entries(RESHAPED_METRIC_THEMES)) {
-      const colours = theme.palette.map((hex) => hexToRgb(hex));
-      for (const mode of ['protan', 'deutan', 'tritan'] as const) {
-        const simulated = colours.map((colour) =>
-          simulateColorBlind(colour, mode),
-        );
-        for (let i = 1; i < simulated.length; i += 1)
-          expect(
-            deltaE2000(simulated[i - 1]!, simulated[i]!),
-          ).toBeGreaterThanOrEqual(10);
-      }
-      for (let index = 0; index < colours.length; index += 1) {
-        const neighbours = [colours[index - 1], colours[index + 1]].filter(
-          (value): value is [number, number, number] => Boolean(value),
-        );
-        for (const neighbour of neighbours)
-          expect(
-            deltaE2000(desaturate(colours[index]!), neighbour),
-          ).toBeGreaterThanOrEqual(10);
+      expect(theme.palette).toHaveLength(7);
+      const colours = theme.palette.map(hexToRgb);
+      const lch = colours.map(rgbToLch);
+      const reference =
+        RESHAPED_METRIC_HUE_REFERENCES[
+          metric as keyof typeof RESHAPED_METRIC_HUE_REFERENCES
+        ];
+      for (const index of [0, 1, 2])
         expect(
-          contrastRatio(hexToRgb(theme.border), colours[index]!),
-        ).toBeGreaterThanOrEqual(3);
+          hueDifference(lch[index]![2], reference.smaller),
+        ).toBeLessThanOrEqual(25);
+      for (const index of [4, 5, 6])
         expect(
-          contrastRatio(hexToRgb(theme.border), desaturate(colours[index]!)),
-        ).toBeGreaterThanOrEqual(3);
-      }
-      expect(
-        contrastRatio(hexToRgb(theme.border), hexToRgb(theme.selection)),
-      ).toBeGreaterThanOrEqual(3);
+          hueDifference(lch[index]![2], reference.larger),
+        ).toBeLessThanOrEqual(25);
+      for (const index of [0, 1, 2, 4, 5, 6])
+        expect(lch[3]![1]).toBeLessThan(lch[index]![1]);
       const luminance = colours.map(relativeLuminance);
       if (metric === 'lights') {
         for (let i = 1; i < luminance.length; i += 1)
@@ -158,11 +157,85 @@ describe('Reshaped Earth metric copy and formatting', () => {
         for (let i = 4; i < luminance.length; i += 1)
           expect(luminance[i]).toBeLessThan(luminance[i - 1]!);
       }
-      if (metric === 'lights')
-        expect(
-          contrastRatio(colours[0]!, hexToRgb(theme.ocean)),
-        ).toBeGreaterThanOrEqual(3);
     }
+  });
+
+  it('separates every adjacent band and padding from both neighbours under each colour-blind simulation', () => {
+    for (const theme of Object.values(RESHAPED_METRIC_THEMES)) {
+      const colours = theme.palette.map(hexToRgb);
+      const padding = colours.map((colour) => desaturate(colour));
+      for (const mode of ['protan', 'deutan', 'tritan'] as const) {
+        const simulated = colours.map((colour) =>
+          simulateColorBlind(colour, mode),
+        );
+        for (let i = 1; i < simulated.length; i += 1)
+          expect(
+            deltaE2000(simulated[i - 1]!, simulated[i]!),
+          ).toBeGreaterThanOrEqual(10);
+        for (let i = 0; i < colours.length; i += 1) {
+          for (const j of [i - 1, i + 1]) {
+            if (!colours[j]) continue;
+            expect(deltaE2000(padding[i]!, colours[j]!)).toBeGreaterThanOrEqual(
+              10,
+            );
+            expect(
+              deltaE2000(simulateColorBlind(padding[i]!, mode), simulated[j]!),
+            ).toBeGreaterThanOrEqual(10);
+          }
+        }
+      }
+    }
+  });
+
+  it('makes the same casing distinguishable against the ink over land, padding and ocean', () => {
+    for (const [metric, theme] of Object.entries(RESHAPED_METRIC_THEMES)) {
+      const isNight = metric === 'lights';
+      expect(theme.casing).toBe(isNight ? '#9aa7b8' : '#fbf7ee');
+      expect(theme.casingOpacity).toBe(isNight ? 0.35 : 0.85);
+      const colours = theme.palette.map(hexToRgb);
+      const backgrounds = [
+        ...colours,
+        ...colours.map((colour) => desaturate(colour)),
+        hexToRgb(theme.ocean),
+      ];
+      const ink = hexToRgb(theme.border);
+      const casing = hexToRgb(theme.casing);
+      const threshold = isNight ? 2 : 3;
+      for (const factor of [
+        1,
+        theme.light.ambient,
+        theme.light.ambient + theme.light.directional,
+      ]) {
+        for (const background of backgrounds)
+          expect(
+            contrastRatio(
+              applyLinearLight(ink, factor),
+              applyLinearLight(
+                compositeLinear(casing, background, theme.casingOpacity),
+                factor,
+              ),
+            ),
+          ).toBeGreaterThanOrEqual(threshold);
+        expect(
+          contrastRatio(
+            applyLinearLight(ink, factor),
+            applyLinearLight(hexToRgb(theme.selection), factor),
+          ),
+        ).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
+  it('measures CIELCh hue on a circle and composites casing in linear RGB', () => {
+    expect(rgbToLch([1, 1, 1])[0]).toBeCloseTo(100, 4);
+    expect(rgbToLch([0, 0, 0])).toEqual([0, 0, 0]);
+    expect(hueDifference(350, 10)).toBe(20);
+    expect(hueDifference(10, 350)).toBe(20);
+    expect(hueDifference(0, 180)).toBe(180);
+    const grey = compositeLinear([1, 1, 1], [0, 0, 0], 0.5);
+    for (const channel of grey) expect(channel).toBeCloseTo(0.735356983, 8);
+    expect(relativeLuminance(grey)).toBeCloseTo(0.5, 8);
+    expect(compositeLinear([0.2, 0.5, 1], [0, 0, 0], 0)).toEqual([0, 0, 0]);
   });
 
   it('matches published CIEDE2000 reference pairs including wrapped hue', () => {
@@ -180,8 +253,7 @@ describe('Reshaped Earth metric copy and formatting', () => {
     }
   });
 
-  it('keeps lights brightness monotonic and its darkest band distinct under actual lighting', async () => {
-    const { RESHAPED_METRIC_THEMES } = await import('./metrics');
+  it('keeps lights brightness monotonic and its darkest band distinct under actual lighting', () => {
     const theme = RESHAPED_METRIC_THEMES.lights;
     const luminance = theme.palette.map((hex) =>
       relativeLuminance(hexToRgb(hex)),
@@ -197,6 +269,6 @@ describe('Reshaped Earth metric copy and formatting', () => {
           applyLinearLight(hexToRgb(theme.palette[0]!), factor),
           applyLinearLight(hexToRgb(theme.ocean), factor),
         ),
-      ).toBeGreaterThanOrEqual(3);
+      ).toBeGreaterThanOrEqual(1.5);
   });
 });

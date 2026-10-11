@@ -58,12 +58,13 @@ const THEME_COLORS = Object.fromEntries(
     {
       ocean: new Color(RESHAPED_METRIC_THEMES[id].ocean),
       border: new Color(RESHAPED_METRIC_THEMES[id].border),
+      casing: new Color(RESHAPED_METRIC_THEMES[id].casing),
       selection: new Color(RESHAPED_METRIC_THEMES[id].selection),
     },
   ]),
 ) as Record<
   ReshapedMetricId,
-  { ocean: Color; border: Color; selection: Color }
+  { ocean: Color; border: Color; casing: Color; selection: Color }
 >;
 
 export interface ReshapedMappingHandle {
@@ -217,6 +218,7 @@ uniform int uFromPaddingBit; uniform int uToPaddingBit;
 uniform int uFromMetricIndex; uniform int uToMetricIndex;
 uniform float uT; uniform float uThemeT; uniform int uSelected; uniform vec3 uOcean; uniform vec3 uBorder; uniform vec3 uSelection;
 uniform float uAmbient; uniform float uDirectional;
+uniform vec3 uCasing; uniform float uCasingOpacity; uniform float uPixelRatio;
 in vec3 vGeo; in vec3 vNormal;
 ${RESHAPED_SAMPLING_GLSL}
 
@@ -227,49 +229,63 @@ vec3 palette(int metricIndex,int id) {
   ivec2 size=textureSize(uPalette,0);
   return texelFetch(uPalette,ivec2(clamp(id,0,size.x-1),clamp(metricIndex,0,size.y-1)),0).rgb;
 }
-vec4 shadeLabel(vec4 label, vec3 p, float footprint) {
+vec4 shadeLabel(vec4 label, vec3 p, float footprint, float edgeWidth, float stripeAa) {
   int id=int(label.x+0.5);
   vec3 color=id==0?uOcean:mix(palette(uFromMetricIndex,id),palette(uToMetricIndex,id),uThemeT);
   float padding=id==0?0.0:paddingWeight(int(label.z+0.5),uFromPaddingBit,uToPaddingBit,uT);
   float phase=dot(p,vec3(1.0,1.0,0.35))*90.0;
-  float stripeDistance=abs(fract(phase)-0.5); float stripeAa=max(fwidth(phase),0.001);
+  float stripeDistance=abs(fract(phase)-0.5);
   float stripe=1.0-smoothstep(0.10-stripeAa,0.10+stripeAa,stripeDistance);
   float grey=dot(color,vec3(0.2126,0.7152,0.0722));
   vec3 paddingColor=mix(vec3(grey),color,0.30);
   paddingColor=mix(paddingColor,vec3(1.0),0.15);
   paddingColor=mix(paddingColor,vec3(0.18,0.13,0.09),stripe*0.65);
   color=mix(color,paddingColor,padding);
-  float px=label.y/max(footprint,0.0001);
+  float px=label.y/max(footprint*uPixelRatio,0.0001);
+  float aa=clamp(edgeWidth*0.5/max(footprint*uPixelRatio,0.0001),0.25,0.75);
   // Saturated B means distance >= its cap, not distance = its cap. Painting it
   // as a real edge floods small globes with border ink at large footprints.
-  float border=label.w>0.5?0.0:1.0-smoothstep(0.1,1.1,px);
+  // The unsigned distance gives the same half-width on either side: 0.5 CSS
+  // px of ink, followed by 0.75 CSS px of casing. Both rasters share this path.
+  float casing=label.w>0.5?0.0:1.0-smoothstep(1.25-aa,1.25+aa,px);
+  float border=label.w>0.5?0.0:1.0-smoothstep(0.5-aa,0.5+aa,px);
+  color=mix(color,uCasing,casing*uCasingOpacity);
   color=mix(color,uBorder,border);
   if(id!=0 && id==uSelected && label.w<0.5) {
-    float ring=smoothstep(0.1,1.1,px)*(1.0-smoothstep(3.5,4.5,px));
+    float ring=smoothstep(1.25-aa,1.25+aa,px)*(1.0-smoothstep(4.25-aa,4.25+aa,px));
     color=mix(color,uSelection,ring);
-    float outerInk=smoothstep(3.5,4.5,px)*(1.0-smoothstep(4.5,5.5,px));
+    float outerCasing=smoothstep(4.25-aa,4.25+aa,px)*(1.0-smoothstep(6.0-aa,6.0+aa,px));
+    color=mix(color,uCasing,outerCasing*uCasingOpacity);
+    float outerInk=smoothstep(4.25-aa,4.25+aa,px)*(1.0-smoothstep(5.25-aa,5.25+aa,px));
     color=mix(color,uBorder,outerInk);
   }
-  return vec4(color,border);
+  // Alpha is an internal sampling hint, not display opacity. Include the
+  // whole selected ring so its outer edges receive the same extra samples.
+  float edgeSamples=label.w>0.5?0.0:float(px<(id!=0 && id==uSelected?6.0+aa:1.25+aa));
+  return vec4(color,edgeSamples);
 }
-vec4 shadeAt(vec2 uv, vec3 p, vec2 dx, vec2 dy) {
+vec4 shadeAt(vec2 uv, vec3 p, vec2 dx, vec2 dy, vec2 derivativeWidth, float stripeAa) {
   vec2 baseSize=vec2(textureSize(uIds,0));
   float footprint=max(length(dx*baseSize),length(dy*baseSize));
   vec2 patchUv; float patchWeight;
   int index=patchAt(uv,patchUv,patchWeight);
-  if(index<0 || patchWeight<=0.0) return shadeLabel(classify(uv),p,footprint);
+  if(index<0 || patchWeight<=0.0) return shadeLabel(classify(uv),p,footprint,length(derivativeWidth*baseSize),stripeAa);
   vec4 box=uPatchBboxes[index];
   vec2 patchSize=(uPatchRects[index].zw-2.0)*vec2(360.0/(box.z-box.x),180.0/(box.w-box.y));
   float patchFootprint=max(length(dx*patchSize),length(dy*patchSize));
-  vec4 patchColor=shadeLabel(classifyPatch(patchUv,uPatchRects[index]),p,patchFootprint);
+  vec4 patchColor=shadeLabel(classifyPatch(patchUv,uPatchRects[index]),p,patchFootprint,length(derivativeWidth*patchSize),stripeAa);
   if(patchWeight>=1.0) return patchColor;
-  return mix(shadeLabel(classify(uv),p,footprint),patchColor,patchWeight);
+  return mix(shadeLabel(classify(uv),p,footprint,length(derivativeWidth*baseSize),stripeAa),patchColor,patchWeight);
 }
 void main() {
   vec3 p=normalize(vGeo); float longitude=degrees(atan(p.x,p.z)); float s=p.y; float latitude=degrees(atan(p.y,length(p.xz)));
   vec2 source=inverseMapping(uFromField,uToField,uHasFrom,uHasTo,longitude,latitude,s,uT);
   vec2 uv=vec2((source.x+180.0)/360.0,(90.0-source.y)/180.0);
   vec2 dx=dFdx(uv),dy=dFdy(uv); if(abs(dx.x)>0.5)dx.x-=sign(dx.x); if(abs(dy.x)>0.5)dy.x-=sign(dy.x);
+  // Derivatives must run for every fragment before patch, label and sampling
+  // branches. The seam-corrected sum is fwidth(uv) without a dateline spike.
+  vec2 derivativeWidth=abs(dx)+abs(dy);
+  float stripeAa=max(fwidth(dot(p,vec3(1.0,1.0,0.35))*90.0),0.001);
   vec2 texelSize=vec2(textureSize(uIds,0)); float footprint=max(length(dx*texelSize),length(dy*texelSize));
   vec2 patchUv; float patchWeight; int patchIndex=patchAt(uv,patchUv,patchWeight);
   if(patchIndex>=0) {
@@ -279,9 +295,15 @@ void main() {
   }
   vec3 color;
   if(footprint>1.0) {
-    vec2 offsets[4]=vec2[4](vec2(-0.375,-0.125),vec2(0.125,-0.375),vec2(0.375,0.125),vec2(-0.125,0.375));
-    color=vec3(0.0); for(int i=0;i<4;i++) color+=shadeAt(uv+dx*offsets[i].x+dy*offsets[i].y,p,dx,dy).rgb; color*=0.25;
-  } else color=shadeAt(uv,p,dx,dy).rgb;
+    vec2 offsets[8]=vec2[8](vec2(-0.375,-0.125),vec2(0.125,-0.375),vec2(0.375,0.125),vec2(-0.125,0.375),vec2(-0.125,-0.375),vec2(0.375,-0.125),vec2(0.125,0.375),vec2(-0.375,0.125));
+    vec4 samples=vec4(0.0); for(int i=0;i<4;i++) samples+=shadeAt(uv+dx*offsets[i].x+dy*offsets[i].y,p,dx,dy,derivativeWidth,stripeAa);
+    // Four more samples near rendered boundaries reduce aliasing from the
+    // casing. All derivatives above precede this per-fragment decision.
+    if(samples.a>0.0) {
+      for(int i=4;i<8;i++) samples+=shadeAt(uv+dx*offsets[i].x+dy*offsets[i].y,p,dx,dy,derivativeWidth,stripeAa);
+      color=samples.rgb*0.125;
+    } else color=samples.rgb*0.25;
+  } else color=shadeAt(uv,p,dx,dy,derivativeWidth,stripeAa).rgb;
   float light=uAmbient+uDirectional*max(dot(normalize(vNormal),normalize(vec3(-0.4,0.7,1.0))),0.0);
   gl_FragColor=vec4(color*light,1.0);
   #include <colorspace_fragment>
@@ -488,6 +510,12 @@ function syncTransitionUniforms(
     .uBorder!.value.copy(THEME_COLORS[fromMetric].border)
     .lerp(THEME_COLORS[toMetric].border, theme.t);
   material.uniforms
+    .uCasing!.value.copy(THEME_COLORS[fromMetric].casing)
+    .lerp(THEME_COLORS[toMetric].casing, theme.t);
+  material.uniforms.uCasingOpacity!.value =
+    fromTheme.casingOpacity +
+    (toTheme.casingOpacity - fromTheme.casingOpacity) * theme.t;
+  material.uniforms
     .uSelection!.value.copy(THEME_COLORS[fromMetric].selection)
     .lerp(THEME_COLORS[toMetric].selection, theme.t);
   material.uniforms.uAmbient!.value =
@@ -564,6 +592,9 @@ export function ReshapedLayer({
           uToMetricIndex: { value: 0 },
           uOcean: { value: new Color(COUNTRY_TEXTURE_STYLE.oceanColor) },
           uBorder: { value: new Color(COUNTRY_VECTOR_BORDER_COLOR) },
+          uCasing: { value: new Color('#fbf7ee') },
+          uCasingOpacity: { value: 0.85 },
+          uPixelRatio: { value: 1 },
           uSelection: { value: new Color('#e8562a') },
           uPatchAtlas: { value: null },
           uPatchCount: { value: 0 },
@@ -664,9 +695,10 @@ export function ReshapedLayer({
   useEffect(() => () => material.dispose(), [material]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => transition.dispose(), [transition]);
-  useFrame(() => {
+  useFrame(({ gl }) => {
     const currentShader = shader.current;
     if (!currentShader) return;
+    currentShader.uniforms.uPixelRatio!.value = gl.getPixelRatio();
     if (transition.active || theme.active) {
       const now = performance.now();
       transition.tick(now);
