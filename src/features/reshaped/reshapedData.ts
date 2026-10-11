@@ -185,21 +185,27 @@ export async function loadReshapedData(
     );
   }
   const graphicsUnavailable = typeof DecompressionStream === 'undefined';
+  const lowQuality = getRuntimeQualityProfile().level === 'low';
   let ids: DecodedIdRaster | null = previous?.ids ?? null,
     inverse: InverseField | null = null;
   if (!graphicsUnavailable) {
     [ids, inverse] = await Promise.all([
       ids
         ? Promise.resolve(ids)
-        : asset('ids-country.png', signal).then(decodeCountryPaddingRaster),
+        : asset('ids-country.png', signal).then((buffer) =>
+            decodeCountryPaddingRaster(buffer, lowQuality ? 2 : 1),
+          ),
       asset(`inverse-${metric}.bin`, signal).then((buffer) =>
         decodeInverse(buffer, { metric }),
       ),
     ]);
-    if (!previous?.ids && (ids.width !== 4096 || ids.height !== 2048))
+    const expectedWidth = lowQuality ? 2048 : 4096;
+    const expectedHeight = expectedWidth / 2;
+    if (
+      !previous?.ids &&
+      (ids.width !== expectedWidth || ids.height !== expectedHeight)
+    )
       throw new Error('Invalid Reshaped Earth ID raster dimensions');
-    if (!previous?.ids)
-      ids = displayIdRaster(ids, getRuntimeQualityProfile().level === 'low');
   }
   return {
     units,
@@ -248,8 +254,9 @@ export function displayIdRaster(
 }
 export async function decodeCountryPaddingRaster(
   buffer: ArrayBuffer,
+  sample: 1 | 2 = 1,
 ): Promise<DecodedIdRaster> {
-  const raster = await decodePngRgb(buffer);
+  const raster = await decodePngRgb(buffer, { sample });
   const ids = new Uint32Array(raster.ids.length);
   const padding = new Uint8Array(ids.length);
   const distance = new Uint8Array(ids.length);
@@ -261,9 +268,16 @@ export async function decodeCountryPaddingRaster(
       throw new Error('Invalid country/padding PNG channels');
     ids[i] = id;
     padding[i] = bits;
-    distance[i] = pixel & 255;
+    distance[i] = Math.round((pixel & 255) / sample);
   }
-  return { width: raster.width, height: raster.height, ids, padding, distance };
+  return {
+    width: raster.width,
+    height: raster.height,
+    ids,
+    padding,
+    distance,
+    distanceCap: Math.round(255 / sample),
+  };
 }
 
 export function sampleReshapedPadding(

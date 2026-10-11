@@ -12,7 +12,7 @@ function crc32(bytes) {
 }
 
 /** Opaque ID bytes never pass through canvas or browser colour management. */
-export async function decodePngRgb(buffer) {
+export async function decodePngRgb(buffer, options = {}) {
   const bytes = new Uint8Array(buffer);
   if (bytes.length < 33 || !SIGNATURE.every((value, i) => bytes[i] === value))
     throw new Error('Invalid ID PNG signature');
@@ -73,6 +73,9 @@ export async function decodePngRgb(buffer) {
     compressed.set(chunk, cursor);
     cursor += chunk.length;
   }
+  const sample = options.sample ?? 1;
+  if (![1, 2].includes(sample) || width % sample || height % sample)
+    throw new Error('Unsupported ID PNG sample factor');
   const expected = (width * 3 + 1) * height;
   const reader = new Blob([compressed])
     .stream()
@@ -94,7 +97,9 @@ export async function decodePngRgb(buffer) {
   }
   if (cursor !== expected)
     throw new Error('ID PNG decompressed length mismatch');
-  const ids = new Uint32Array(width * height);
+  const outputWidth = width / sample,
+    outputHeight = height / sample,
+    ids = new Uint32Array(outputWidth * outputHeight);
   const stride = width * 3;
   const previous = new Uint8Array(stride),
     row = new Uint8Array(stride);
@@ -129,10 +134,15 @@ export async function decodePngRgb(buffer) {
         row[i] = (filtered[i] + prediction) & 255;
       }
     }
-    for (let x = 0; x < width; x += 1)
-      ids[y * width + x] =
-        row[x * 3] * 65536 + row[x * 3 + 1] * 256 + row[x * 3 + 2];
+    if (y % sample === sample - 1) {
+      const outputY = (y - (sample - 1)) / sample;
+      for (let x = sample - 1; x < width; x += sample) {
+        const outputX = (x - (sample - 1)) / sample;
+        ids[outputY * outputWidth + outputX] =
+          row[x * 3] * 65536 + row[x * 3 + 1] * 256 + row[x * 3 + 2];
+      }
+    }
     previous.set(row);
   }
-  return { width, height, ids };
+  return { width: outputWidth, height: outputHeight, ids };
 }

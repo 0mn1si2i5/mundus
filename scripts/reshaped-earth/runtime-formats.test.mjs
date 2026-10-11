@@ -15,6 +15,25 @@ test('build RGB8 writer roundtrips byte-exact IDs through browser decoder', asyn
   );
   assert.deepEqual([...raster.ids], [0, 511, 65536, 16777215]);
 });
+
+test('runtime decoder samples odd source pixels for the low-quality raster', async () => {
+  const png = writeRgbPng(
+    4,
+    2,
+    Uint8Array.from([
+      1, 1, 10, 1, 2, 20, 2, 4, 30, 2, 8, 40, 1, 1, 50, 1, 2, 100, 2, 4, 150, 2,
+      8, 200,
+    ]),
+  );
+  const raster = await decodePngRgb(
+    png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength),
+    { sample: 2 },
+  );
+  assert.equal(raster.width, 2);
+  assert.equal(raster.height, 1);
+  assert.deepEqual([...raster.ids], [0x010264, 0x0208c8]);
+});
+
 test('runtime PNG rejects changed bytes before decoding', async () => {
   const png = writeRgbPng(1, 1, Uint8Array.from([0, 0, 2]));
   png[40] ^= 1;
