@@ -167,7 +167,7 @@ const reshapedDerivedAssetSchema = z.discriminatedUnion('kind', [
   reshapedAssetIdentitySchema
     .extend({
       kind: z.literal('metadata'),
-      content: z.enum(['units', 'values']),
+      content: z.enum(['units', 'values', 'patches']),
     })
     .strict(),
   reshapedAssetIdentitySchema
@@ -176,6 +176,15 @@ const reshapedDerivedAssetSchema = z.discriminatedUnion('kind', [
       width: z.literal(4096),
       height: z.literal(2048),
       encoding: z.literal('country-padding-distance-rgb8'),
+    })
+    .strict(),
+  reshapedAssetIdentitySchema
+    .extend({
+      kind: z.literal('id-patch-atlas'),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+      encoding: z.literal('country-padding-distance-rgb8-atlas'),
+      patches: z.number().int().min(0).max(64),
     })
     .strict(),
   reshapedAssetIdentitySchema
@@ -336,6 +345,38 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
         .strict(),
     ),
     derivedAssets: z.record(z.string(), reshapedDerivedAssetSchema),
+    patchBudget: z
+      .object({
+        removals: z.array(
+          z
+            .object({
+              countryId: z.string(),
+              rasterId: z.number().int().positive(),
+              basePixelCount: z.number().int().nonnegative(),
+              step: z.number().int().positive(),
+              gzipBytesBefore: z.number().int().positive(),
+            })
+            .strict(),
+        ),
+        steps: z
+          .array(
+            z
+              .object({
+                step: z.number().int().nonnegative(),
+                removedCountryId: z.string().nullable(),
+                countryIds: z.array(z.string()),
+                patches: z.number().int().nonnegative().max(64),
+                gzipBytes: z.number().int().positive(),
+                width: z.number().int().positive(),
+                height: z.number().int().positive(),
+                gpuBytes: z.number().int().positive(),
+              })
+              .strict(),
+          )
+          .min(1),
+      })
+      .strict()
+      .optional(),
     acceptance: z.partialRecord(
       z.enum(reshapedMetrics),
       reshapedAcceptanceSchema,
@@ -382,6 +423,8 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
       'units.json',
       'values.json',
       'ids-country.png',
+      'ids-patches.png',
+      'ids-patches.json',
       ...manifest.publishedMetrics.map((metric) => `inverse-${metric}.bin`),
     ]);
     const expectedPublished = reshapedMetrics.filter(
@@ -445,10 +488,14 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
     for (const [name, asset] of Object.entries(manifest.derivedAssets)) {
       const expectedName =
         asset.kind === 'metadata'
-          ? `${asset.content}.json`
+          ? asset.content === 'patches'
+            ? 'ids-patches.json'
+            : `${asset.content}.json`
           : asset.kind === 'id-raster'
             ? 'ids-country.png'
-            : `inverse-${asset.metric}.bin`;
+            : asset.kind === 'id-patch-atlas'
+              ? 'ids-patches.png'
+              : `inverse-${asset.metric}.bin`;
       if (
         !expectedAssets.has(name) ||
         name !== expectedName ||
@@ -473,6 +520,18 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
           issue(
             ['derivedAssets', name, 'gpuBytes'],
             'IDs and padding use RG8; vector distance uses R8',
+          );
+      }
+      if (asset.kind === 'id-patch-atlas') {
+        if (asset.gzipBytes > 150_000)
+          issue(
+            ['derivedAssets', name, 'gzipBytes'],
+            'ID patch atlas exceeds 150000 gzip bytes',
+          );
+        if (asset.gpuBytes !== asset.width * asset.height * 3)
+          issue(
+            ['derivedAssets', name, 'gpuBytes'],
+            'ID patch atlas GPU bytes must match RGB8 dimensions',
           );
       }
       if (asset.kind === 'inverse-field') {
@@ -520,10 +579,19 @@ export const reshapedEarthManifestSchema = dataManifestObjectSchema
         .map((asset) => asset.gpuBytes),
     );
     const paletteBytes = Math.ceil((239 + 1) / 256) * 256 * 4 * 16;
-    if (2 * largestInverse + 4096 * 2048 * 3 + paletteBytes > 40 * 1024 ** 2)
+    const patchGpuBytes = Math.max(
+      0,
+      ...Object.values(manifest.derivedAssets)
+        .filter((asset) => asset.kind === 'id-patch-atlas')
+        .map((asset) => asset.gpuBytes),
+    );
+    if (
+      2 * largestInverse + 4096 * 2048 * 3 + patchGpuBytes + paletteBytes >
+      40 * 1024 ** 2
+    )
       issue(
         ['derivedAssets'],
-        'Current and preceding inverses, RG8 IDs, R8 distance and palette exceed 40 MiB',
+        'Current and preceding inverses, ID rasters, patch atlas and palette exceed 40 MiB',
       );
     for (const metric of manifest.publishedMetrics) {
       const result = manifest.acceptance[metric],

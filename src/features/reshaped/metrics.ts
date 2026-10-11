@@ -60,7 +60,6 @@ export type ReshapedMetricTheme = {
   palette: readonly string[];
   ocean: string;
   border: string;
-  borderLight: string;
   selection: string;
   graticule: string;
   light: { ambient: number; directional: number };
@@ -72,59 +71,56 @@ export const RESHAPED_METRIC_THEMES: Record<
 > = {
   population: {
     palette: [
-      '#1f6f78',
+      '#b82fdd',
       '#4f9a9f',
       '#93c3c2',
       '#e8dfc8',
       '#e3a67f',
       '#c8673f',
-      '#8f3b22',
+      '#60887a',
     ],
     ocean: '#c7d2cd',
-    border: '#000000',
-    borderLight: '#ffffff',
-    selection: '#6b261c',
+    border: '#241f18',
+    selection: '#e8562a',
     graticule: '#6b6258',
     light: { ambient: 0.72, directional: 0.3 },
   },
   gdp: {
     palette: [
-      '#5b418f',
+      '#477e13',
       '#8973b4',
       '#c6bcd2',
       '#eef4ce',
       '#e6c66d',
       '#c9982c',
-      '#8c6118',
+      '#2d8479',
     ],
     ocean: '#c7d2cd',
-    border: '#000000',
-    borderLight: '#ffffff',
-    selection: '#6b261c',
+    border: '#241f18',
+    selection: '#e8562a',
     graticule: '#6b6258',
     light: { ambient: 0.72, directional: 0.3 },
   },
   co2: {
     palette: [
-      '#465773',
+      '#b3803f',
       '#7290a7',
       '#b3c5db',
       '#f1dbdc',
       '#d9a77c',
       '#b16e38',
-      '#6d411e',
+      '#d31fd8',
     ],
     ocean: '#c7d2cd',
-    border: '#000000',
-    borderLight: '#ffffff',
-    selection: '#6b261c',
+    border: '#241f18',
+    selection: '#e8562a',
     graticule: '#6b6258',
     light: { ambient: 0.72, directional: 0.3 },
   },
   lights: {
     palette: [
-      '#31424f',
-      '#455f7a',
+      '#217f8d',
+      '#c27070',
       '#768fb2',
       '#a39595',
       '#bfad39',
@@ -132,9 +128,8 @@ export const RESHAPED_METRIC_THEMES: Record<
       '#ffefc6',
     ],
     ocean: '#0b1424',
-    border: '#000000',
-    borderLight: '#ffffff',
-    selection: '#bdeaff',
+    border: '#0b1424',
+    selection: '#7fd3ff',
     graticule: '#718096',
     light: { ambient: 0.72, directional: 0.18 },
   },

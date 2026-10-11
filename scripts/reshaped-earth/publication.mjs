@@ -21,6 +21,7 @@ import { reshapedEarthManifestSchema } from '../../src/data/manifestSchemas.ts';
 import { loadCountryRaster } from './padding.mjs';
 import { mundusCountryFeatures } from '../build-mundus-countries.mjs';
 import { buildCountryDistanceField } from './distance-field.mjs';
+import { buildPatchAtlas } from './patches.mjs';
 import { resourceMonitor } from './resources.mjs';
 
 const METRICS = ['population', 'gdp', 'co2', 'lights'];
@@ -50,7 +51,7 @@ const paddingCountry = (country) =>
 export async function buildIdRasters(
   c,
   masks = {},
-  { countryFeatures, onProgress } = {},
+  { countryFeatures, onProgress, returnRaster = false } = {},
 ) {
   const { width, height, ids } = await loadCountryRaster(c);
   const distances = countryFeatures
@@ -65,6 +66,7 @@ export async function buildIdRasters(
     : new Uint8Array(ids.length);
   if (c.countries.length > 255) throw new Error('Country IDs exceed R8');
   const country = new Uint8Array(width * height * 3);
+  const padding = new Uint8Array(ids.length);
   for (const [metric, mask] of Object.entries(masks)) {
     if (!METRICS.includes(metric) || mask.length !== ids.length)
       throw new Error(`Invalid padding raster ${metric}`);
@@ -80,6 +82,7 @@ export async function buildIdRasters(
         throw new Error(`Invalid padding byte ${metric}:${i}`);
       if (!id && mask[i]) throw new Error('Ocean cannot contain padding');
       country[i * 3 + 1] |= mask[i] << METRICS.indexOf(metric);
+      padding[i] |= mask[i] << METRICS.indexOf(metric);
     }
   }
   const bytes = writeRgbPng(width, height, country);
@@ -88,7 +91,12 @@ export async function buildIdRasters(
     throw new Error(
       `ID raster exceeds gzip budget: ${transferredBytes}/1200000`,
     );
-  return { 'ids-country.png': bytes };
+  return returnRaster
+    ? {
+        'ids-country.png': bytes,
+        raster: { width, height, ids, padding, distance: distances },
+      }
+    : { 'ids-country.png': bytes };
 }
 
 async function loadCountryFeatures(cacheDir) {
@@ -267,9 +275,12 @@ export async function publishProductionAssets({
   const idRasters = await buildIdRasters(c, masks, {
     countryFeatures,
     onProgress: distanceMonitor.progress,
+    returnRaster: true,
   });
   distanceMonitor.finish();
-  for (const [name, bytes] of Object.entries(idRasters))
+  for (const [name, bytes] of Object.entries(idRasters).filter(([name]) =>
+    name.endsWith('.png'),
+  ))
     await describe(name, bytes, {
       kind: 'id-raster',
       width: 4096,
@@ -277,6 +288,44 @@ export async function publishProductionAssets({
       encoding: 'country-padding-distance-rgb8',
       gpuBytes: 4096 * 2048 * 3,
     });
+  const patchAtlas = await buildPatchAtlas({
+    classification: c,
+    fields,
+    publishedMetrics,
+    countryFeatures,
+    baseRaster: idRasters.raster,
+    onProgress: (progress) =>
+      console.log(
+        JSON.stringify({ phase: 'id-patch-publication', ...progress }),
+      ),
+  });
+  await describe('ids-patches.png', patchAtlas.png, {
+    kind: 'id-patch-atlas',
+    width: patchAtlas.width,
+    height: patchAtlas.height,
+    encoding: 'country-padding-distance-rgb8-atlas',
+    patches: patchAtlas.entries.length,
+    gpuBytes: patchAtlas.width * patchAtlas.height * 3,
+  });
+  const patchManifest = Buffer.from(
+    JSON.stringify({
+      formatVersion: 1,
+      encoding: 'country-padding-distance-rgb8-atlas',
+      width: patchAtlas.width,
+      height: patchAtlas.height,
+      scale: 8,
+      patches: patchAtlas.entries,
+      selection: patchAtlas.selection,
+      retainedSelection: patchAtlas.retainedSelection,
+      removals: patchAtlas.removals,
+      budgetSteps: patchAtlas.budgetSteps,
+    }) + '\n',
+  );
+  await describe('ids-patches.json', patchManifest, {
+    kind: 'metadata',
+    content: 'patches',
+    gpuBytes: 0,
+  });
   for (const key of publishedMetrics) {
     const name = `inverse-${key}.bin`,
       field = fields[key],
@@ -370,6 +419,10 @@ export async function publishProductionAssets({
       })),
     sourceAssets,
     derivedAssets,
+    patchBudget: {
+      removals: patchAtlas.removals,
+      steps: patchAtlas.budgetSteps,
+    },
     acceptance: Object.fromEntries(
       publishedMetrics.map((key) => [key, fields[key].acceptance]),
     ),

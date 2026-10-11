@@ -117,37 +117,51 @@ describe('Reshaped Earth metric copy and formatting', () => {
     },
   );
 
-  it('keeps the published palettes separated under colour-blind checks', async () => {
+  it('keeps the published palettes separated under colour-blind, padding and fixed-ink checks', async () => {
     const { RESHAPED_METRIC_THEMES } = await import('./metrics');
-    for (const theme of Object.values(RESHAPED_METRIC_THEMES)) {
+    for (const [metric, theme] of Object.entries(RESHAPED_METRIC_THEMES)) {
+      const colours = theme.palette.map((hex) => hexToRgb(hex));
       for (const mode of ['protan', 'deutan', 'tritan'] as const) {
-        const colours = theme.palette.map((hex) =>
-          simulateColorBlind(hexToRgb(hex), mode),
+        const simulated = colours.map((colour) =>
+          simulateColorBlind(colour, mode),
         );
-        for (let i = 1; i < colours.length; i += 1)
+        for (let i = 1; i < simulated.length; i += 1)
           expect(
-            deltaE2000(colours[i - 1]!, colours[i]!),
+            deltaE2000(simulated[i - 1]!, simulated[i]!),
           ).toBeGreaterThanOrEqual(10);
       }
-      const border = hexToRgb(theme.border);
-      for (let index = 0; index < theme.palette.length; index += 1) {
-        const hex = theme.palette[index]!;
-        const neighbours = [
-          theme.palette[index - 1],
-          theme.palette[index + 1],
-        ].filter((value): value is string => Boolean(value));
-        expect(
-          Math.max(
-            contrastRatio(border, hexToRgb(hex)),
-            contrastRatio(hexToRgb(theme.borderLight), hexToRgb(hex)),
-          ),
-          `adaptive border vs ${hex}`,
-        ).toBeGreaterThanOrEqual(3);
+      for (let index = 0; index < colours.length; index += 1) {
+        const neighbours = [colours[index - 1], colours[index + 1]].filter(
+          (value): value is [number, number, number] => Boolean(value),
+        );
         for (const neighbour of neighbours)
           expect(
-            deltaE2000(desaturate(hexToRgb(hex)), hexToRgb(neighbour)),
+            deltaE2000(desaturate(colours[index]!), neighbour),
           ).toBeGreaterThanOrEqual(10);
+        expect(
+          contrastRatio(hexToRgb(theme.border), colours[index]!),
+        ).toBeGreaterThanOrEqual(3);
+        expect(
+          contrastRatio(hexToRgb(theme.border), desaturate(colours[index]!)),
+        ).toBeGreaterThanOrEqual(3);
       }
+      expect(
+        contrastRatio(hexToRgb(theme.border), hexToRgb(theme.selection)),
+      ).toBeGreaterThanOrEqual(3);
+      const luminance = colours.map(relativeLuminance);
+      if (metric === 'lights') {
+        for (let i = 1; i < luminance.length; i += 1)
+          expect(luminance[i]).toBeGreaterThan(luminance[i - 1]!);
+      } else {
+        for (let i = 1; i <= 3; i += 1)
+          expect(luminance[i]).toBeGreaterThan(luminance[i - 1]!);
+        for (let i = 4; i < luminance.length; i += 1)
+          expect(luminance[i]).toBeLessThan(luminance[i - 1]!);
+      }
+      if (metric === 'lights')
+        expect(
+          contrastRatio(colours[0]!, hexToRgb(theme.ocean)),
+        ).toBeGreaterThanOrEqual(3);
     }
   });
 
@@ -183,6 +197,6 @@ describe('Reshaped Earth metric copy and formatting', () => {
           applyLinearLight(hexToRgb(theme.palette[0]!), factor),
           applyLinearLight(hexToRgb(theme.ocean), factor),
         ),
-      ).toBeGreaterThanOrEqual(1.5);
+      ).toBeGreaterThanOrEqual(3);
   });
 });

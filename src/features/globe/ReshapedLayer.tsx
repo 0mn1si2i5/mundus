@@ -12,12 +12,14 @@ import {
   FloatType,
   GLSL3,
   NearestFilter,
+  RGBFormat,
   RedFormat,
   RGBAFormat,
   RGFormat,
   ShaderMaterial,
   SphereGeometry,
   UnsignedByteType,
+  Vector4,
 } from 'three';
 import type { Mesh } from 'three';
 import { useAppStore } from '../../state/appStore';
@@ -32,9 +34,13 @@ import { useReducedMotion } from './useReducedMotion';
 import { ignoreRaycast } from './sceneUtils';
 import { forwardPoint, inversePoint } from '../reshaped/reshapedMapping';
 import {
+  loadReshapedPatches,
   sampleReshapedId,
+  sampleReshapedPatchLabel,
+  type ReshapedPatchAtlas,
   type ReshapedDataset,
 } from '../reshaped/reshapedData';
+import { buildReshapedPatchBins } from '../reshaped/patchSampling.mjs';
 import type { InverseField } from '../reshaped/inverseFormat.mjs';
 import { ReshapedTransition } from './reshapedTransition';
 import { ReshapedThemeTransition } from './reshapedThemeTransition';
@@ -52,13 +58,12 @@ const THEME_COLORS = Object.fromEntries(
     {
       ocean: new Color(RESHAPED_METRIC_THEMES[id].ocean),
       border: new Color(RESHAPED_METRIC_THEMES[id].border),
-      borderLight: new Color(RESHAPED_METRIC_THEMES[id].borderLight),
       selection: new Color(RESHAPED_METRIC_THEMES[id].selection),
     },
   ]),
 ) as Record<
   ReshapedMetricId,
-  { ocean: Color; border: Color; borderLight: Color; selection: Color }
+  { ocean: Color; border: Color; selection: Color }
 >;
 
 export interface ReshapedMappingHandle {
@@ -128,21 +133,7 @@ float paddingWeight(int bits, int fromBit, int toBit, float t) {
 export const RESHAPED_LABEL_GLSL = `// Return id, signed distance in raster pixels, padding bits, and whether
 // all four texels are a single label with a saturated distance lower bound.
 uniform float uDistanceCap;
-vec4 classify(vec2 uv) {
-  ivec2 size=textureSize(uIds,0);
-  vec2 scaled=vec2(fract(uv.x),clamp(uv.y,0.0,1.0))*vec2(size)-0.5;
-  ivec2 base=ivec2(floor(scaled)); vec2 f=fract(scaled);
-  int ids[4]; int bits[4]; float distances[4]; float weights[4];
-  for(int j=0;j<2;j++) for(int i=0;i<2;i++) {
-    int k=j*2+i; int x=(base.x+i)%size.x; if(x<0)x+=size.x;
-    int y=clamp(base.y+j,0,size.y-1); ivec2 p=ivec2(x,y);
-    vec2 packed=floor(texelFetch(uIds,p,0).rg*255.0+0.5);
-    ids[k]=int(packed.x); bits[k]=int(packed.y);
-    // Compare exact quantized bytes; normalize only the winning score. UNORM
-    // rounding per texel otherwise changes which label wins an exact tie.
-    distances[k]=floor(texelFetch(uDistances,p,0).r*255.0+0.5);
-    weights[k]=((i==0)?1.0-f.x:f.x)*((j==0)?1.0-f.y:f.y);
-  }
+vec4 classifyTexels(int ids[4], int bits[4], float distances[4], float weights[4], float distanceCap) {
   int bestId=ids[0]; float best=-1000.0; int bestBits=0;
   for(int c=0;c<4;c++) {
     float score=0.0; float closestWeight=-1.0; int candidateBits=0;
@@ -153,9 +144,69 @@ vec4 classify(vec2 uv) {
     if(score>best) { best=score; bestId=ids[c]; bestBits=candidateBits; }
   }
   bool cappedInterior=true;
-  for(int k=0;k<4;k++) if(ids[k]!=bestId || distances[k]<uDistanceCap) cappedInterior=false;
+  for(int k=0;k<4;k++) if(ids[k]!=bestId || distances[k]<distanceCap) cappedInterior=false;
   return vec4(float(bestId),best*4.0/255.0,float(bestBits),cappedInterior?1.0:0.0);
+}
+vec4 classify(vec2 uv) {
+  ivec2 size=textureSize(uIds,0);
+  vec2 scaled=vec2(fract(uv.x),clamp(uv.y,0.0,1.0))*vec2(size)-0.5;
+  ivec2 base=ivec2(floor(scaled)); vec2 f=fract(scaled);
+  int ids[4]; int bits[4]; float distances[4]; float weights[4];
+  for(int j=0;j<2;j++) for(int i=0;i<2;i++) {
+    int k=j*2+i; int x=(base.x+i)%size.x; if(x<0)x+=size.x;
+    int y=clamp(base.y+j,0,size.y-1); ivec2 p=ivec2(x,y);
+    vec2 packed=floor(texelFetch(uIds,p,0).rg*255.0+0.5);
+    ids[k]=int(packed.x); bits[k]=int(packed.y);
+    distances[k]=floor(texelFetch(uDistances,p,0).r*255.0+0.5);
+    weights[k]=((i==0)?1.0-f.x:f.x)*((j==0)?1.0-f.y:f.y);
+  }
+  return classifyTexels(ids,bits,distances,weights,uDistanceCap);
 }`;
+
+export const RESHAPED_PATCH_GLSL = `
+uniform sampler2D uPatchAtlas;
+uniform int uPatchCount;
+uniform vec4 uPatchBboxes[64];
+uniform vec4 uPatchRects[64];
+uniform uvec2 uPatchBins[32];
+vec4 classifyPatch(vec2 uv, vec4 rect) {
+  vec2 inner=rect.zw-vec2(2.0);
+  vec2 scaled=uv*inner-vec2(0.5);
+  ivec2 base=ivec2(floor(scaled)); vec2 f=fract(scaled);
+  int ids[4]; int bits[4]; float distances[4]; float weights[4];
+  for(int j=0;j<2;j++) for(int i=0;i<2;i++) {
+    int k=j*2+i;
+    ivec2 p=ivec2(rect.xy)+ivec2(1)+base+ivec2(i,j);
+    p.x=clamp(p.x,int(rect.x)+1,int(rect.x+rect.z)-2);
+    p.y=clamp(p.y,int(rect.y)+1,int(rect.y+rect.w)-2);
+    vec3 packed=floor(texelFetch(uPatchAtlas,p,0).rgb*255.0+0.5);
+    ids[k]=int(packed.x); bits[k]=int(packed.y); distances[k]=packed.z;
+    weights[k]=((i==0)?1.0-f.x:f.x)*((j==0)?1.0-f.y:f.y);
+  }
+  return classifyTexels(ids,bits,distances,weights,255.0);
+}
+int patchAt(vec2 uv, out vec2 patchUv, out float patchWeight) {
+  patchWeight=0.0; patchUv=vec2(0.0);
+  float lon=wrapLongitude(uv.x*360.0-180.0); float lat=90.0-uv.y*180.0;
+  int binX=clamp(int(floor((lon+180.0)/45.0)),0,7);
+  int binY=clamp(int(floor((90.0-lat)/45.0)),0,3);
+  uvec2 candidates=uPatchBins[binY*8+binX];
+  if(all(equal(candidates,uvec2(0u)))) return -1;
+  for(int i=0;i<64;i++) {
+    if(i>=uPatchCount) break;
+    uint mask=i<32?candidates.x:candidates.y;
+    if((mask & (1u << uint(i%32)))==0u) continue;
+    vec4 box=uPatchBboxes[i]; float center=(box.x+box.z)*0.5;
+    float localLon=lon; while(localLon-center>180.0)localLon-=360.0; while(localLon-center<-180.0)localLon+=360.0;
+    if(localLon<box.x || localLon>box.z || lat<box.y || lat>box.w) continue;
+    float edge=min(min(localLon-box.x,box.z-localLon)/(${360 / 4096.0}),min(lat-box.y,box.w-lat)/(${180 / 2048.0}));
+    patchWeight=smoothstep(0.0,2.0,edge);
+    patchUv=vec2((localLon-box.x)/(box.z-box.x),(box.w-lat)/(box.w-box.y));
+    return i;
+  }
+  return -1;
+}
+`;
 
 export const RESHAPED_FRAGMENT_SHADER = `
 layout(location=0) out highp vec4 reshapedColor;
@@ -164,19 +215,20 @@ uniform sampler2D uFromField; uniform sampler2D uToField; uniform sampler2D uIds
 uniform int uHasFrom; uniform int uHasTo;
 uniform int uFromPaddingBit; uniform int uToPaddingBit;
 uniform int uFromMetricIndex; uniform int uToMetricIndex;
-uniform float uT; uniform float uThemeT; uniform int uSelected; uniform vec3 uOcean; uniform vec3 uBorder; uniform vec3 uBorderLight; uniform vec3 uSelection;
+uniform float uT; uniform float uThemeT; uniform int uSelected; uniform vec3 uOcean; uniform vec3 uBorder; uniform vec3 uSelection;
 uniform float uAmbient; uniform float uDirectional;
 in vec3 vGeo; in vec3 vNormal;
 ${RESHAPED_SAMPLING_GLSL}
 
 ${RESHAPED_LABEL_GLSL}
+${RESHAPED_PATCH_GLSL}
 
 vec3 palette(int metricIndex,int id) {
   ivec2 size=textureSize(uPalette,0);
   return texelFetch(uPalette,ivec2(clamp(id,0,size.x-1),clamp(metricIndex,0,size.y-1)),0).rgb;
 }
-vec4 shadeAt(vec2 uv, vec3 p, float footprint) {
-  vec4 label=classify(uv); int id=int(label.x+0.5);
+vec4 shadeLabel(vec4 label, vec3 p, float footprint) {
+  int id=int(label.x+0.5);
   vec3 color=id==0?uOcean:mix(palette(uFromMetricIndex,id),palette(uToMetricIndex,id),uThemeT);
   float padding=id==0?0.0:paddingWeight(int(label.z+0.5),uFromPaddingBit,uToPaddingBit,uT);
   float phase=dot(p,vec3(1.0,1.0,0.35))*90.0;
@@ -191,12 +243,27 @@ vec4 shadeAt(vec2 uv, vec3 p, float footprint) {
   // Saturated B means distance >= its cap, not distance = its cap. Painting it
   // as a real edge floods small globes with border ink at large footprints.
   float border=label.w>0.5?0.0:1.0-smoothstep(0.1,1.1,px);
-  // Choose contrasting ink on each side of a shared boundary. A single ink
-  // cannot meet 3:1 against both the darkest and brightest palette entries.
-  vec3 borderInk=dot(color,vec3(0.2126,0.7152,0.0722))<0.179?uBorderLight:uBorder;
-  color=mix(color,borderInk,border);
-  if(id!=0 && id==uSelected && label.w<0.5) color=mix(color,uSelection,1.0-smoothstep(2.5,3.5,px));
+  color=mix(color,uBorder,border);
+  if(id!=0 && id==uSelected && label.w<0.5) {
+    float ring=smoothstep(0.1,1.1,px)*(1.0-smoothstep(3.5,4.5,px));
+    color=mix(color,uSelection,ring);
+    float outerInk=smoothstep(3.5,4.5,px)*(1.0-smoothstep(4.5,5.5,px));
+    color=mix(color,uBorder,outerInk);
+  }
   return vec4(color,border);
+}
+vec4 shadeAt(vec2 uv, vec3 p, vec2 dx, vec2 dy) {
+  vec2 baseSize=vec2(textureSize(uIds,0));
+  float footprint=max(length(dx*baseSize),length(dy*baseSize));
+  vec2 patchUv; float patchWeight;
+  int index=patchAt(uv,patchUv,patchWeight);
+  if(index<0 || patchWeight<=0.0) return shadeLabel(classify(uv),p,footprint);
+  vec4 box=uPatchBboxes[index];
+  vec2 patchSize=(uPatchRects[index].zw-2.0)*vec2(360.0/(box.z-box.x),180.0/(box.w-box.y));
+  float patchFootprint=max(length(dx*patchSize),length(dy*patchSize));
+  vec4 patchColor=shadeLabel(classifyPatch(patchUv,uPatchRects[index]),p,patchFootprint);
+  if(patchWeight>=1.0) return patchColor;
+  return mix(shadeLabel(classify(uv),p,footprint),patchColor,patchWeight);
 }
 void main() {
   vec3 p=normalize(vGeo); float longitude=degrees(atan(p.x,p.z)); float s=p.y; float latitude=degrees(atan(p.y,length(p.xz)));
@@ -204,11 +271,17 @@ void main() {
   vec2 uv=vec2((source.x+180.0)/360.0,(90.0-source.y)/180.0);
   vec2 dx=dFdx(uv),dy=dFdy(uv); if(abs(dx.x)>0.5)dx.x-=sign(dx.x); if(abs(dy.x)>0.5)dy.x-=sign(dy.x);
   vec2 texelSize=vec2(textureSize(uIds,0)); float footprint=max(length(dx*texelSize),length(dy*texelSize));
+  vec2 patchUv; float patchWeight; int patchIndex=patchAt(uv,patchUv,patchWeight);
+  if(patchIndex>=0) {
+    vec4 box=uPatchBboxes[patchIndex];
+    vec2 patchSize=(uPatchRects[patchIndex].zw-2.0)*vec2(360.0/(box.z-box.x),180.0/(box.w-box.y));
+    footprint=max(footprint,max(length(dx*patchSize),length(dy*patchSize)));
+  }
   vec3 color;
   if(footprint>1.0) {
     vec2 offsets[4]=vec2[4](vec2(-0.375,-0.125),vec2(0.125,-0.375),vec2(0.375,0.125),vec2(-0.125,0.375));
-    color=vec3(0.0); for(int i=0;i<4;i++) color+=shadeAt(uv+dx*offsets[i].x+dy*offsets[i].y,p,footprint).rgb; color*=0.25;
-  } else color=shadeAt(uv,p,footprint).rgb;
+    color=vec3(0.0); for(int i=0;i<4;i++) color+=shadeAt(uv+dx*offsets[i].x+dy*offsets[i].y,p,dx,dy).rgb; color*=0.25;
+  } else color=shadeAt(uv,p,dx,dy).rgb;
   float light=uAmbient+uDirectional*max(dot(normalize(vNormal),normalize(vec3(-0.4,0.7,1.0))),0.0);
   gl_FragColor=vec4(color*light,1.0);
   #include <colorspace_fragment>
@@ -321,6 +394,29 @@ function idResources(data: Pick<ReshapedDataset, 'ids' | 'units' | 'values'>) {
   };
 }
 
+function patchResources(atlas: ReshapedPatchAtlas | null) {
+  if (!atlas) return null;
+  const bytes = new Uint8Array(atlas.raster.ids.length * 3);
+  for (let i = 0; i < atlas.raster.ids.length; i += 1) {
+    bytes[i * 3] = atlas.raster.ids[i]!;
+    bytes[i * 3 + 1] = atlas.raster.padding?.[i] ?? 0;
+    bytes[i * 3 + 2] = atlas.raster.distance?.[i] ?? 0;
+  }
+  const texture = new DataTexture(
+    bytes,
+    atlas.width,
+    atlas.height,
+    RGBFormat,
+    UnsignedByteType,
+  );
+  texture.internalFormat = 'RGB8';
+  texture.minFilter = NearestFilter;
+  texture.magFilter = NearestFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return { texture, atlas };
+}
+
 function syncTransitionUniforms(
   transition: ReshapedTransition<DataTexture>,
   material: ShaderMaterial,
@@ -365,9 +461,6 @@ function syncTransitionUniforms(
     .uBorder!.value.copy(THEME_COLORS[fromMetric].border)
     .lerp(THEME_COLORS[toMetric].border, theme.t);
   material.uniforms
-    .uBorderLight!.value.copy(THEME_COLORS[fromMetric].borderLight)
-    .lerp(THEME_COLORS[toMetric].borderLight, theme.t);
-  material.uniforms
     .uSelection!.value.copy(THEME_COLORS[fromMetric].selection)
     .lerp(THEME_COLORS[toMetric].selection, theme.t);
   material.uniforms.uAmbient!.value =
@@ -384,12 +477,14 @@ export function ReshapedLayer({
   data,
   replayKey,
   mappingRef,
+  onPatchesReady,
 }: {
   profile: QualityProfile;
   shape: 'true' | 'reshaped';
   data: ReshapedDataset;
   replayKey: number;
   mappingRef: MutableRefObject<ReshapedMappingHandle | null>;
+  onPatchesReady?: (atlas: ReshapedPatchAtlas) => void;
 }) {
   const { invalidate } = useThree();
   const reducedMotion = useReducedMotion();
@@ -402,6 +497,10 @@ export function ReshapedLayer({
     [],
   );
   const [theme] = useState(() => new ReshapedThemeTransition(data.metric));
+  const [patchAtlas, setPatchAtlas] = useState<ReshapedPatchAtlas | null>(
+    data.patchAtlas ?? null,
+  );
+  const [firstFrameRendered, setFirstFrameRendered] = useState(false);
   const marker = useRef<Mesh>(null);
   const shader = useRef<ShaderMaterial>(null);
   const { ids, units, values } = data;
@@ -409,6 +508,7 @@ export function ReshapedLayer({
     () => idResources({ ids, units, values }),
     [ids, units, values],
   );
+  const patches = useMemo(() => patchResources(patchAtlas), [patchAtlas]);
   const geometry = useMemo(
     () => new SphereGeometry(1.002, ...profile.sphereSegments),
     [profile.sphereSegments],
@@ -437,14 +537,71 @@ export function ReshapedLayer({
           uToMetricIndex: { value: 0 },
           uOcean: { value: new Color(COUNTRY_TEXTURE_STYLE.oceanColor) },
           uBorder: { value: new Color(COUNTRY_VECTOR_BORDER_COLOR) },
-          uBorderLight: { value: new Color('#ffffff') },
-          uSelection: { value: new Color('#6b261c') },
+          uSelection: { value: new Color('#e8562a') },
+          uPatchAtlas: { value: null },
+          uPatchCount: { value: 0 },
+          uPatchBins: { value: new Uint32Array(64) },
+          uPatchBboxes: {
+            value: Array.from({ length: 64 }, () => new Vector4()),
+          },
+          uPatchRects: {
+            value: Array.from({ length: 64 }, () => new Vector4(0, 0, 1, 1)),
+          },
           uAmbient: { value: 0.72 },
           uDirectional: { value: 0.3 },
         },
       }),
     [resources],
   );
+  useEffect(() => {
+    const uniforms = material.uniforms;
+    uniforms.uPatchAtlas!.value = patches?.texture ?? null;
+    uniforms.uPatchCount!.value = patches?.atlas.patches.length ?? 0;
+    uniforms.uPatchBins!.value = buildReshapedPatchBins(patches?.atlas ?? null);
+    for (let index = 0; index < 64; index++) {
+      const patch = patches?.atlas.patches[index];
+      const box = patch?.bbox;
+      (uniforms.uPatchBboxes!.value[index] as Vector4).set(
+        box?.[0] ?? 0,
+        box?.[1] ?? 0,
+        box?.[2] ?? 0,
+        box?.[3] ?? 0,
+      );
+      const rect = patch?.atlas;
+      (uniforms.uPatchRects!.value[index] as Vector4).set(
+        rect?.x ?? 0,
+        rect?.y ?? 0,
+        rect?.width ?? 1,
+        rect?.height ?? 1,
+      );
+    }
+    // Updating uniforms keeps the base shader program alive when the atlas arrives.
+    invalidate();
+  }, [patches, material, invalidate]);
+  useEffect(() => {
+    if (!firstFrameRendered || patchAtlas) return;
+    let active = true;
+    const controller = new AbortController();
+    // onAfterRender confirms a base frame reached WebGL before this request.
+    loadReshapedPatches(controller.signal)
+      .then((atlas) => {
+        if (active) {
+          setPatchAtlas(atlas);
+          onPatchesReady?.(atlas);
+        }
+      })
+      .catch((error: unknown) => {
+        if (
+          active &&
+          !(error instanceof DOMException && error.name === 'AbortError')
+        )
+          console.warn('Reshaped Earth local ID patches unavailable', error);
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [firstFrameRendered, patchAtlas, onPatchesReady]);
   useEffect(() => {
     shader.current = material;
     transition.sync(
@@ -480,22 +637,24 @@ export function ReshapedLayer({
       theme: () => theme,
       unitId: (p) =>
         data.unitsByRasterId.get(
-          sampleReshapedId(resources.raster, p.latitude, p.longitude),
+          sampleReshapedPatchLabel(patchAtlas, p.latitude, p.longitude)?.id ??
+            sampleReshapedId(resources.raster, p.latitude, p.longitude),
         )?.id ?? null,
     };
     return () => {
       mappingRef.current = null;
     };
-  }, [data, mappingRef, resources, transition, theme]);
+  }, [data, mappingRef, resources, transition, theme, patchAtlas]);
   useEffect(
     () => () => {
       resources.texture.dispose();
       resources.distances.dispose();
       resources.palette.dispose();
-      material.dispose();
     },
-    [resources, material],
+    [resources],
   );
+  useEffect(() => () => patches?.texture.dispose(), [patches]);
+  useEffect(() => () => material.dispose(), [material]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => transition.dispose(), [transition]);
   useFrame(() => {
@@ -509,9 +668,14 @@ export function ReshapedLayer({
       if (transition.active || theme.active) invalidate();
       else setMorphState('settled');
     }
-    const selected = selectedOverride
-      ? data.unitsById.get(selectedOverride)?.rasterId
-      : sampleReshapedId(resources.raster, point.latitude, point.longitude);
+    const selected =
+      selectedOverride !== undefined
+        ? selectedOverride === null
+          ? 0
+          : data.unitsById.get(selectedOverride)?.rasterId
+        : (sampleReshapedPatchLabel(patchAtlas, point.latitude, point.longitude)
+            ?.id ??
+          sampleReshapedId(resources.raster, point.latitude, point.longitude));
     currentShader.uniforms.uSelected!.value = selected ?? 0;
     if (marker.current)
       marker.current.position.copy(
@@ -520,7 +684,14 @@ export function ReshapedLayer({
   });
   return (
     <>
-      <mesh geometry={geometry} material={material} raycast={ignoreRaycast} />
+      <mesh
+        geometry={geometry}
+        material={material}
+        raycast={ignoreRaycast}
+        onAfterRender={() => {
+          if (!firstFrameRendered) setFirstFrameRendered(true);
+        }}
+      />
       <mesh ref={marker} raycast={ignoreRaycast}>
         <sphereGeometry args={[0.007, 12, 8]} />
         <meshBasicMaterial color="#7f2f24" />

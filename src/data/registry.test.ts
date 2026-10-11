@@ -33,6 +33,20 @@ function reshapedManifestFixture() {
     encoding: 'country-padding-distance-rgb8',
     gpuBytes: 4096 * 2048 * 3,
   };
+  derivedAssets['ids-patches.json'] = {
+    ...identity('ids-patches.json'),
+    kind: 'metadata',
+    content: 'patches',
+  };
+  derivedAssets['ids-patches.png'] = {
+    ...identity('ids-patches.png'),
+    kind: 'id-patch-atlas',
+    width: 64,
+    height: 32,
+    encoding: 'country-padding-distance-rgb8-atlas',
+    patches: 2,
+    gpuBytes: 64 * 32 * 3,
+  };
   for (const metric of metrics)
     derivedAssets[`inverse-${metric}.bin`] = {
       ...identity(`inverse-${metric}.bin`),
@@ -274,7 +288,7 @@ describe('data registry', () => {
     expect(published).toBeDefined();
     expect(published).toEqual(reshapedEarthManifestSchema.parse(published));
     expect(manifest.formatVersion).toBe(5);
-    expect(Object.keys(manifest.derivedAssets)).toHaveLength(7);
+    expect(Object.keys(manifest.derivedAssets)).toHaveLength(9);
     expect(Object.keys(manifest.acceptance)).toEqual([
       'population',
       'gdp',
@@ -423,7 +437,11 @@ describe('data registry', () => {
     png.derivedAssets['ids-country.png']!.gzipBytes = 1_200_001;
     const gpu = structuredClone(manifest);
     gpu.derivedAssets['inverse-population.bin']!.gpuBytes -= 1;
-    for (const invalid of [raw, gzip, metadata, png, gpu])
+    const patches = structuredClone(manifest);
+    patches.derivedAssets['ids-patches.png']!.gzipBytes = 150_001;
+    const patchGpu = structuredClone(manifest);
+    patchGpu.derivedAssets['ids-patches.png']!.gpuBytes += 1;
+    for (const invalid of [raw, gzip, metadata, png, gpu, patches, patchGpu])
       expect(dataManifestSchema.safeParse(invalid).success).toBe(false);
     const oversizedTransition = structuredClone(manifest);
     oversizedTransition.derivedAssets['inverse-population.bin']!.gpuBytes =
@@ -432,7 +450,7 @@ describe('data registry', () => {
     expect(parsed.success).toBe(false);
     if (!parsed.success)
       expect(parsed.error.issues.map((issue) => issue.message)).toContain(
-        'Current and preceding inverses, RG8 IDs, R8 distance and palette exceed 40 MiB',
+        'Current and preceding inverses, ID rasters, patch atlas and palette exceed 40 MiB',
       );
   });
 

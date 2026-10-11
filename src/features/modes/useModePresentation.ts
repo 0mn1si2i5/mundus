@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../state/appStore';
 import type { GeoPoint } from '../globe/geo';
 import type { CountryRef } from '../globe/countryData';
@@ -36,7 +36,12 @@ import type { IsolationView } from '../../state/urlState';
 import { useIsolationField } from '../isolation/useIsolationField';
 import { isolationFieldSelection } from '../isolation/isolationField';
 import type { IsolationFieldState } from '../isolation/useIsolationField';
-import type { ReshapedDataset } from '../reshaped/reshapedData';
+import type {
+  ReshapedDataset,
+  ReshapedPatchAtlas,
+} from '../reshaped/reshapedData';
+import { sampleReshapedLabel } from '../reshaped/labelSampling.mjs';
+import { sampleReshapedPatchLabel } from '../reshaped/patchSampling.mjs';
 import {
   RESHAPED_DEFAULT_METRIC,
   type ReshapedMetricId,
@@ -74,6 +79,7 @@ export interface ReshapedLoadState {
   status: 'idle' | 'loading' | 'error' | 'ready';
   data?: ReshapedDataset;
   retry: () => void;
+  onPatchesReady?: (atlas: ReshapedPatchAtlas) => void;
 }
 
 export type AntipodeRelationLoadState = 'idle' | 'loading' | 'error' | 'ready';
@@ -252,22 +258,17 @@ export function useModePresentation(
       };
     case 'reshaped': {
       const dataset = reshapedLoad.data;
-      const selectedId = dataset?.ids
-        ? (dataset.ids.ids[
-            Math.min(
-              dataset.ids.height - 1,
-              Math.max(
-                0,
-                Math.floor(((90 - point.latitude) / 180) * dataset.ids.height),
-              ),
-            ) *
-              dataset.ids.width +
-              Math.floor(
-                (((((point.longitude + 180) % 360) + 360) % 360) / 360) *
-                  dataset.ids.width,
-              )
-          ] ?? 0)
-        : 0;
+      const selectedId =
+        sampleReshapedPatchLabel(
+          dataset?.patchAtlas ?? null,
+          point.latitude,
+          point.longitude,
+        )?.id ??
+        sampleReshapedLabel(
+          dataset?.ids ?? null,
+          point.latitude,
+          point.longitude,
+        ).id;
       const unit =
         selectedUnitId !== undefined
           ? selectedUnitId === null
@@ -484,8 +485,12 @@ function useReshapedDataset(
           previous.current,
         ).then((data) => {
           if (controller.signal.aborted) return;
-          previous.current = data;
-          setState({ status: 'ready', data });
+          const readyData = {
+            ...data,
+            patchAtlas: previous.current?.patchAtlas ?? data.patchAtlas,
+          };
+          previous.current = readyData;
+          setState({ status: 'ready', data: readyData });
         });
       })
       .catch(() => {
@@ -496,6 +501,18 @@ function useReshapedDataset(
       });
     return () => controller.abort();
   }, [enabled, metric, retryKey]);
+  const onPatchesReady = useCallback(
+    (atlas: ReshapedPatchAtlas) => {
+      if (!enabled || !previous.current) return;
+      previous.current = { ...previous.current, patchAtlas: atlas };
+      setState((current) =>
+        current.data
+          ? { ...current, data: { ...current.data, patchAtlas: atlas } }
+          : current,
+      );
+    },
+    [enabled],
+  );
   const matching = state.data?.metric === metric;
   return {
     ...(enabled
@@ -504,6 +521,7 @@ function useReshapedDataset(
         : state
       : { status: 'idle' as const }),
     retry: () => setRetryKey((v) => v + 1),
+    onPatchesReady,
   };
 }
 

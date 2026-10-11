@@ -75,116 +75,124 @@ export function ReshapedResult({
       aria-label={t.reshapedResult}
       data-testid="reshaped-result"
     >
-      <div className={styles.endpoint}>
-        <span className={styles.label}>{t.reshapedSelected}</span>
-        <strong>{selectedName}</strong>
-      </div>
-      <p className={styles.finding} aria-live="polite">
-        {finding}
-      </p>
-      {selectedUnit ? (
-        <dl className={styles.facts}>
-          <div>
-            <dt>{t.reshapedValue}</dt>
-            <dd>
-              {formatReshapedValue(raw, metric, locale)}
-              <small> {definition.unit[locale]}</small>
-            </dd>
-          </div>
-          <div>
-            <dt>{t.reshapedShare}</dt>
-            <dd>
-              {share === null
-                ? t.reshapedMissing
-                : formatReshapedShare(share, locale)}
-            </dd>
-          </div>
-          <div>
-            <dt>{t.reshapedAreaRatio}</dt>
-            <dd>
-              {ratio === null
-                ? t.reshapedMissing
-                : formatReshapedAreaRatio(ratio, locale)}
-            </dd>
-          </div>
-          <div>
-            <dt>{t.reshapedYear}</dt>
-            <dd>2020</dd>
-          </div>
-          <div>
-            <dt>{t.reshapedSource}</dt>
-            <dd>{definition.sourceName}</dd>
-          </div>
-        </dl>
-      ) : null}
-      {padding && padding.paddingFraction > 0 ? (
-        <p className={styles.note}>
-          {t.reshapedPaddingNote.replace(
-            '{percent}',
-            formatReshapedShare(padding.paddingFraction, locale),
-          )}
+      <div className={styles.content}>
+        <div className={styles.endpoint}>
+          <span className={styles.label}>{t.reshapedSelected}</span>
+          <strong>{selectedName}</strong>
+        </div>
+        <p className={styles.finding} aria-live="polite">
+          {finding}
         </p>
-      ) : null}
-      {data.data?.graphicsUnavailable || unavailable ? (
-        <p role="status">{t.reshapedDeviceUnavailable}</p>
-      ) : null}
-      {metric === 'lights' ? (
-        <p className={styles.note}>{t.reshapedLightsCaveat}</p>
-      ) : null}
-      <div className={styles.rankings} aria-label={t.reshapedTopList}>
-        <h3>{t.reshapedTopList}</h3>
-        <ol>
-          {ranking.map((row) => {
-            const unit = data.data?.unitsById.get(row.id);
-            return unit ? (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  disabled={!unit.representativePoint}
-                  aria-current={
-                    selectedUnit?.id === unit.id ? 'true' : undefined
-                  }
-                  onClick={() => {
-                    if (!unit.representativePoint) return;
-                    selectPoint(unit.representativePoint);
-                    setSelectedUnitId(unit.id);
-                  }}
-                >
-                  {unitName(unit)} ·{' '}
-                  {row.worldShare[metric] === null
-                    ? t.reshapedMissing
-                    : formatReshapedShare(row.worldShare[metric], locale)}{' '}
-                  <span className={styles.rankBand}>
-                    <i
-                      className={styles.rankSwatch}
-                      aria-hidden="true"
-                      style={{
-                        backgroundColor:
-                          RESHAPED_METRIC_THEMES[metric].palette[
-                            areaRatioBand(row.areaRatio[metric])
-                          ] ?? '#a9a7a0',
-                      }}
-                    />
-                    {t.reshapedAreaBand.replace(
-                      '{band}',
-                      formatReshapedAreaRatio(row.areaRatio[metric], locale),
-                    )}
-                  </span>
-                  {row.padding?.[metric] ? ` · ${t.reshapedPaddingMark}` : ''}
-                </button>
-              </li>
-            ) : null;
-          })}
-        </ol>
+        {selectedUnit ? (
+          <dl className={styles.facts}>
+            <div>
+              <dt>{t.reshapedValue}</dt>
+              <dd>
+                {formatReshapedValue(raw, metric, locale)}
+                <small> {definition.unit[locale]}</small>
+              </dd>
+            </div>
+            <div>
+              <dt>{t.reshapedShare}</dt>
+              <dd>
+                {share === null
+                  ? t.reshapedMissing
+                  : formatReshapedShare(share, locale)}
+              </dd>
+            </div>
+            <div>
+              <dt>{t.reshapedAreaRatio}</dt>
+              <dd>
+                {ratio === null
+                  ? t.reshapedMissing
+                  : formatReshapedAreaRatio(ratio, locale)}
+              </dd>
+            </div>
+            <div>
+              <dt>{t.reshapedYear}</dt>
+              <dd>2020</dd>
+            </div>
+            <div>
+              <dt>{t.reshapedSource}</dt>
+              <dd>{definition.sourceName}</dd>
+            </div>
+          </dl>
+        ) : null}
+        {padding && padding.paddingFraction > 0 ? (
+          <p className={styles.note}>
+            {t.reshapedPaddingNote.replace(
+              '{percent}',
+              formatReshapedShare(padding.paddingFraction, locale),
+            )}
+          </p>
+        ) : null}
+        {data.data?.graphicsUnavailable || unavailable ? (
+          <p role="status">{t.reshapedDeviceUnavailable}</p>
+        ) : null}
+        {metric === 'lights' ? (
+          <p className={styles.note}>{t.reshapedLightsCaveat}</p>
+        ) : null}
+        <div className={styles.rankings} aria-label={t.reshapedTopList}>
+          <h3>{t.reshapedTopList}</h3>
+          <ol>
+            {ranking.map((row) => {
+              const unit = data.data?.unitsById.get(row.id);
+              return unit ? (
+                <li key={row.id}>
+                  <button
+                    type="button"
+                    disabled={!unit.representativePoint}
+                    aria-current={
+                      selectedUnit?.id === unit.id ? 'true' : undefined
+                    }
+                    onClick={() => {
+                      if (!unit.representativePoint) return;
+                      selectPoint(unit.representativePoint);
+                      setSelectedUnitId(unit.id);
+                    }}
+                  >
+                    {unitName(unit)} ·{' '}
+                    {row.worldShare[metric] === null
+                      ? t.reshapedMissing
+                      : formatReshapedShare(
+                          row.worldShare[metric],
+                          locale,
+                        )}{' '}
+                    <span className={styles.rankBand}>
+                      <i
+                        className={styles.rankSwatch}
+                        aria-hidden="true"
+                        style={{
+                          backgroundColor:
+                            RESHAPED_METRIC_THEMES[metric].palette[
+                              areaRatioBand(row.areaRatio[metric])
+                            ] ?? '#a9a7a0',
+                        }}
+                      />
+                      {t.reshapedAreaBand.replace(
+                        '{band}',
+                        formatReshapedAreaRatio(row.areaRatio[metric], locale),
+                      )}
+                    </span>
+                    {row.padding?.[metric] ? ` · ${t.reshapedPaddingMark}` : ''}
+                  </button>
+                </li>
+              ) : null;
+            })}
+          </ol>
+        </div>
+        <span className={styles.live} aria-live="polite">
+          {shape === 'reshaped' &&
+          morphState === 'settled' &&
+          !data.data?.graphicsUnavailable &&
+          !unavailable
+            ? t.reshapedSettled.replace(
+                '{metric}',
+                definition.shortLabel[locale],
+              )
+            : ''}
+        </span>
       </div>
-      <span className={styles.live} aria-live="polite">
-        {shape === 'reshaped' &&
-        morphState === 'settled' &&
-        !data.data?.graphicsUnavailable &&
-        !unavailable
-          ? t.reshapedSettled.replace('{metric}', definition.shortLabel[locale])
-          : ''}
-      </span>
     </aside>
   );
 }

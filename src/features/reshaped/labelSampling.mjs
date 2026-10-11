@@ -19,6 +19,11 @@ export function sampleReshapedLabel(raster, latitude, longitude) {
   const fx =
     (((((longitude + 180) % 360) + 360) % 360) / 360) * raster.width - 0.5;
   const fy = ((90 - latitude) / 180) * raster.height - 0.5;
+  return sampleRasterLabelAtPixel(raster, fx, fy);
+}
+
+/** Pixel-centre coordinates; atlas rectangles clamp instead of wrapping. */
+export function sampleRasterLabelAtPixel(raster, fx, fy, rect) {
   const baseX = Math.floor(fx),
     baseY = Math.floor(fy);
   const tx = fx - baseX,
@@ -29,8 +34,12 @@ export function sampleReshapedLabel(raster, latitude, longitude) {
     weights = [];
   for (let j = 0; j < 2; j += 1)
     for (let i = 0; i < 2; i += 1) {
-      const x = (((baseX + i) % raster.width) + raster.width) % raster.width;
-      const y = Math.min(raster.height - 1, Math.max(0, baseY + j));
+      const x = rect
+        ? Math.min(rect.x + rect.width - 1, Math.max(rect.x, baseX + i))
+        : (((baseX + i) % raster.width) + raster.width) % raster.width;
+      const y = rect
+        ? Math.min(rect.y + rect.height - 1, Math.max(rect.y, baseY + j))
+        : Math.min(raster.height - 1, Math.max(0, baseY + j));
       const index = y * raster.width + x;
       ids.push(raster.ids[index] ?? 0);
       bits.push(raster.padding?.[index] ?? 0);

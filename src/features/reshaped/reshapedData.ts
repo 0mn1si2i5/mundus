@@ -2,6 +2,8 @@ import manifest from '../../data/manifests/reshaped-earth.json';
 import unitsUrl from '../../data/generated/reshaped-earth/units.json?url';
 import valuesUrl from '../../data/generated/reshaped-earth/values.json?url';
 import idsUrl from '../../data/generated/reshaped-earth/ids-country.png?url';
+import patchIdsUrl from '../../data/generated/reshaped-earth/ids-patches.png?url';
+import patchManifestUrl from '../../data/generated/reshaped-earth/ids-patches.json?url';
 import populationUrl from '../../data/generated/reshaped-earth/inverse-population.bin?url';
 import gdpUrl from '../../data/generated/reshaped-earth/inverse-gdp.bin?url';
 import co2Url from '../../data/generated/reshaped-earth/inverse-co2.bin?url';
@@ -58,9 +60,33 @@ export interface ReshapedDataset {
   unitsByRasterId: ReadonlyMap<number, ReshapedUnit>;
   values: ReadonlyMap<string, ReshapedValueRow>;
   ids: DecodedIdRaster | null;
+  patchAtlas?: ReshapedPatchAtlas;
   inverse: InverseField | null;
   graphicsUnavailable: boolean;
   metric: ReshapedMetricId;
+}
+export interface ReshapedPatch {
+  countryIds: string[];
+  rasterIds: number[];
+  groupIndex: number;
+  bbox: [number, number, number, number];
+  width: number;
+  height: number;
+  innerWidth: number;
+  innerHeight: number;
+  transitionWidthPixels: number;
+  transitionBoundaryPixels: number;
+  labelMismatchPixels: number;
+  edgeClearancePixels: number;
+  countryPaddingBits: number;
+  atlas: { x: number; y: number; width: number; height: number };
+}
+export interface ReshapedPatchAtlas {
+  width: number;
+  height: number;
+  scale: number;
+  patches: readonly ReshapedPatch[];
+  raster: DecodedIdRaster;
 }
 
 // These rewritten URLs live in the lazy mode chunk. Fetching an asset remains
@@ -69,6 +95,8 @@ const urls: Record<string, string> = {
   'units.json': unitsUrl,
   'values.json': valuesUrl,
   'ids-country.png': idsUrl,
+  'ids-patches.png': patchIdsUrl,
+  'ids-patches.json': patchManifestUrl,
   'inverse-population.bin': populationUrl,
   'inverse-gdp.bin': gdpUrl,
   'inverse-co2.bin': co2Url,
@@ -96,6 +124,44 @@ async function asset(name: string, signal?: AbortSignal): Promise<ArrayBuffer> {
     .join('');
   if (hash !== expected.sha256) throw new Error(`Asset hash mismatch: ${name}`);
   return buffer;
+}
+
+/** Load the optional high-resolution ID atlas after the first frame. */
+export async function loadReshapedPatches(
+  signal?: AbortSignal,
+): Promise<ReshapedPatchAtlas> {
+  const [png, metadata] = await Promise.all([
+    asset('ids-patches.png', signal),
+    json('ids-patches.json', signal),
+  ]);
+  const descriptor = metadata as {
+    formatVersion?: number;
+    encoding?: string;
+    width?: number;
+    height?: number;
+    scale?: number;
+    patches?: ReshapedPatch[];
+  };
+  if (
+    descriptor.formatVersion !== 1 ||
+    descriptor.encoding !== 'country-padding-distance-rgb8-atlas' ||
+    !Number.isInteger(descriptor.width) ||
+    !Number.isInteger(descriptor.height) ||
+    descriptor.scale !== 8 ||
+    !Array.isArray(descriptor.patches) ||
+    descriptor.patches.length > 64
+  )
+    throw new Error('Invalid Reshaped Earth patch atlas metadata');
+  const raster = await decodeCountryPaddingRaster(png);
+  if (raster.width !== descriptor.width || raster.height !== descriptor.height)
+    throw new Error('Reshaped Earth patch atlas dimensions differ');
+  return {
+    width: descriptor.width,
+    height: descriptor.height,
+    scale: descriptor.scale,
+    patches: descriptor.patches,
+    raster,
+  };
 }
 const json = async (name: string, signal?: AbortSignal): Promise<unknown> =>
   JSON.parse(new TextDecoder().decode(await asset(name, signal)));
@@ -142,6 +208,7 @@ export async function loadReshapedData(
       previous?.unitsByRasterId ?? new Map(units.map((u) => [u.rasterId, u])),
     values,
     ids,
+    patchAtlas: previous?.patchAtlas,
     inverse,
     graphicsUnavailable,
     metric,
@@ -219,3 +286,5 @@ export function sampleReshapedId(
 ): number {
   return sampleReshapedLabel(raster, latitude, longitude).id;
 }
+
+export { sampleReshapedPatchLabel } from './patchSampling.mjs';

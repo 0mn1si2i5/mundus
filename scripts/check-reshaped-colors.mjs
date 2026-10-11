@@ -2,8 +2,6 @@ import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
-// The production tokens stay in the runtime metadata. TypeScript is already
-// a build dependency; transpile in memory so this audit leaves no artifacts.
 async function sourceModule(path, replace = (source) => source) {
   const source = replace(
     await readFile(new URL(path, import.meta.url), 'utf8'),
@@ -34,7 +32,7 @@ export async function checkReshapedColors() {
           "const RESHAPED_PUBLISHED_METRIC_IDS=['population','gdp','co2','lights'];",
         ),
   );
-  return Object.fromEntries(
+  const result = Object.fromEntries(
     Object.entries(themes).map(([metric, theme]) => {
       const colors = theme.palette.map(math.hexToRgb);
       const adjacent = Object.fromEntries(
@@ -59,57 +57,64 @@ export async function checkReshapedColors() {
             ),
         ),
       );
-      const borders = colors.map((color) =>
-        Math.max(
-          math.contrastRatio(math.hexToRgb('#000000'), color),
-          math.contrastRatio(math.hexToRgb('#ffffff'), color),
-        ),
+      const ink = math.hexToRgb(theme.border);
+      const borderContrast = colors.map((color) =>
+        math.contrastRatio(ink, color),
       );
+      const paddingColors = colors.map((color) => math.desaturate(color));
+      const paddingContrast = paddingColors.map((color) =>
+        math.contrastRatio(ink, color),
+      );
+      const luminance = colors.map(math.relativeLuminance);
+      const selectionContrast = math.contrastRatio(
+        ink,
+        math.hexToRgb(theme.selection),
+      );
+      const oceanContrast =
+        metric === 'lights'
+          ? math.contrastRatio(colors[0], math.hexToRgb(theme.ocean))
+          : null;
       return [
         metric,
         {
           palette: theme.palette,
+          ink: theme.border,
+          selection: theme.selection,
           adjacent,
           padding,
-          borders,
-          luminance: colors.map(math.relativeLuminance),
-          oceanContrast: math.contrastRatio(
-            colors[0],
-            math.hexToRgb(theme.ocean),
-          ),
-          litOceanContrast: [
-            theme.light.ambient,
-            theme.light.ambient + theme.light.directional,
-          ].map((factor) =>
-            math.contrastRatio(
-              math.applyLinearLight(colors[0], factor),
-              math.applyLinearLight(math.hexToRgb(theme.ocean), factor),
-            ),
-          ),
-          litBorderMinimum: [
-            theme.light.ambient,
-            theme.light.ambient + theme.light.directional,
-          ].map((factor) =>
-            Math.min(
-              ...colors.map((color) =>
-                math.contrastRatio(
-                  math.applyLinearLight(
-                    math.hexToRgb(
-                      math.relativeLuminance(color) < 0.179
-                        ? theme.borderLight
-                        : theme.border,
-                    ),
-                    factor,
-                  ),
-                  math.applyLinearLight(color, factor),
-                ),
-              ),
-            ),
-          ),
+          borderContrast,
+          paddingContrast,
+          luminance,
+          selectionContrast,
+          oceanContrast,
         },
       ];
     }),
   );
+  for (const [metric, report] of Object.entries(result)) {
+    for (const mode of ['protan', 'deutan', 'tritan'])
+      if (Math.min(...report.adjacent[mode]) < 10)
+        throw new Error(`${metric} ${mode} adjacent ΔE00 below 10`);
+    if (Math.min(...report.padding) < 10)
+      throw new Error(`${metric} padding ΔE00 below 10`);
+    if (Math.min(...report.borderContrast, ...report.paddingContrast) < 3)
+      throw new Error(`${metric} border contrast below 3:1`);
+    if (report.selectionContrast < 3)
+      throw new Error(`${metric} selection contrast below 3:1`);
+    const l = report.luminance;
+    const monotonic =
+      metric === 'lights'
+        ? l.every((value, i) => i === 0 || value > l[i - 1])
+        : l.slice(0, 4).every((value, i) => i === 0 || value > l[i - 1]) &&
+          l
+            .slice(4)
+            .every((value, i, values) => i === 0 || value < values[i - 1]);
+    if (!monotonic)
+      throw new Error(`${metric} luminance order is not monotonic`);
+    if (metric === 'lights' && report.oceanContrast < 3)
+      throw new Error('lights darkest band/ocean contrast below 3:1');
+  }
+  return result;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href)

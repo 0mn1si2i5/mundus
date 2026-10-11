@@ -46,6 +46,28 @@ test('published distance PNG retains the accepted country and padding channels',
     '19f5358712ec3a66fa037eddedf1628eef6a9d0980cd67b2a7e828d0ab69ac8c',
   );
 });
+test('local ID publication leaves the accepted base PNG and all four inverse fields byte identical', async () => {
+  const hashes = {
+    'ids-country.png':
+      '6ef5a0b7013e62bc664f85685e403b268ec1d2d5f9a34e85040074ee69a0cf8c',
+    'inverse-population.bin':
+      'a28ffe7bfe3b87dc3891865daf43308c7a629d97b25e5d6112153e7b6ececc13',
+    'inverse-gdp.bin':
+      '128ebd61f10ccbc2c0ac5f976d37524ed12727d3de5e6a36f693006b8c4e218b',
+    'inverse-co2.bin':
+      '117f1e9bf8fb215197321ae26048636a5f816c877ade640a42833f28e9463407',
+    'inverse-lights.bin':
+      '785394a598d4d0b6a5417c3393c5802000caffb426a893784041a049cc69b578',
+  };
+  for (const [name, hash] of Object.entries(hashes))
+    assert.equal(
+      createHash('sha256')
+        .update(await readFile(`src/data/generated/reshaped-earth/${name}`))
+        .digest('hex'),
+      hash,
+      name,
+    );
+});
 function fields() {
   return Object.fromEntries(
     ['population', 'gdp', 'co2', 'lights'].map((key) => [
@@ -363,6 +385,67 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
       encoding: 'country-padding-distance-rgb8',
       gpuBytes: 4096 * 2048 * 3,
     });
+    const patchPng = writeRgbPng(6, 6, new Uint8Array(6 * 6 * 3).fill(1));
+    await add('ids-patches.png', patchPng, {
+      kind: 'id-patch-atlas',
+      width: 6,
+      height: 6,
+      encoding: 'country-padding-distance-rgb8-atlas',
+      patches: 1,
+      gpuBytes: 6 * 6 * 3,
+    });
+    const patchBudget = {
+      removals: [],
+      steps: [
+        {
+          step: 0,
+          removedCountryId: null,
+          countryIds: [units[0].id],
+          patches: 1,
+          gzipBytes: gzipSync(patchPng, { level: 6 }).length,
+          width: 6,
+          height: 6,
+          gpuBytes: 108,
+        },
+      ],
+    };
+    const patchManifestBytes = Buffer.from(
+      JSON.stringify({
+        formatVersion: 1,
+        encoding: 'country-padding-distance-rgb8-atlas',
+        width: 6,
+        height: 6,
+        scale: 8,
+        removals: patchBudget.removals,
+        budgetSteps: patchBudget.steps,
+        patches: [
+          {
+            countryIds: [units[0].id],
+            rasterIds: [1],
+            groupIndex: 0,
+            areaKm2: 1,
+            maxAreaRatio: 10,
+            areaRatios: Object.fromEntries(metrics.map((key) => [key, 10])),
+            bbox: [0, 0, 1, 1],
+            width: 6,
+            height: 6,
+            innerWidth: 4,
+            innerHeight: 4,
+            transitionWidthPixels: 16,
+            transitionBoundaryPixels: 0,
+            labelMismatchPixels: 0,
+            edgeClearancePixels: 20,
+            countryPaddingBits: 0,
+            atlas: { x: 0, y: 0, width: 6, height: 6 },
+          },
+        ],
+      }) + '\n',
+    );
+    await add('ids-patches.json', patchManifestBytes, {
+      kind: 'metadata',
+      content: 'patches',
+      gpuBytes: 0,
+    });
     await MeshoptEncoder.ready;
     const encoded = MeshoptEncoder.encodeVertexBuffer(
       new Uint8Array(1025 * 513 * 4),
@@ -461,6 +544,7 @@ test('candidate verifier accepts MRE3/gzip-6 identities and rejects altered byte
         ]),
       ),
       derivedAssets,
+      patchBudget,
       nameCoverage: { countries: 239, chinese: 239, fraction: 1 },
       acceptance: Object.fromEntries(
         metrics.map((key) => [

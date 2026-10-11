@@ -17,3 +17,9 @@ export function sampleReshapedLabel(
   latitude: number,
   longitude: number,
 ): ReshapedRasterSample;
+export function sampleRasterLabelAtPixel(
+  raster: DecodedIdRaster,
+  x: number,
+  y: number,
+  rect?: { x: number; y: number; width: number; height: number },
+): ReshapedRasterSample;

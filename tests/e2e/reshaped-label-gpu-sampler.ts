@@ -1,5 +1,7 @@
+import { buildReshapedPatchBins } from '../../src/features/reshaped/patchSampling.mjs';
 import type { Page } from '@playwright/test';
 import type { DecodedIdRaster } from '../../src/features/reshaped/labelSampling.mjs';
+import type { ReshapedPatchAtlas } from '../../src/features/reshaped/reshapedData';
 
 /** Upload the production RG8/R8 inputs and read the unmodified GLSL classifier. */
 export async function readGpuLabels(
@@ -7,6 +9,7 @@ export async function readGpuLabels(
   raster: DecodedIdRaster,
   source: string,
   queries: number[][],
+  patchAtlas?: ReshapedPatchAtlas,
 ): Promise<number[]> {
   if (!raster.distance) throw new Error('GPU label test requires distances');
   const packed = new Uint8Array(raster.ids.length * 2);
@@ -18,8 +21,26 @@ export async function readGpuLabels(
     Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString(
       'base64',
     );
+  const patchBytes = patchAtlas
+    ? new Uint8Array(patchAtlas.raster.ids.length * 3)
+    : null;
+  if (patchAtlas && patchBytes)
+    for (let i = 0; i < patchAtlas.raster.ids.length; i++) {
+      patchBytes[i * 3] = patchAtlas.raster.ids[i]!;
+      patchBytes[i * 3 + 1] = patchAtlas.raster.padding?.[i] ?? 0;
+      patchBytes[i * 3 + 2] = patchAtlas.raster.distance?.[i] ?? 0;
+    }
   return page.evaluate(
-    ({ width, height, packed, distance, distanceCap, source, queries }) => {
+    ({
+      width,
+      height,
+      packed,
+      distance,
+      distanceCap,
+      source,
+      queries,
+      patches,
+    }) => {
       const decode = (encoded: string) => {
         const text = atob(encoded);
         return Uint8Array.from(text, (character) => character.charCodeAt(0));
@@ -82,6 +103,16 @@ export async function readGpuLabels(
         gl.UNSIGNED_BYTE,
         decode(distance),
       );
+      if (patches)
+        texture(
+          4,
+          patches.width,
+          patches.height,
+          gl.RGB8,
+          gl.RGB,
+          gl.UNSIGNED_BYTE,
+          decode(patches.bytes),
+        );
       const queryData = new Float32Array(outputWidth * outputHeight * 4);
       queries.forEach((query, i) =>
         queryData.set([query[0]!, query[1]!, 0, 0], i * 4),
@@ -137,7 +168,14 @@ precision highp float; precision highp int; precision highp sampler2D;
 uniform sampler2D uIds; uniform sampler2D uDistances; uniform sampler2D uQueries;
 layout(location=0) out vec4 result;
 ${source}
-void main(){result=classify(texelFetch(uQueries,ivec2(gl_FragCoord.xy),0).xy);}`,
+void main(){vec2 uv=texelFetch(uQueries,ivec2(gl_FragCoord.xy),0).xy;
+${
+  patches
+    ? `vec2 local; float weight; int index=patchAt(uv,local,weight);
+result=index>=0 && weight>=0.5 ? classifyPatch(local,uPatchRects[index]) : classify(uv); result.w=weight;`
+    : 'result=classify(uv);'
+}
+}`,
       );
       const program = gl.createProgram()!;
       gl.attachShader(program, vertex);
@@ -155,6 +193,33 @@ void main(){result=classify(texelFetch(uQueries,ivec2(gl_FragCoord.xy),0).xy);}`
       ] as const)
         gl.uniform1i(gl.getUniformLocation(program, name), unit);
       gl.uniform1f(gl.getUniformLocation(program, 'uDistanceCap'), distanceCap);
+      if (patches) {
+        gl.uniform2uiv(
+          gl.getUniformLocation(program, 'uPatchBins[0]'),
+          new Uint32Array(patches.bins),
+        );
+        gl.uniform1i(gl.getUniformLocation(program, 'uPatchAtlas'), 4);
+        gl.uniform1i(
+          gl.getUniformLocation(program, 'uPatchCount'),
+          patches.entries.length,
+        );
+        const boxes = new Float32Array(64 * 4),
+          rects = new Float32Array(64 * 4);
+        patches.entries.forEach((patch, i) => {
+          boxes.set(patch.bbox, i * 4);
+          rects.set(
+            [
+              patch.atlas.x,
+              patch.atlas.y,
+              patch.atlas.width,
+              patch.atlas.height,
+            ],
+            i * 4,
+          );
+        });
+        gl.uniform4fv(gl.getUniformLocation(program, 'uPatchBboxes[0]'), boxes);
+        gl.uniform4fv(gl.getUniformLocation(program, 'uPatchRects[0]'), rects);
+      }
       gl.viewport(0, 0, outputWidth, outputHeight);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       const values = new Float32Array(outputWidth * outputHeight * 4);
@@ -178,6 +243,19 @@ void main(){result=classify(texelFetch(uQueries,ivec2(gl_FragCoord.xy),0).xy);}`
       distanceCap: raster.distanceCap ?? 255,
       source,
       queries,
+      patches:
+        patchAtlas && patchBytes
+          ? {
+              width: patchAtlas.width,
+              height: patchAtlas.height,
+              entries: patchAtlas.patches.map(({ bbox, atlas }) => ({
+                bbox,
+                atlas,
+              })),
+              bins: Array.from(buildReshapedPatchBins(patchAtlas)),
+              bytes: binary(patchBytes),
+            }
+          : null,
     },
   );
 }

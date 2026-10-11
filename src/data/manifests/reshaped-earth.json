@@ -204,6 +204,27 @@
       "height": 2048,
       "encoding": "country-padding-distance-rgb8"
     },
+    "ids-patches.png": {
+      "path": "src/data/generated/reshaped-earth/ids-patches.png",
+      "sha256": "26e482d0c518251b1dbe8f97ef6e2787dd601c0416935c44b125bfec7a189b3d",
+      "rawBytes": 91688,
+      "gzipBytes": 88161,
+      "gpuBytes": 2660352,
+      "kind": "id-patch-atlas",
+      "width": 2048,
+      "height": 433,
+      "encoding": "country-padding-distance-rgb8-atlas",
+      "patches": 17
+    },
+    "ids-patches.json": {
+      "path": "src/data/generated/reshaped-earth/ids-patches.json",
+      "sha256": "12beea01762a42f1759902351a9e735802befccb16a1d01f4ed66c8e21332916",
+      "rawBytes": 22440,
+      "gzipBytes": 4058,
+      "gpuBytes": 0,
+      "kind": "metadata",
+      "content": "patches"
+    },
     "inverse-population.bin": {
       "path": "src/data/generated/reshaped-earth/inverse-population.bin",
       "sha256": "a28ffe7bfe3b87dc3891865daf43308c7a629d97b25e5d6112153e7b6ececc13",
@@ -260,6 +281,41 @@
       "stepLongitude": 0.01707242294021192,
       "stepS": 0.000026263990035129588
     }
+  },
+  "patchBudget": {
+    "removals": [],
+    "steps": [
+      {
+        "step": 0,
+        "removedCountryId": null,
+        "countryIds": [
+          "ne-048",
+          "ne-275",
+          "ne-344",
+          "ne-414",
+          "ne-422",
+          "ne-438",
+          "ne-442",
+          "ne-446",
+          "ne-470",
+          "ne-480",
+          "ne-492",
+          "ne-630",
+          "ne-634",
+          "ne-674",
+          "ne-702",
+          "ne-780",
+          "ne-831",
+          "ne-832",
+          "ne-833"
+        ],
+        "patches": 17,
+        "gzipBytes": 88161,
+        "width": 2048,
+        "height": 433,
+        "gpuBytes": 2660352
+      }
+    ]
   },
   "acceptance": {
     "population": {

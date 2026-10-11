@@ -7,6 +7,8 @@ import {
   displayIdRaster,
   sampleReshapedId,
   sampleReshapedPadding,
+  sampleReshapedPatchLabel,
+  type ReshapedPatchAtlas,
   type ReshapedDataset,
   type ReshapedUnit,
 } from './reshapedData';
@@ -16,6 +18,75 @@ const initialState = useAppStore.getState();
 afterEach(() => {
   cleanup();
   useAppStore.setState(initialState, true);
+});
+
+describe('local ID atlas picking', () => {
+  const patchAtlas = (): ReshapedPatchAtlas => {
+    const width = 70,
+      height = 70;
+    const patch = {
+      countryIds: ['north', 'south'],
+      rasterIds: [1, 2],
+      groupIndex: 0,
+      bbox: [178, -2, 182, 2] as [number, number, number, number],
+      width: 66,
+      height: 66,
+      innerWidth: 64,
+      innerHeight: 64,
+      transitionWidthPixels: 16,
+      transitionBoundaryPixels: 0,
+      labelMismatchPixels: 0,
+      edgeClearancePixels: 24,
+      countryPaddingBits: 3,
+      atlas: { x: 2, y: 2, width: 66, height: 66 },
+    };
+    const raster = {
+      width,
+      height,
+      ids: new Uint32Array(width * height).fill(9),
+      padding: new Uint8Array(width * height),
+      distance: new Uint8Array(width * height).fill(255),
+    };
+    for (let y = 0; y < 66; y++)
+      for (let x = 0; x < 66; x++) {
+        const innerY = Math.min(63, Math.max(0, y - 1));
+        const i = (y + 2) * width + x + 2;
+        raster.ids[i] = innerY < 32 ? 1 : 2;
+        raster.padding[i] = innerY < 32 ? 1 : 2;
+        raster.distance[i] = Math.round(
+          Math.min(4, Math.abs(innerY + 0.5 - 32)) * 63.75,
+        );
+      }
+    return { width, height, scale: 8, patches: [patch], raster };
+  };
+  it('uses the common bilinear classifier without a vertical flip or atlas shelf leakage', () => {
+    const atlas = patchAtlas();
+    expect(sampleReshapedPatchLabel(atlas, 1, 180)?.id).toBe(1);
+    expect(sampleReshapedPatchLabel(atlas, -1, -180)?.id).toBe(2);
+    expect(sampleReshapedPatchLabel(atlas, 0, 180)).toMatchObject({
+      id: 1,
+      distance: 0,
+      padding: 1,
+    });
+    expect(sampleReshapedPatchLabel(atlas, 0, -180)).toEqual(
+      sampleReshapedPatchLabel(atlas, 0, 180),
+    );
+    expect(sampleReshapedPatchLabel(atlas, 0, 0)).toBeNull();
+  });
+  it('switches to the atlas at the half-weight seam and retains the base outside it', () => {
+    const atlas = patchAtlas();
+    const basePixel = 360 / 4096;
+    expect(
+      sampleReshapedPatchLabel(atlas, 1, 178 + basePixel * 0.99),
+    ).toBeNull();
+    expect(sampleReshapedPatchLabel(atlas, 1, 178 + basePixel)).toMatchObject({
+      id: 1,
+      weight: 0.5,
+    });
+    expect(
+      sampleReshapedPatchLabel(atlas, 1, 178 + basePixel * 2),
+    ).toMatchObject({ id: 1, weight: 1 });
+  });
 });
 
 describe('shared Reshaped Earth display raster', () => {

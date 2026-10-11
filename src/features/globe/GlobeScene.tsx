@@ -1180,6 +1180,7 @@ export function GlobeScene({
               data={reshapedData}
               replayKey={reshaped.replayKey}
               mappingRef={reshapedMapping}
+              onPatchesReady={reshaped.data.onPatchesReady}
             />
           </Suspense>
         ) : (

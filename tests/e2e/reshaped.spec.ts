@@ -9,7 +9,7 @@ import {
 } from './helpers';
 
 const reshapedRequests = (url: string) =>
-  /reshaped|\/Reshaped|\/inverse-(?:population|gdp|co2|lights)|\/ids-country|\/(?:units|values)(?:\.|-)[^/]*\.json/iu.test(
+  /reshaped|\/Reshaped|\/inverse-(?:population|gdp|co2|lights)|\/ids-(?:country|patches)|\/(?:units|values)(?:\.|-)[^/]*\.json/iu.test(
     url,
   );
 
@@ -20,6 +20,139 @@ function controls(page: Page) {
 function result(page: Page) {
   return page.getByRole('complementary', { name: '变形地球结果' });
 }
+
+test('local ID atlas loads after the first actual globe draw and releases its texture on exit', async ({
+  page,
+}) => {
+  const manifest = JSON.parse(
+    await readFile('src/data/manifests/reshaped-earth.json', 'utf8'),
+  );
+  const descriptor = manifest.derivedAssets['ids-patches.png'];
+  await page.addInitScript(({ width, height }) => {
+    const state = { draws: 0, uploads: 0, releases: 0 };
+    (window as typeof window & { localAtlas: typeof state }).localAtlas = state;
+    const proto = WebGL2RenderingContext.prototype;
+    const shaders = new WeakSet<WebGLShader>(),
+      programs = new WeakSet<WebGLProgram>();
+    const current = new WeakMap<WebGL2RenderingContext, WebGLProgram | null>();
+    const shaderSource = proto.shaderSource,
+      attachShader = proto.attachShader,
+      useProgram = proto.useProgram,
+      drawElements = proto.drawElements;
+    proto.shaderSource = function (shader, source) {
+      if (source.includes('inverseMapping') && source.includes('uIds'))
+        shaders.add(shader);
+      shaderSource.call(this, shader, source);
+    };
+    proto.attachShader = function (program, shader) {
+      if (shaders.has(shader)) programs.add(program);
+      attachShader.call(this, program, shader);
+    };
+    proto.useProgram = function (program) {
+      current.set(this, program);
+      useProgram.call(this, program);
+    };
+    proto.drawElements = function (mode, count, type, offset) {
+      drawElements.call(this, mode, count, type, offset);
+      const p = current.get(this);
+      if (p && programs.has(p)) state.draws++;
+    };
+    const atlasTextures = new WeakSet<WebGLTexture>(),
+      storage = proto.texStorage2D,
+      deleteTexture = proto.deleteTexture;
+    proto.texStorage2D = function (target, levels, internal, w, h) {
+      storage.call(this, target, levels, internal, w, h);
+      if (internal === this.RGB8 && w === width && h === height) {
+        const texture = this.getParameter(
+          this.TEXTURE_BINDING_2D,
+        ) as WebGLTexture;
+        atlasTextures.add(texture);
+        state.uploads++;
+      }
+    };
+    proto.deleteTexture = function (texture) {
+      if (texture && atlasTextures.has(texture)) state.releases++;
+      deleteTexture.call(this, texture);
+    };
+  }, descriptor);
+  let drawAtRequest = 0;
+  await page.route(/\/ids-patches[^/]*\.png(?:\?|$)/u, async (route) => {
+    drawAtRequest = await page.evaluate(
+      () =>
+        (window as typeof window & { localAtlas: { draws: number } }).localAtlas
+          .draws,
+    );
+    await route.continue();
+  });
+  await page.goto('./?v=2&mode=reshaped&metric=gdp&point=22.2686,114.1506');
+  await ready(page);
+  await expect(result(page)).toContainText('香港');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as typeof window & { localAtlas: { uploads: number } })
+            .localAtlas.uploads,
+      ),
+    )
+    .toBe(1);
+  expect(drawAtRequest).toBeGreaterThan(0);
+  await switchMode(page, '地球另一端');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as typeof window & { localAtlas: { releases: number } })
+            .localAtlas.releases,
+      ),
+    )
+    .toBe(1);
+});
+
+test('local atlas keeps restored Bahrain results consistent through metric and history changes', async ({
+  page,
+}) => {
+  await page.goto('./?v=2&mode=reshaped&metric=gdp&point=26.2822,50.6152');
+  await ready(page);
+  await expect(result(page)).toContainText('巴林');
+  await controls(page)
+    .getByRole('radio', { name: '人口', exact: true })
+    .check();
+  await ready(page);
+  await expect(result(page)).toContainText('巴林');
+  await page.goBack();
+  await ready(page);
+  await expect(result(page)).toContainText('巴林');
+});
+
+test('optional local atlas failure retains usable GDP results and base graphics', async ({
+  page,
+}) => {
+  const warnings: string[] = [];
+  page.on('console', (message) => {
+    if (
+      message.type() === 'warning' &&
+      message.text().includes('local ID patches unavailable')
+    )
+      warnings.push(message.text());
+  });
+  await page.route(/\/ids-patches[^/]*\.png(?:\?|$)/u, (route) =>
+    route.abort(),
+  );
+  await page.goto('./?v=2&mode=reshaped&metric=gdp&point=22.2686,114.1506');
+  await ready(page);
+  await expect(result(page)).toContainText('香港');
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-reshaped-renderer-active',
+    'true',
+  );
+  await expect.poll(() => warnings.length).toBe(1);
+  await controls(page)
+    .getByRole('button', { name: '真实形状', exact: true })
+    .click();
+  await ready(page);
+  await expect(result(page)).toContainText('香港');
+});
 
 test('area legend, dark-earth theme and small GDP results are readable', async ({
   page,
