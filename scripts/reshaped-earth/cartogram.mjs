@@ -114,29 +114,6 @@ export function ifftRadix2(spectrum, imaginary) {
   ).real;
 }
 
-export const fft = fftRadix2;
-export const inverseFft = ifftRadix2;
-
-/** Small direct DFT for numerical reference checks. */
-export function dft(values, inverse = false) {
-  const input = asFloat64(values);
-  const n = input.length;
-  const real = new Float64Array(n);
-  const imag = new Float64Array(n);
-  for (let k = 0; k < n; k += 1) {
-    for (let i = 0; i < n; i += 1) {
-      const angle = ((inverse ? 1 : -1) * TAU * k * i) / n;
-      real[k] += input[i] * Math.cos(angle);
-      imag[k] += input[i] * Math.sin(angle);
-    }
-    if (inverse) {
-      real[k] /= n;
-      imag[k] /= n;
-    }
-  }
-  return { real, imag, imaginary: imag };
-}
-
 function dctPlan(n) {
   const plan = fftPlan(n);
   plan.phaseCos = new Float64Array(n);
@@ -228,11 +205,6 @@ export function idct(values) {
   );
   return real;
 }
-
-export const dct2 = dct;
-export const idct2 = idct;
-export const dctTransform = dct;
-export const inverseDct = idct;
 
 export function fft2d(values, width, height, inverse = false) {
   assertPowerOfTwo(width, 'width');
@@ -919,9 +891,6 @@ export function createCartogram({
   return map;
 }
 
-export const buildCartogram = createCartogram;
-export const buildDensityEqualizingMap = createCartogram;
-
 /**
  * Rasterise the exact inverse of BOTH triangles in every deformed cell.
  * `centers=true`: width*height sample centres (texture). `centers=false`:
@@ -1088,32 +1057,6 @@ export function composeCartograms(
   map.iterations = (first.iterations ?? 1) + 1;
   map.density = first.density;
   return map;
-}
-
-/** Subdivide the original affine triangles without altering the current map.
- * A power-of-two subdivision keeps all old diagonals as mesh edges. */
-export function refineCartogram(map, factor = 2) {
-  if (!Number.isInteger(factor) || factor < 2 || factor & (factor - 1))
-    throw new RangeError('Cartogram refinement factor must be a power of two');
-  const width = map.width * factor,
-    height = map.height * factor;
-  const forwardGrid = new Float64Array((width + 1) * (height + 1) * 2);
-  for (let y = 0; y <= height; y += 1)
-    for (let x = 0; x <= width; x += 1) {
-      const at = map.forward(x / width, y / height);
-      const i = (y * (width + 1) + x) * 2;
-      forwardGrid[i] = at[0];
-      forwardGrid[i + 1] = at[1];
-    }
-  const refined = cartogramFromForwardGrid({
-    width,
-    height,
-    forwardGrid,
-    diagnostics: { ...map.diagnostics, refinedFrom: [map.width, map.height] },
-  });
-  if (!measureTriangleOrientation(refined).positive)
-    throw new Error('Refinement lost topology');
-  return refined;
 }
 
 /** Improve numerically pinched vertex stars while keeping every incident
@@ -1354,18 +1297,6 @@ export function validateCartogram(
   return { passes, orientation, roundTrip, areaErrors };
 }
 
-export function applyForwardMap(map, point) {
-  return map.forward(point[0], point[1]);
-}
-export function applyInverseMap(map, point) {
-  return map.inverse(point[0], point[1]);
-}
-export function validatePositiveJacobian(map) {
-  return measureTriangleOrientation(map);
-}
-export function mapGridPoints(map, points, direction = 'forward') {
-  return Array.from(points, (point) => map[direction](point[0], point[1]));
-}
 export function polygonSignedArea(points) {
   let area = 0;
   for (let i = 0; i < points.length; i += 1) {
@@ -1378,10 +1309,6 @@ export function areaRelativeError(actual, target) {
   if (!Number.isFinite(actual) || !Number.isFinite(target)) return Infinity;
   return Math.abs(actual - target) / Math.max(Math.abs(target), EPSILON);
 }
-export function jacobianAt(map, x, y) {
-  return map.jacobian(x, y);
-}
-
 export function summarizeAreaErrors(actualByUnit, targetByUnit, options = {}) {
   const errors = [];
   const entries =

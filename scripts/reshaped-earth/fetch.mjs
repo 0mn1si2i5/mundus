@@ -27,7 +27,7 @@ export async function identity(path) {
   return { sha256: sha256.digest('hex'), md5: md5.digest('hex'), bytes };
 }
 
-export function verifyIdentity(source, captured, capture = false) {
+function verifyIdentity(source, captured, capture = false) {
   if (source.bytes !== undefined && captured.bytes !== source.bytes)
     throw new Error(
       `S1: ${source.fileName}: expected ${source.bytes} bytes, got ${captured.bytes}`,

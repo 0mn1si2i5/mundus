@@ -18,8 +18,6 @@ export function angularErrorDegrees(a, b) {
     Math.cos(la) * Math.cos(lb) * Math.sin(lon / 2) ** 2;
   return (360 / Math.PI) * Math.asin(Math.sqrt(clamp(h, 0, 1)));
 }
-export const sampleEncodedInverse = sampleInverseCoordinates;
-
 /** Fixed seed and uniform x/sin(latitude) give equal-area display samples. */
 export function measureDisplayRoundTrip(
   map,

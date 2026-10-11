@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decodeRgbPng, writeRgbPng } from './png.mjs';
+import { writeRgbPng } from './png.mjs';
+import { decodeRgbPng } from './png-test-helpers.mjs';
 
-test('RGB PNG writer and decoder round-trip byte-exact IDs', () => {
+test('RGB PNG writer round-trips byte-exact IDs through the runtime decoder', async () => {
   const pixels = Uint8Array.from([
     0, 1, 2, 3, 4, 5, 200, 201, 202, 253, 254, 255,
   ]);
   const encoded = writeRgbPng(2, 2, pixels);
-  const decoded = decodeRgbPng(encoded);
+  const decoded = await decodeRgbPng(encoded);
   assert.equal(decoded.width, 2);
   assert.equal(decoded.height, 2);
   assert.deepEqual(decoded.data, pixels);
@@ -17,7 +18,7 @@ test('RGB PNG writer and decoder round-trip byte-exact IDs', () => {
   assert.equal(Buffer.from(encoded).includes(Buffer.from('sRGB')), false);
 });
 
-test('Sub filtering preserves smooth distances and country/padding bytes', () => {
+test('Sub filtering preserves smooth distances and country/padding bytes', async () => {
   const width = 64;
   const height = 8;
   const pixels = new Uint8Array(width * height * 3);
@@ -29,14 +30,14 @@ test('Sub filtering preserves smooth distances and country/padding bytes', () =>
       pixels[offset + 2] = (x + y) * 3;
     }
   const encoded = writeRgbPng(width, height, pixels);
-  assert.deepEqual(decodeRgbPng(encoded).data, pixels);
+  assert.deepEqual((await decodeRgbPng(encoded)).data, pixels);
   assert.deepEqual(writeRgbPng(width, height, pixels), encoded);
 });
 
-test('decoder rejects non-RGB and malformed PNG input', () => {
-  assert.throws(() => decodeRgbPng(Uint8Array.of(1, 2, 3)), /signature/i);
+test('runtime decoder rejects non-RGB and malformed PNG input', async () => {
+  await assert.rejects(decodeRgbPng(Uint8Array.of(1, 2, 3)), /signature/i);
   const encoded = writeRgbPng(1, 1, Uint8Array.of(1, 2, 3));
   const corrupted = Uint8Array.from(encoded);
   corrupted[corrupted.length - 1] ^= 1;
-  assert.throws(() => decodeRgbPng(corrupted), /CRC|IEND/i);
+  await assert.rejects(decodeRgbPng(corrupted), /CRC|IEND/i);
 });

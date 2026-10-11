@@ -277,7 +277,7 @@ export async function openGeoTiffReader(path, { key, stripeRows } = {}) {
  * while yielding north-to-south 0.1-degree stripes. Bunkers and carbonation
  * remain deliberately excluded by the variable allow-list.
  */
-export async function openGridFedReader(path, { stripeRows = 8 } = {}) {
+async function openGridFedReader(path, { stripeRows = 8 } = {}) {
   if (!path) throw new TypeError('GridFED path is required');
   if (!Number.isInteger(stripeRows) || stripeRows < 1)
     throw new RangeError('stripeRows must be a positive integer');

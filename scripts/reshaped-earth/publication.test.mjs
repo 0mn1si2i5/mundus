@@ -19,7 +19,7 @@ import {
   publishProductionAssets,
   publishVerifiedAssets,
 } from './publication.mjs';
-import { decodeRgbPng } from './png.mjs';
+import { decodeRgbPng } from './png-test-helpers.mjs';
 
 const fingerprint = 'f'.repeat(64);
 
@@ -27,7 +27,7 @@ test('published distance PNG retains the accepted country and padding channels',
   const bytes = await readFile(
     'src/data/generated/reshaped-earth/ids-country.png',
   );
-  const { data } = decodeRgbPng(bytes);
+  const { data } = await decodeRgbPng(bytes);
   const countries = new Uint8Array(data.length / 3);
   const padding = new Uint8Array(countries.length);
   for (let i = 0; i < countries.length; i += 1) {
@@ -149,7 +149,9 @@ test('country publication preserves classified coastal ownership without publish
       lights,
     });
     assert.deepEqual(Object.keys(assets), ['ids-country.png']);
-    const { width, height, data } = decodeRgbPng(assets['ids-country.png']);
+    const { width, height, data } = await decodeRgbPng(
+      assets['ids-country.png'],
+    );
     const id = (x, y) => {
       const i = (y * width + x) * 3;
       return data[i];

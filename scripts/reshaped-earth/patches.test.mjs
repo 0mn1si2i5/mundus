@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { decodeRgbPng } from './png.mjs';
+import { decodeRgbPng } from './png-test-helpers.mjs';
 import {
   assertPatchBoundsDisjoint,
   buildPatchAtlas,
@@ -11,7 +11,6 @@ import {
   orderPatchRemovals,
   patchBoundsForFeature,
   selectPatchCountries,
-  PATCH_TRANSITION_WIDTH,
 } from './patches.mjs';
 
 const rect = (west, south, east, north) => [
@@ -112,7 +111,7 @@ test('4c margin uses original span and preserves four pixels inside the transiti
     labelsById: new Map([['a', 1]]),
     base: emptyBase(),
   });
-  assert.ok(patch.edgeClearancePixels >= PATCH_TRANSITION_WIDTH + 4);
+  assert.ok(patch.edgeClearancePixels >= patch.transitionWidthPixels + 4);
   assert.ok(patch.width < 60 && patch.height < 60);
 });
 
@@ -240,10 +239,10 @@ test('multi-island multi-country atlas builds twice with identical bytes and met
   for (const entry of first.entries) {
     assert.equal(entry.blockWidth, entry.width);
     assert.equal(entry.blockHeight, entry.height);
-    assert.equal(entry.transitionWidthPixels, PATCH_TRANSITION_WIDTH);
-    assert.ok(entry.edgeClearancePixels >= PATCH_TRANSITION_WIDTH + 4);
+    assert.equal(entry.transitionWidthPixels, 16);
+    assert.ok(entry.edgeClearancePixels >= entry.transitionWidthPixels + 4);
   }
-  const decoded = decodeRgbPng(first.png);
+  const decoded = await decodeRgbPng(first.png);
   const largest = first.entries[0];
   const at = (x, y) =>
     decoded.data.subarray(
@@ -385,7 +384,7 @@ test('padding belongs to the matching country and national evidence covers the f
   const result = await buildPatchAtlas(options);
   assert.equal(result.selection[0].basePixelCount, 1);
   assert.equal(result.selection[0].basePaddingBits, 2);
-  const decoded = decodeRgbPng(result.png);
+  const decoded = await decodeRgbPng(result.png);
   for (let i = 0; i < decoded.data.length; i += 3)
     if (decoded.data[i] !== 2) assert.equal(decoded.data[i + 1], 0);
 });

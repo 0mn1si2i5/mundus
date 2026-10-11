@@ -1,13 +1,13 @@
 import { gzipSync } from 'node:zlib';
 import { writeRgbPng } from './png.mjs';
 
-export const PATCH_BASE_WIDTH = 4096;
-export const PATCH_BASE_HEIGHT = 2048;
-export const PATCH_SCALE = 8;
-export const PATCH_TRANSITION_WIDTH = PATCH_SCALE * 2;
-export const PATCH_LIMIT = 64;
-export const PATCH_GZIP_LIMIT = 150_000;
-export const PATCH_CORE_COUNTRIES = [
+const PATCH_BASE_WIDTH = 4096;
+const PATCH_BASE_HEIGHT = 2048;
+const PATCH_SCALE = 8;
+const PATCH_TRANSITION_WIDTH = PATCH_SCALE * 2;
+const PATCH_LIMIT = 64;
+const PATCH_GZIP_LIMIT = 150_000;
+const PATCH_CORE_COUNTRIES = [
   'ne-344',
   'ne-446',
   'ne-702',
