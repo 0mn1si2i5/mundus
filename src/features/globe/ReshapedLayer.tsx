@@ -1,6 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   useEffect,
+  useCallback,
   useMemo,
   useRef,
   useState,
@@ -557,7 +558,8 @@ export function ReshapedLayer({
   const [patchAtlas, setPatchAtlas] = useState<ReshapedPatchAtlas | null>(
     data.patchAtlas ?? null,
   );
-  const [firstFrameRendered, setFirstFrameRendered] = useState(false);
+  const patchLoadStarted = useRef(false);
+  const patchLoadController = useRef<AbortController | null>(null);
   const marker = useRef<Mesh>(null);
   const shader = useRef<ShaderMaterial>(null);
   const { ids, units, values } = data;
@@ -618,30 +620,35 @@ export function ReshapedLayer({
     // Updating uniforms keeps the base shader program alive when the atlas arrives.
     invalidate();
   }, [patches, material, invalidate]);
-  useEffect(() => {
-    if (!firstFrameRendered || patchAtlas) return;
-    let active = true;
+  const loadPatchesAfterFirstFrame = useCallback(() => {
+    if (patchLoadStarted.current || patchAtlas) return;
+    patchLoadStarted.current = true;
     const controller = new AbortController();
-    // onAfterRender confirms a base frame reached WebGL before this request.
+    patchLoadController.current = controller;
+    // This callback runs after the base mesh reached WebGL. Starting the
+    // request here avoids waiting for a second React commit on slow browsers.
     loadReshapedPatches(controller.signal)
       .then((atlas) => {
-        if (active) {
+        if (!controller.signal.aborted) {
           setPatchAtlas(atlas);
           onPatchesReady?.(atlas);
         }
       })
       .catch((error: unknown) => {
         if (
-          active &&
+          !controller.signal.aborted &&
           !(error instanceof DOMException && error.name === 'AbortError')
         )
           console.warn('Reshaped Earth local ID patches unavailable', error);
       });
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [firstFrameRendered, patchAtlas, onPatchesReady]);
+  }, [onPatchesReady, patchAtlas]);
+  useEffect(
+    () => () => {
+      patchLoadController.current?.abort();
+      patchLoadController.current = null;
+    },
+    [],
+  );
   useEffect(() => {
     shader.current = material;
     transition.sync(
@@ -729,9 +736,7 @@ export function ReshapedLayer({
         geometry={geometry}
         material={material}
         raycast={ignoreRaycast}
-        onAfterRender={() => {
-          if (!firstFrameRendered) setFirstFrameRendered(true);
-        }}
+        onAfterRender={loadPatchesAfterFirstFrame}
       />
       <mesh ref={marker} raycast={ignoreRaycast}>
         <sphereGeometry args={[0.007, 12, 8]} />
