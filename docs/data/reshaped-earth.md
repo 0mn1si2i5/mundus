@@ -460,7 +460,7 @@ viewport are:
 | Device / shape     | `20a979d` | Local atlas |
 | ------------------ | --------: | ----------: |
 | Desktop / true     | 0.000868% |   0.000868% |
-| Desktop / reshaped | 0.089735% |   0.083225% |
+| Desktop / reshaped | 0.089952% |   0.089952% |
 | Pixel 7 / true     |        0% |          0% |
 | Pixel 7 / reshaped | 0.000926% |   0.000926% |
 
