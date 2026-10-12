@@ -1663,7 +1663,10 @@ test.describe
   // Each ordinary test retains Playwright's existing 30s timeout. The shared
   // page/context stay alive across the entire serial suite; no reload/reset.
   for (let round = 1; round <= 20; round += 1) {
-    test(`round ${String(round).padStart(2, '0')}: enter, change metric, exit and collect resources`, async ({}, testInfo) => {
+    test(`round ${String(round).padStart(2, '0')}: enter, change metric, exit and collect resources`, async ({
+      page: fixturePage,
+    }, testInfo) => {
+      void fixturePage;
       const roundSamples: ReshapedResourceSample[] = [];
       let completed = false;
       const [label, metric] = metrics[(round - 1) % metrics.length]!;
