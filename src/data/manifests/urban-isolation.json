@@ -20,8 +20,8 @@
   "missingValuePolicy": "Missing Chinese city names and country ISO codes remain null; empty names at or above the universe threshold remain in the immutable input, and a referenced unnamed competitor fails the build unless it has a reviewed override.",
   "boundaryPolicy": "Cities are GHSL urban centres; no runtime geographic boundary matching is performed.",
   "recordCount": 1282,
-  "rawBytes": 125909,
-  "gzipBytes": 53802,
+  "rawBytes": 126290,
+  "gzipBytes": 54033,
   "immutableBuildInput": {
     "path": "src/data/generated/urban-isolation-input.json",
     "schemaVersion": 1,
@@ -30,8 +30,8 @@
   },
   "derivedAsset": {
     "path": "src/data/generated/urban-isolation.json",
-    "sha256": "08dd193d712618571034f161bff6308d1f69306cce50124d48a5565bfda2d67d",
-    "rawBytes": 125909,
+    "sha256": "0ce2608345352ce2c36f8e96dd4887f4f7ef2de72bc20402726f3446a159619e",
+    "rawBytes": 126290,
     "formatVersion": 1
   },
   "sourceAssets": {
