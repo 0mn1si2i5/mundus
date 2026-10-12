@@ -83,6 +83,10 @@ carry it through tests, review and release evidence.
   branches; rewriting or force-pushing shared history; accepting a data or
   licence risk; or starting a job that trips the resource gate in §7.
 - Never discard local changes you did not make.
+- Recorded P2 follow-ups are open GitHub issues labelled `follow-up`. Before
+  starting work, run `gh issue list --label follow-up`; when your change
+  touches an issue's area, fix it in that pull request (it stays in scope) and
+  close it, or say in the pull request why not.
 
 ## 3. Architecture invariants
 
@@ -179,8 +183,8 @@ or non-primary issues with a safe fallback: record, don't inflate scope.
 - Only the deploy job has `pages: write` and `id-token: write`. Roll back by
   redeploying a previously verified run, then fix `main` with a reviewed
   revert. Procedure: `docs/RELEASE_RUNBOOK.md`.
-- Release identity: tag `v1.0.0` and its GitHub Release target
-  `a5ff99bc60fb7cd2e6e14f4d3bc4f54e5abfb4a1`. No later tag exists; creating one
+- Release identity: tags and GitHub Releases are the authority; the latest is
+  `v1.2.0` at `84f0ddb453caff1f38afd7daf33a4eae220a1d77`. Creating a tag
   needs owner approval and must point at a deployed, live-verified `main` SHA.
   `package.json`'s version is build metadata, not a release identity.
 
