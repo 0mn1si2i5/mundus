@@ -19,7 +19,7 @@ const COPY = {
   zh: {
     title: '关于 Mundus',
     description:
-      'Mundus 是一个交互式三维地球：选择一种观察方式，转动地球，看见一个清楚的发现。你可以直接在浏览器里探索它。',
+      'Mundus 是一个交互式三维地球：选择一种观察方式，转动地球，看见一个清楚的发现。在浏览器中交互查看离线模型结果，并就地计算几何和日照观察。',
     close: '关闭',
     methods: '观察与方法',
     sources: '数据来源与许可',
@@ -42,7 +42,7 @@ const COPY = {
       ],
       [
         '城市邻近性',
-        '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级邻近距离是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，距离呈阶梯式增长。全球分区把陆地点归给“距离 ÷ 当前邻近距离”最小的中心，形成不规则区域；颜色只区分归属，没有有效邻近距离的中心只标点。相邻城市可能被合并为一个城市中心；结果只反映几何与人口规模，不代表交通或经济可达性。',
+        '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级邻近距离是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，距离呈阶梯式增长。单城观察只反映几何与人口规模。全球分区采用交通时间 − k × log₁₀(人口) 的加法得分，在人口 ≥10 万的中心之间比较；人口每大十倍，得分减去 k 小时。使用 MAP 2019 估计摩擦面与约 4 km 网格，结果按档位离线计算；颜色区分归属，明度反映 GHS-POP 2020 人口密度。仅按约 15 km 显示网格采样，计算仍在 1/30° 网格上进行，中心切换阈值和父城市不变。这是负责人于 2026-10-12 作出的决定，替代提案 D5 原来的“按 1/30° 显示”；以后提高显示精度需另行审批。路径按 Natural Earth 实控边界及公开开放表计算，绘制使用 Mundus 中国视角；争议区画斜纹隐藏归属，模型不计渡轮，粗网格可能将约 7 km 内的水道视为相通。中心归属切换阈值仅描述中心单元，不代表整座城区消失。相邻城市可能合并为一个 GHSL 中心。这是透明思想实验，不测量通勤、就医、实际统辖或经济联系。',
       ],
       [
         '变形地球',
@@ -108,6 +108,37 @@ const COPY = {
         ],
       },
       {
+        name: 'Malaria Atlas Project · OpenStreetMap',
+        use: '全球分区交通时间模型',
+        notice:
+          'MAP 2019 Global Motorized Friction Surface · Weiss 等（2020）· CC BY 4.0。道路输入含 © OpenStreetMap contributors（ODbL）；仅分发计算结果，不分发摩擦面。',
+        links: [
+          {
+            label: 'MAP 数据与方法',
+            href: 'https://malariaatlas.org/research-project/accessibility-to-cities/',
+          },
+          { label: '论文', href: 'https://doi.org/10.1038/s41591-020-1059-1' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+          {
+            label: 'OpenStreetMap 署名与条款',
+            href: 'https://www.openstreetmap.org/copyright',
+          },
+        ],
+      },
+      {
+        name: 'GHS-POP R2023A · 2020',
+        use: '全球分区人口密度明度',
+        notice:
+          'European Commission, Joint Research Centre · GHS-POP R2023A V1.0 · CC BY 4.0。只用于显示明度，不参与城市竞争得分。',
+        links: [
+          {
+            label: '数据集页面',
+            href: 'https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
         name: 'GHS-POP R2023A',
         use: '变形地球 · 2020 年人口',
         notice:
@@ -158,7 +189,7 @@ const COPY = {
   en: {
     title: 'About Mundus',
     description:
-      'Mundus is an interactive globe: choose a way of observing, turn the Earth, and see one clear finding. Explore it directly in your browser.',
+      'Mundus is an interactive globe: choose a way of observing, turn the Earth, and see one clear finding. Explore offline model results and local geometry and sunlight calculations in your browser.',
     close: 'Close',
     methods: 'Observations and methods',
     sources: 'Data sources and licenses',
@@ -181,7 +212,7 @@ const COPY = {
       ],
       [
         'Urban Proximity',
-        'Uses 2025 populations from the GHSL Urban Centre Database (R2024A). The hierarchical proximity distance is the great-circle distance from a city of at least one million people to the nearest urban centre with at least α times its population; a higher α raises the bar, and the distance grows in steps. Global regions assign land points to the centre with the lowest distance / current proximity distance, producing irregular boundaries. Colours distinguish owners; centres without a valid proximity distance remain dots only. Neighbouring cities can merge into one urban centre; results reflect geometry and size only, not travel or economic access.',
+        'Uses 2025 populations from the GHSL Urban Centre Database (R2024A). The hierarchical proximity distance is the great-circle distance from a city of at least one million people to the nearest urban centre with at least α times its population; a higher α raises the bar, and the distance grows in steps. One city reflects geometry and population only. Global regions compare centres with at least 100,000 people using travel time − k × log₁₀(population): each tenfold population increase subtracts k hours. MAP 2019 estimated friction and a roughly 4 km grid produce offline results by level; colour distinguishes owners and brightness reflects GHS-POP 2020 population density. The sole display resolution samples at roughly 15 km; computation remains at 1/30°, with unchanged centre thresholds and parents. This owner decision of 2026-10-12 replaces proposal D5’s 1/30° display; higher display resolution requires separate approval. Paths follow Natural Earth control boundaries and public open-border rules; drawing follows Mundus’s China view. Hatching hides disputed ownership, ferries are excluded and the coarse grid can join waterways of roughly 7 km. Centre switch thresholds describe the centre cell, not the disappearance of an entire urban area. Neighbouring cities can merge into one GHSL centre. This is a transparent thought experiment, not a measurement of commuting, healthcare, actual jurisdiction or economic ties.',
       ],
       [
         'Reshaped Earth',
@@ -245,6 +276,37 @@ const COPY = {
             href: 'https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php',
           },
           { label: 'GHSL · CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'Malaria Atlas Project · OpenStreetMap',
+        use: 'Global regions travel-time model',
+        notice:
+          'MAP 2019 Global Motorized Friction Surface · Weiss et al. (2020) · CC BY 4.0. Road inputs include © OpenStreetMap contributors (ODbL); only calculated results are distributed, not the friction raster.',
+        links: [
+          {
+            label: 'MAP data and methods',
+            href: 'https://malariaatlas.org/research-project/accessibility-to-cities/',
+          },
+          { label: 'Paper', href: 'https://doi.org/10.1038/s41591-020-1059-1' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+          {
+            label: 'OpenStreetMap attribution and terms',
+            href: 'https://www.openstreetmap.org/copyright',
+          },
+        ],
+      },
+      {
+        name: 'GHS-POP R2023A · 2020',
+        use: 'Global regions population-density brightness',
+        notice:
+          'European Commission, Joint Research Centre · GHS-POP R2023A V1.0 · CC BY 4.0. Controls display brightness only; it never affects city competition scores.',
+        links: [
+          {
+            label: 'Dataset page',
+            href: 'https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
         ],
       },
       {

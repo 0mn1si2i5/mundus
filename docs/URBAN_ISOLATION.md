@@ -1,6 +1,8 @@
 # Urban Proximity — design contract
 
-Status: implemented and deployed from `main` (2026-10-08). This document
+Status: the geometric city view is deployed. On 2026-10-11 the owner approved
+the replacement global-field contract below; it becomes active only after the
+data and frontend pull requests are reviewed and released. This document
 records the product question, data, metric, interaction and acceptance
 decisions. The step-by-step execution packet is handed to the executor
 separately and is not stored in the repository (see `AGENTS.md` §8).
@@ -20,8 +22,9 @@ Mundus measures only:
   (oceans count); and
 - **hierarchical proximity** — whether a city of comparable size is nearby.
 
-It does not measure transport, economic or travel-time accessibility and must
-not suggest it.
+The city view does not measure transport, economic or travel-time
+accessibility. The separate global field uses a travel-cost model (§3); its
+territories are a thought experiment, not measured city relationships.
 
 Names: 城市邻近性 / Urban Proximity (mode); 层级邻近距离 / Hierarchical
 Proximity Distance (metric). Mode id: `isolation`.
@@ -97,49 +100,79 @@ ranked cities at that α.
 
 ### Global field view
 
-Urban Proximity also has a static **global field** view (`view=field`). It is
-the same observation and uses the same α and R_i(α) values; it does not add a
-second metric. For each point x on the bundled land surface, ownership is
+The approved replacement **global field** (`view=field`) asks which city wins
+at each place after its population advantage offsets estimated travel cost:
 
 ```text
-owner(x; α) = arg min over focal i with defined positive R_i(α) of d(x, i) / R_i(α)
+score_i(x; k) = T(x, S_i) - k * log10(P_i)
+owner(x; k) = arg min_i score_i(x; k)
+k = 0.25, 0.5, 1, 2, 4, 8, 16; default = 4
 ```
 
-where d is the same spherical great-circle distance used above. A larger
-proximity distance reduces a centre's weighted distance and extends
-its relative reach; the final region also depends on the other centres and their weights.
-The result is a weighted spherical Voronoi partition, clipped to land. Its borders
-can be curved and irregular; they are geometric boundaries, not coastlines,
-administrative borders, terrain catchments or travel-time regions. A tie uses
-the same deterministic population-then-source-id order as the rest of the
-mode.
+`T` is shortest travel cost in hours through a symmetric eight-neighbour land
+graph; `S_i` is the centre's retained GHSL polygon source cells. Population
+comes from the same 2025 edition, but every centre with at least 100,000 people
+participates, independently of the city view's one-million focal threshold.
+A tenfold-larger city gains `k` hours. Equal scores favour larger population,
+then smaller numeric GHSL id. `k` is independent of `alpha` and `R_i(alpha)`.
 
-Focal centres with an undefined or zero R remain visible and selectable but do
-not own a field region. At α = 1 this includes any centre without a qualifying
-competitor. The field is categorical: its colours distinguish owners and do
-not encode a second continuous score. A selected land point resolves to the
-same owner in the result card and globe. Choosing an exact centre retains that
-centre even when it has no field region.
+The computational grid is 1/30° (about 3.7 km at the equator). It uses the
+minimum non-water friction in each 4-by-4 block of MAP 2019 pixels. Narrow
+waterways and curved mountain routes can be shortened or connected by this
+aggregation. There are no added ferry routes. Borders are closed except the
+explicit owner-reviewed policy; an open border never creates a sea connection.
+Coarse aggregation can treat waterways of roughly 7 km as connected, for
+example Bali–Java, Negros–Cebu and Tierra del Fuego–the South American mainland.
+This is an approximation rather than a strict width limit; diagonal connections
+can span wider water. Ferries themselves are not included.
+Routing follows Natural Earth's default control view while display follows the
+Mundus view. Disputed cells are hatched without an ownership label. Unknown
+land-country cells inherit the nearest routing label deterministically.
 
-The partition changes only when some R_i(α) crosses a population threshold;
-moving α within one set of unchanged radii leaves its boundaries unchanged.
-These changes are steps and are not animated or smoothed into a continuous
-population field.
+The complete open-pair and pseudo-unit policy, sources, clipping rules,
+limitations and reproducibility requirements live in
+[docs/data/city-reach.md](data/city-reach.md). All displayed names still obey §5.
+Every territory owner, parent and component root needs a nonempty English
+display name. Missing reviewed Chinese city names remain null and fall back to
+English in the Chinese interface; the manifest and name report count them.
+All asset countries need reviewed Chinese names, and Chinese duplicates fail
+unless both assignments are reviewed overrides.
 
-The field is evaluated on the existing Natural Earth land triangles. A shared,
-lazy Web Worker builds conservative tile candidate lists so the fragment
-shader can evaluate the exact weighted distance; the lists are an acceleration
-structure and never a raster approximation of the boundary. The worker is
-started only after entering the field view, is cancelled and its GPU textures
-released when α or the view changes, and reports a local retryable error if it
-fails. Entering the field view stops the globe's idle rotation so that the
-static partition can be inspected and manually rotated. The field view,
-selected city and α round-trip through a shared URL (`view=field`).
+As `k` increases, a point's owning population can only increase. Every
+territory component contains one of its owner's source cells. Multi-cell
+sources can still yield disconnected territories; holes and ring-shaped
+surrounding regions are possible. Neither claim means whole urban areas are
+annexed in one step. The centre-assignment threshold
+`k_c(i) = min_j T(c_i, S_j) / log10(P_j / P_i)` over larger cities describes
+only the centre cell. Parent populations strictly increase, forming a forest.
+
+The field distinguishes finite thresholds, transport-component roots,
+larger-but-unreachable cities, coarse-grid merges, missing transport and
+disputed centres. These are not one ranking of the “most independent” cities.
+Only finite thresholds may be ranked. Colour distinguishes owners; brightness
+uses a separate GHS-POP 2020 density raster, not owner population. Neither
+channel changes the underlying score.
+
+RGB8 ownership images are prepared offline and loaded only for the selected
+level, with one shared population-density image. Owner ids use R + 256·G and
+B is zero; neither image carries data in alpha. All devices use the sole
+stride-4 display resolution, about 15 km at the equator; CPU lookup and the
+globe use the same samples. Computation stays on the original 1/30° grid,
+so thresholds and parent cities are unchanged. The owner decided this on
+2026-10-12, replacing proposal D5’s original 1/30° display. A higher display
+resolution requires separate owner approval. Decoded CPU and GPU allocation,
+rather than compressed download size alone, determines the memory budget. A failed new level keeps the previous
+level visible with an explicit notice and a retry action. Exiting releases field
+resources. The static view disables idle rotation but preserves manual rotation.
+
+The existing geometric `d/R` worker field remains shipped until this
+replacement's reviewed assets and frontend are released; it is then removed,
+not retained as another user-facing algorithm.
 
 ## 4. Asset
 
-One generated JSON, loaded lazily as a dynamic-import chunk when the mode is
-entered: `src/data/generated/urban-isolation.json`. It contains:
+The city view uses one generated JSON, loaded lazily as a dynamic-import chunk
+when that view is entered: `src/data/generated/urban-isolation.json`. It contains:
 
 - focal cities plus only those universe cities that appear as a record holder
   for some focal city;
@@ -175,12 +208,14 @@ download URL, SHA-256, licence, citation/DOI, epoch and both thresholds.
   complete reviewed table in `isolationCountryNames.ts`; city GeoNames country
   rows are not used. The table must cover every country represented in the
   asset, and uses `刚果民主共和国` for Democratic Republic of the Congo and
-  `巴勒斯坦` for Palestine.
+  `巴勒斯坦` for Palestine. The owner-approved display labels are
+  `塞尔维亚（科索沃）` for Kosovo and `塞浦路斯（北部）` for Northern Cyprus,
+  consistent with the map's drawing-country view; routing uses separate labels.
 - The executor never invents translations. With no reviewed Chinese city name,
   the Chinese UI shows the English name. A missing Chinese name is a recorded
   state, not an error. A centre with an empty GHSL main name remains in the
   competitor universe; if referenced by a focal record-holder list, the build
-  requires an override supplying both `nameEn` and `nameZh`.
+  requires an override supplying a nonempty `nameEn`; Chinese may remain null.
 
 ## 6. Interaction
 
@@ -208,23 +243,34 @@ download URL, SHA-256, licence, citation/DOI, epoch and both thresholds.
   - No filled discs.
 - Global field view:
   - a toggle switches between the city view and `view=field`;
-  - all land is assigned by the weighted rule in §3, with one centre per
-    region; ocean has no region fill;
-  - the city selector remains a keyboard-accessible way to choose any focal
-    centre, including one that has no field region;
+  - an independent native radio group chooses `k`; the α slider and geometric
+    Top 10 remain in the city view;
+  - territory owners are shown by the travel-cost rule in §3; disputed cells
+    are hatched, unreachable land is neutral, and oceans have no region fill;
+  - the selected point reports its owner and country, centre threshold and
+    parent, or its explicit missing/root/merge state;
+  - a keyboard-accessible city selector includes reviewed field cities;
+  - a centre with no larger reachable city is labelled “所在陆块/岛屿（交通连通区域）中人口最大的城市” / “Largest city on its landmass or island (transport-connected area)”; closed borders can divide a landmass;
+  - known limitation: the selected point’s ownership chain across all seven
+    levels (for example Dongguan → Guangzhou) is not shown in this version.
+    Only the current level is loaded; the centre threshold/parent forest is
+    a separate observation and does not substitute for that point’s chain;
   - the static view does not use idle rotation, but keeps manual globe
     rotation and selection.
-- URL: `mode=isolation&point=…&alpha=0.37&view=field&v=2`.
+- URL: `mode=isolation&point=…&alpha=0.37&view=field&reach=8&v=2`.
   - `alpha` has two decimals and is omitted at the 0.50 default.
   - `view=field` is emitted only for the global field view; city view is the
     default.
   - Invalid or out-of-range values fall back to 0.50.
-  - Slider moves replace the history entry; mode, view and point changes push one.
+  - `reach` records only a nondefault approved level. Invalid values return to 4.
+  - `alpha` keeps its existing semantics and value when switching to field; it
+    does not change field ownership.
+  - Slider and reach moves replace history; mode, view and point changes push one.
 - Lazy loading: no isolation chunk or data request in the lobby or other
-  modes. The field worker is likewise lazy. A failed data or field build shows
-  a local error with a retry action.
-- About: a method note and a GHSL credit (CC BY 4.0 + citation). The credit
-  line adds "GHSL".
+  modes. Field cities and ownership tiles load only upon entering field. A
+  failed field request shows a local retry action and leaves city view usable.
+- About: method notes and GHSL credit (CC BY 4.0 + citation); the replacement
+  field adds MAP, GHS-POP and OpenStreetMap attribution before release.
 
 ## 7. Acceptance
 
@@ -236,9 +282,12 @@ Mathematics (unit tests):
   step lookup on random fixtures for α on a 0.01 grid.
 - Ties follow §3; the no-competitor state appears exactly when expected.
 - The completeness invariant holds.
-- The field owner follows the weighted d/R rule, including deterministic ties.
-- Conservative tile lists retain the brute-force winner at tile boundaries,
-  the antimeridian and the poles.
+- The replacement field solver agrees with independent shortest paths and
+  exhaustive score comparisons, including deterministic ties.
+- Population monotonicity, source-connected territory components and centre
+  thresholds pass small-graph tests.
+- PNG owner codes, tile seams and antimeridian lookup agree on CPU and GPU.
+- Global audits use the approved ≥100,000-city universe, not research counts.
 
 Geography (unit tests):
 
@@ -264,9 +313,10 @@ Product (browser tests, desktop and Pixel 7):
 - lazy loading;
 - choosing a ranked city;
 - moving α changes competitor, ring and arc diagnostics at a known breakpoint;
-- entering `view=field` partitions land by d/R, updates when α crosses a step,
-  leaves centres without R selectable, and keeps the field stable after idle
-  rotation is stopped;
+- entering `view=field` loads the selected level only, changes ownership with
+  `k`, preserves `alpha`, agrees between card and globe, and stops idle rotation;
+- field keyboard selection, per-level sharing, failed-level retry and all
+  missing/root/disputed states;
 - the URL round-trip;
 - the no-competitor state;
 - 44 px touch targets;

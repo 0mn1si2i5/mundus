@@ -88,7 +88,7 @@ importers:
         specifier: ^0.4.26
         version: 0.4.26(eslint@9.39.5)
       geotiff:
-        specifier: ^3.0.5
+        specifier: 3.0.5
         version: 3.0.5
       globals:
         specifier: ^17.4.0

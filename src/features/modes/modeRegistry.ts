@@ -2,6 +2,10 @@ import type { Locale } from '../../i18n/messages';
 import { z } from 'zod';
 import { SUNLINE_MAX_TIME_MS, SUNLINE_MIN_TIME_MS } from '../sunline/solar';
 import { ALPHA_MAX, ALPHA_MIN } from '../isolation/isolationMetric';
+import {
+  CITY_REACH_DEFAULT,
+  isCityReachLevel,
+} from '../isolation/cityReachLevel';
 
 export const MODE_ORDER = [
   'antipodes',
@@ -94,15 +98,15 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     compactTitle: { zh: '城市邻近', en: 'Proximity' },
     titlePhrases: { zh: ['城市', '邻近性'] },
     question: {
-      zh: '离一座大城市最近的达标城市中心有多远？',
-      en: 'How far away is the nearest qualifying urban centre?',
+      zh: '城市之间的间距与交通，如何划分地球？',
+      en: 'How do city spacing and travel divide the Earth?',
     },
     summary: {
-      zh: '调整 α，观察达标城市间距如何变化，并在全球分区中查看相对邻近关系。',
-      en: 'Adjust α to change qualifying-centre distance, then explore relative proximity across the globe.',
+      zh: '单城观察用 α 比较几何间距；全球分区用 k 查看交通与人口塑造的归属。',
+      en: 'Use α to compare geometric city spacing, or k to explore regions shaped by travel and population.',
     },
     cameraPolicy: 'preserve',
-    resources: ['mundus-countries', 'urban-isolation'],
+    resources: ['mundus-countries', 'urban-isolation', 'city-reach'],
     stateSchema: z.object({
       point: z.object({
         latitude: z.number().min(-90).max(90),
@@ -110,6 +114,7 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
       }),
       alpha: z.number().min(ALPHA_MIN).max(ALPHA_MAX),
       view: z.enum(['city', 'field']),
+      reach: z.number().refine(isCityReachLevel).default(CITY_REACH_DEFAULT),
     }),
   },
   reshaped: {

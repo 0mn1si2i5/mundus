@@ -12,6 +12,7 @@ import {
   decodeUnits,
   decodeValues,
 } from '../src/features/reshaped/metadata.mjs';
+import { verifyCityReach } from './city-reach/verify.mjs';
 
 const reshapedMetrics = ['population', 'gdp', 'co2', 'lights'];
 
@@ -234,6 +235,17 @@ try {
 } catch (error) {
   failed = true;
   console.error(`Reshaped Earth: ${error.message}`);
+}
+
+try {
+  const reach = await verifyCityReach();
+  if (reach.present)
+    console.log(
+      `City reach: verified ${reach.assets} city, source-capture and texture assets`,
+    );
+} catch (error) {
+  failed = true;
+  console.error(error.message);
 }
 
 if (failed) process.exitCode = 1;

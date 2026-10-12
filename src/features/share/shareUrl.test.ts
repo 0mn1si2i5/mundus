@@ -10,6 +10,7 @@ describe('createShareUrl', () => {
     surnameDisplayMode: 'local' as const,
     isolationAlpha: 0.5,
     isolationView: 'city' as const,
+    isolationReach: 4 as const,
   };
 
   it('serializes a default lobby to a bare URL', () => {
@@ -49,5 +50,19 @@ describe('createShareUrl', () => {
       activeMode: 'sunline',
     });
     expect(url).toContain('time=2026-07-14T09%3A37Z');
+  });
+
+  it('shares field reach and the independent city-view alpha', () => {
+    expect(
+      createShareUrl('https://example.com/path', {
+        ...base,
+        activeMode: 'isolation',
+        isolationView: 'field',
+        isolationAlpha: 0.37,
+        isolationReach: 8,
+      }),
+    ).toBe(
+      'https://example.com/path?mode=isolation&alpha=0.37&view=field&reach=8&v=2',
+    );
   });
 });

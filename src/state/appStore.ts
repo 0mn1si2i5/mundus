@@ -16,6 +16,11 @@ import { clampSunlineTime } from '../features/sunline/solar';
 import { clampAlpha } from '../features/isolation/isolationMetric';
 import type { ReshapedMetricId } from '../features/reshaped/metrics';
 import { RESHAPED_DEFAULT_METRIC } from '../features/reshaped/metrics';
+import {
+  CITY_REACH_DEFAULT,
+  isCityReachLevel,
+  type CityReachLevel,
+} from '../features/isolation/cityReachLevel';
 
 export interface CameraFocusIntent {
   side: 'origin' | 'antipode' | 'free' | 'major-city';
@@ -43,6 +48,7 @@ interface AppState {
   setReshapedSelectedUnitId: (id: string | null | undefined) => void;
   setReshapedMorphState: (state: 'animating' | 'settled') => void;
   setReshapedGraphicsUnavailable: (unavailable: boolean) => void;
+  isolationReach: CityReachLevel;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -65,6 +71,7 @@ interface AppState {
   setIsolationView: (view: IsolationView) => void;
   setReshapedMetric: (metric: ReshapedMetricId) => void;
   setReshapedShape: (shape: 'true' | 'reshaped') => void;
+  setIsolationReach: (value: number) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
   setAntipodeCountry: (country: CountryRef | null) => void;
@@ -175,6 +182,10 @@ export const useAppStore = create<AppState>((set) => ({
     set({ reshapedGraphicsUnavailable }),
   setReshapedMetric: (reshapedMetric) => set({ reshapedMetric }),
   setReshapedShape: (reshapedShape) => set({ reshapedShape }),
+  setIsolationReach: (value) =>
+    set({
+      isolationReach: isCityReachLevel(value) ? value : CITY_REACH_DEFAULT,
+    }),
   returnSunlineToLive: (timestampMs = Date.now()) =>
     set({
       sunlineTimeMs: clampSunlineTime(timestampMs),

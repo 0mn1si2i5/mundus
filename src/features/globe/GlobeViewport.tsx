@@ -1,3 +1,4 @@
+import type { CityReachFrame } from '../isolation/cityReachTypes';
 import { Canvas } from '@react-three/fiber';
 import {
   useEffect,
@@ -102,16 +103,16 @@ export function GlobeViewport({
   );
   const [contextLost, setContextLost] = useState(false);
   const [vectorRenderSampleKey, setVectorRenderSampleKey] = useState(0);
+  const [vectorSurfaceRetryKey, setVectorSurfaceRetryKey] = useState(0);
   const [vectorState, setVectorState] = useState<VectorGlobeState>('loading');
+  const [fieldRenderedFrame, setFieldRenderedFrame] =
+    useState<CityReachFrame | null>(null);
   const [rasterLayers, setRasterLayers] = useState<RasterLayerVisibility>({
     reshaped: false,
     baseSurface: true,
     outerShell: false,
     highlight: true,
   });
-  const [fieldRenderedAlpha, setFieldRenderedAlpha] = useState<number | null>(
-    null,
-  );
   const [vectorPaletteVersion, setVectorPaletteVersion] = useState(0);
   const [vectorGeometryId, setVectorGeometryId] = useState('');
   const [vectorDragTransparent, setVectorDragTransparent] = useState(false);
@@ -158,6 +159,26 @@ export function GlobeViewport({
     [selectedCountry?.countryId, surnameMapLabels],
   );
   const antipodeDragVisible = showAntipodes && antipodeDragActive;
+  const fieldStatus =
+    isolation?.view === 'field' ? isolation.field.status : null;
+  const previousFieldStatus = useRef<typeof fieldStatus>(null);
+  const retryVectorSurface = useCallback(() => {
+    setVectorState('loading');
+    setFieldRenderedFrame(null);
+    setVectorSurfaceRetryKey((value) => value + 1);
+  }, []);
+  useEffect(() => {
+    const previous = previousFieldStatus.current;
+    previousFieldStatus.current = fieldStatus;
+    // Card and control Retry actions also recover the failed surface. Only
+    // an explicit field retry (error -> loading) remounts it; failure is final.
+    if (
+      vectorState === 'error' &&
+      previous === 'error' &&
+      fieldStatus === 'loading'
+    )
+      retryVectorSurface();
+  }, [fieldStatus, retryVectorSurface, vectorState]);
   const handleVectorStateChange = useCallback(
     (state: VectorGlobeState, resources: VectorGlobeResources | null) => {
       setVectorState(state);
@@ -296,6 +317,7 @@ export function GlobeViewport({
       pointerActiveRef.current = false;
       setAntipodeDragActive(false);
       cancelCameraGesture.current?.();
+      setFieldRenderedFrame(null);
       setContextLost(true);
     };
     const restored = () => {
@@ -493,14 +515,28 @@ export function GlobeViewport({
           : undefined
       }
       data-isolation-field-site-count={
-        isolation?.view === 'field' ? isolation.field.sites.length : undefined
+        isolation?.view === 'field'
+          ? isolation.field.frame?.ownerIds.size
+          : undefined
       }
-      data-isolation-field-max-candidates={
-        isolation?.field.table?.maxCandidates
+      data-isolation-field-requested-level={
+        isolation?.view === 'field' ? isolation.field.requestedLevel : undefined
       }
-      data-isolation-field-rendered-alpha={
-        isolation?.view === 'field' && isolation.field.status === 'ready'
-          ? fieldRenderedAlpha?.toFixed(2)
+      data-isolation-field-rendered-level={
+        isolation?.view === 'field' &&
+        isolation.field.frame === fieldRenderedFrame
+          ? fieldRenderedFrame?.level
+          : undefined
+      }
+      data-isolation-field-quality={
+        isolation?.view === 'field' &&
+        isolation.field.frame === fieldRenderedFrame
+          ? fieldRenderedFrame?.quality
+          : undefined
+      }
+      data-isolation-field-owner-id={
+        isolation?.fieldSelection?.status === 'owned'
+          ? isolation.fieldSelection.city.id
           : undefined
       }
       data-isolation-competitor-id={isolation?.competitorId}
@@ -569,7 +605,7 @@ export function GlobeViewport({
           surnameDisplayMode={surnameDisplayMode}
           isolation={isolation}
           reshaped={reshaped}
-          onIsolationFieldRendered={setFieldRenderedAlpha}
+          onIsolationFieldRendered={setFieldRenderedFrame}
           cameraGestureCancelRef={cancelCameraGesture}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}
           onSurnameLabelLayoutChange={setSurnameLabelLayout}
@@ -588,6 +624,7 @@ export function GlobeViewport({
             }))
           }
           vectorRenderSampleKey={vectorRenderSampleKey}
+          vectorSurfaceRetryKey={vectorSurfaceRetryKey}
           pointerActiveRef={pointerActiveRef}
         />
       </Canvas>
@@ -597,9 +634,24 @@ export function GlobeViewport({
         </p>
       ) : null}
       {isolation?.view === 'field' && vectorState === 'error' ? (
-        <p className={styles.contextStatus} role="status">
-          {messages[locale].isolationFieldSurfaceError}
-        </p>
+        <div
+          className={styles.contextStatus}
+          role="status"
+          data-city-reach-surface-error
+        >
+          <p>{messages[locale].isolationFieldSurfaceError}</p>
+          <button
+            type="button"
+            style={{ minWidth: 44, minHeight: 44 }}
+            onKeyDown={(event) => event.stopPropagation()}
+            onClick={() => {
+              retryVectorSurface();
+              isolation.field.retry();
+            }}
+          >
+            {messages[locale].isolationRetry}
+          </button>
+        </div>
       ) : null}
       {benchmark.enabled ? (
         <BenchmarkPanel phase={benchmark.phase} result={benchmark.result} />

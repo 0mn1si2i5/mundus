@@ -109,6 +109,17 @@ license.
 
 ## Data
 
+The owner-approved city-reach pipeline additionally uses MAP's 2019 motorized
+friction surface (CC BY 4.0; Weiss et al. 2020,
+<https://doi.org/10.1038/s41591-020-1059-1>) and GHS-POP R2023A V1.0, 2020
+population (CC BY 4.0). MAP's road inputs include OpenStreetMap (ODbL).
+Only calculated ownership outputs are distributed, with **Malaria Atlas
+Project** and **© OpenStreetMap contributors** attribution. The owner accepted
+the residual derivative-licence interpretation risk on 2026-10-11; this does not
+relicense the underlying OSM database. See
+<https://www.openstreetmap.org/copyright> and
+[docs/data/city-reach.md](docs/data/city-reach.md).
+
 | Material                           | Version                                                  | Terms                                                                                                                                              | Attribution                                                                   |
 | ---------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Natural Earth Admin 0 countries    | 5.1.2, 1:10m China view with Taiwan from default view    | Public domain                                                                                                                                      | Made with Natural Earth                                                       |
@@ -133,6 +144,15 @@ build input and its compact runtime index. Both remain under CC BY 4.0 with the
 attribution above; the large raw rolling downloads are not redistributed.
 
 ## Build-only software
+
+- `geotiff@3.0.5`, pinned in `pnpm-lock.yaml`, decodes the offline city-reach
+  friction and density GeoTIFFs. It is MIT licensed and is not imported by the
+  application runtime; source and notices are at
+  <https://github.com/geotiffjs/geotiff.js>. Its resolved build-only graph is
+  reviewed with `pnpm licenses list --json` after lockfile changes: float16,
+  parse-headers and quick-lru use MIT; lerc and web-worker use Apache-2.0;
+  xml-utils uses CC0-1.0; pako uses MIT AND Zlib; zstddec uses MIT AND
+  BSD-3-Clause. These decoder dependencies remain build-only.
 
 - `opencc-js@1.4.1`, pinned in `pnpm-lock.yaml`, is used only by the GeoNames
   generator with the OpenCC `t` to `cn` dictionaries. It is not imported by the

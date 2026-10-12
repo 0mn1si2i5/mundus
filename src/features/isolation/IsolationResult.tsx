@@ -4,8 +4,7 @@ import type { ModePresentation } from '../modes/useModePresentation';
 import { displayIsolationCountry, displayIsolationName } from './isolationData';
 import { IsolationStepChart } from './IsolationStepChart';
 import styles from '../modes/ModeResult.module.css';
-import { useAppStore } from '../../state/appStore';
-import fieldStyles from './IsolationControls.module.css';
+import { CityReachResult } from './CityReachResult';
 
 export function IsolationResult({
   locale,
@@ -15,7 +14,14 @@ export function IsolationResult({
   presentation: Extract<ModePresentation, { id: 'isolation' }>;
 }) {
   const t = messages[locale];
-  const selectPoint = useAppStore((state) => state.selectPoint);
+  if (presentation.view === 'field')
+    return (
+      <CityReachResult
+        locale={locale}
+        field={presentation.field}
+        selection={presentation.fieldSelection}
+      />
+    );
   const numberFormatter = new Intl.NumberFormat(
     locale === 'zh' ? 'zh-CN' : 'en-US',
   );
@@ -63,10 +69,7 @@ export function IsolationResult({
     : null;
   const nearestNote =
     selection.distanceFromPointKm > 50
-      ? (presentation.view === 'field'
-          ? t.isolationFieldSelectionNote
-          : t.isolationNearestNote
-        ).replace(
+      ? t.isolationNearestNote.replace(
           '{d}',
           numberFormatter.format(Math.round(selection.distanceFromPointKm)),
         )
@@ -80,42 +83,9 @@ export function IsolationResult({
       aria-label={t.isolationResult}
     >
       <div className={styles.endpoint}>
-        <span className={styles.label}>
-          {presentation.view === 'field'
-            ? t.isolationFieldCenter
-            : t.selectedPoint}
-        </span>
+        <span className={styles.label}>{t.selectedPoint}</span>
         <em className={styles.place}>{displayIsolationName(city, locale)}</em>
         <small>{displayIsolationCountry(city, locale)}</small>
-        {presentation.view === 'field' ? (
-          <label className={fieldStyles.centerPicker}>
-            <span>{t.isolationFieldChooseCenter}</span>
-            <select
-              value={city.id}
-              onChange={(event) => {
-                const chosen = load.data.cities.find(
-                  (item) => item.id === event.target.value,
-                );
-                if (chosen) selectPoint(chosen.point);
-              }}
-            >
-              {load.data.focalIndices
-                .map((index) => load.data.cities[index]!)
-                .sort((a, b) =>
-                  displayIsolationName(a, locale).localeCompare(
-                    displayIsolationName(b, locale),
-                    locale === 'zh' ? 'zh-CN' : 'en',
-                  ),
-                )
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {displayIsolationName(item, locale)} ·{' '}
-                    {displayIsolationCountry(item, locale)}
-                  </option>
-                ))}
-            </select>
-          </label>
-        ) : null}
         {nearestNote ? <small>{nearestNote}</small> : null}
       </div>
       <dl className={styles.facts}>

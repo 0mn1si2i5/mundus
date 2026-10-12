@@ -91,7 +91,8 @@ import {
 } from './surnameLabelLayout';
 import { SurnameMapLabelLayer } from './SurnameMapLabelLayer';
 import { IsolationLayer } from './IsolationLayer';
-import { IsolationFieldLayer } from './IsolationFieldLayer';
+import { CityReachFieldLayer } from './CityReachFieldLayer';
+import type { CityReachFrame } from '../isolation/cityReachTypes';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
 import type { ReshapedMappingHandle } from './ReshapedLayer';
 import type { GlobePresentation } from '../modes/useModePresentation';
@@ -141,7 +142,7 @@ interface GlobeSceneProps {
   surnameDisplayMode: SurnameDisplayMode;
   isolation: IsolationGlobePresentation | null;
   reshaped: GlobePresentation['reshaped'];
-  onIsolationFieldRendered: (alpha: number) => void;
+  onIsolationFieldRendered: (frame: CityReachFrame) => void;
   cameraGestureCancelRef: MutableRefObject<(() => void) | null>;
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
   onSurnameLabelLayoutChange: (layout: {
@@ -163,6 +164,7 @@ interface GlobeSceneProps {
   onVectorDragEvidence: (alphaEvidence: string, orderEvidence: string) => void;
   onVectorSunlineHighlightChange: (evidence: string | null) => void;
   onVectorRenderEvidence: (vectorDraws: number, rendererCalls: number) => void;
+  vectorSurfaceRetryKey: number;
   vectorRenderSampleKey: number;
   pointerActiveRef: MutableRefObject<boolean>;
 }
@@ -192,6 +194,7 @@ export function GlobeScene({
   onVectorDragEvidence,
   onVectorSunlineHighlightChange,
   onVectorRenderEvidence,
+  vectorSurfaceRetryKey,
   vectorRenderSampleKey,
   diagnostics,
   pointerActiveRef,
@@ -281,6 +284,7 @@ export function GlobeScene({
   const innerWall = useRef<Mesh>(null);
   const innerMaterial = useRef<MeshBasicMaterial>(null);
   const [vectorReady, setVectorReady] = useState(false);
+  const [vectorFailed, setVectorFailed] = useState(false);
   const [vectorResources, setVectorResources] =
     useState<VectorGlobeResources | null>(null);
   // Keep the gesture gate synchronous with the pointer event. React state can
@@ -658,11 +662,21 @@ export function GlobeScene({
   const handleVectorStateChange = useCallback(
     (state: VectorGlobeState, resources: VectorGlobeResources | null) => {
       setVectorReady(state === 'ready');
+      setVectorFailed(state === 'error');
       setVectorResources(resources);
       onVectorStateChange(state, resources);
     },
     [onVectorStateChange],
   );
+  useEffect(() => {
+    if (!vectorFailed || isolation?.view !== 'field') return;
+    const frame = isolation.field.pendingFrame ?? isolation.field.frame;
+    if (frame)
+      isolation.field.rejectFrame(
+        frame,
+        new Error('City-reach land surface failed to load'),
+      );
+  }, [isolation, vectorFailed]);
 
   const relationOrigin = antipodeRelation?.origin.exactPoint ?? point;
   const relationAntipode =
@@ -1185,6 +1199,7 @@ export function GlobeScene({
           </Suspense>
         ) : (
           <VectorGlobeLayer
+            key={`vector-surface:${vectorSurfaceRetryKey}`}
             profile={profile}
             hoveredCountryId={hoveredCountry?.countryId ?? null}
             selectedCountryId={selectedCountry?.countryId ?? null}
@@ -1362,14 +1377,21 @@ export function GlobeScene({
         ) : null}
         {isolation ? <IsolationLayer isolation={isolation} /> : null}
         {isolation?.view === 'field' &&
-        isolation.field.status === 'ready' &&
+        isolation.field.metadata &&
         vectorResources ? (
-          <IsolationFieldLayer
+          <CityReachFieldLayer
+            key={`city-reach:${vectorRenderSampleKey}`}
             surface={vectorResources.surface}
-            sites={isolation.field.sites}
-            table={isolation.field.table!}
-            selectedCityId={isolation.cityId}
-            alpha={isolation.alpha}
+            metadata={isolation.field.metadata}
+            frame={isolation.field.frame}
+            pendingFrame={isolation.field.pendingFrame}
+            selectedOwnerIndex={
+              isolation.fieldSelection?.status === 'owned'
+                ? isolation.fieldSelection.ownerIndex
+                : null
+            }
+            commitFrame={isolation.field.commitFrame}
+            rejectFrame={isolation.field.rejectFrame}
             onRendered={onIsolationFieldRendered}
           />
         ) : null}

@@ -33,9 +33,6 @@ import {
 import type { RecordHolder } from '../isolation/isolationMetric';
 import { greatCircleArcPoints } from '../isolation/isolationGeometry';
 import type { IsolationView } from '../../state/urlState';
-import { useIsolationField } from '../isolation/useIsolationField';
-import { isolationFieldSelection } from '../isolation/isolationField';
-import type { IsolationFieldState } from '../isolation/useIsolationField';
 import type {
   ReshapedDataset,
   ReshapedPatchAtlas,
@@ -46,6 +43,13 @@ import {
   RESHAPED_DEFAULT_METRIC,
   type ReshapedMetricId,
 } from '../reshaped/metrics';
+import {
+  useCityReachField,
+  type CityReachFieldState,
+} from '../isolation/useCityReachField';
+import { cityReachPointSelection } from '../isolation/cityReachData';
+import type { CityReachPointSelection } from '../isolation/cityReachTypes';
+import type { CityReachLevel } from '../isolation/cityReachLevel';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -65,9 +69,10 @@ export interface GlobePresentation {
 export interface IsolationGlobePresentation {
   alpha: number;
   view: IsolationView;
-  field: IsolationFieldState;
+  field: CityReachFieldState;
+  fieldSelection: CityReachPointSelection | null;
   focalPoints: readonly GeoPoint[];
-  city: GeoPoint;
+  city: GeoPoint | null;
   competitor: GeoPoint | null;
   radiusKm: number | null;
   cityId: string;
@@ -113,7 +118,9 @@ export type ModePresentation =
       id: 'isolation';
       alpha: number;
       view: IsolationView;
-      field: IsolationFieldState & { retry: () => void };
+      reach: CityReachLevel;
+      field: CityReachFieldState;
+      fieldSelection: CityReachPointSelection | null;
       dataset: IsolationLoadState;
       selection: {
         cityIndex: number;
@@ -155,9 +162,16 @@ export function useModePresentation(
     DEFAULT_SURNAME_DISPLAY_MODE;
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
   const surnameData = useSurnameDataset(activeMode === 'surnames');
-  const isolationData = useIsolationDataset(activeMode === 'isolation');
-  const isolationAlpha = useAppStore((state) => state.isolationAlpha);
   const isolationView = useAppStore((state) => state.isolationView);
+  const isolationData = useIsolationDataset(
+    activeMode === 'isolation' && isolationView === 'city',
+  );
+  const isolationAlpha = useAppStore((state) => state.isolationAlpha);
+  const isolationReach = useAppStore((state) => state.isolationReach);
+  const field = useCityReachField(
+    isolationReach,
+    activeMode === 'isolation' && isolationView === 'field',
+  );
   const reshapedMetric = useAppStore(
     (state) => state.reshapedMetric ?? RESHAPED_DEFAULT_METRIC,
   );
@@ -167,11 +181,6 @@ export function useModePresentation(
   );
   const reshapedLoad = sharedReshapedData ?? localReshapedLoad;
   const selectedUnitId = useAppStore((state) => state.reshapedSelectedUnitId);
-  const field = useIsolationField(
-    isolationData.status === 'ready' ? isolationData.data : null,
-    isolationAlpha,
-    activeMode === 'isolation' && isolationView === 'field',
-  );
 
   const relation = useMemo(
     () =>
@@ -195,22 +204,15 @@ export function useModePresentation(
   const isolation = useMemo(() => {
     if (activeMode !== 'isolation' || isolationData.status !== 'ready')
       return null;
-    return computeIsolationSelection(
-      point,
-      isolationAlpha,
-      isolationData.data,
-      isolationView === 'field'
-        ? isolationFieldSelection(point, isolationData.data, field.sites)
+    return computeIsolationSelection(point, isolationAlpha, isolationData.data);
+  }, [activeMode, isolationAlpha, isolationData, point]);
+  const fieldSelection = useMemo(
+    () =>
+      field.metadata && field.frame
+        ? cityReachPointSelection(point, field.metadata, field.frame)
         : null,
-    );
-  }, [
-    activeMode,
-    field.sites,
-    isolationAlpha,
-    isolationData,
-    isolationView,
-    point,
-  ]);
+    [point, field.metadata, field.frame],
+  );
   switch (activeMode) {
     case null:
       return null;
@@ -244,7 +246,9 @@ export function useModePresentation(
         id: activeMode,
         alpha: isolationAlpha,
         view: isolationView,
+        reach: isolationReach,
         field,
+        fieldSelection,
         dataset: isolationData,
         selection: isolation
           ? {
@@ -323,9 +327,16 @@ export function useGlobePresentation(
   const surnameDisplayMode =
     useAppStore((state) => state.surnameDisplayMode) ??
     DEFAULT_SURNAME_DISPLAY_MODE;
-  const isolationData = useIsolationDataset(activeMode === 'isolation');
-  const isolationAlpha = useAppStore((state) => state.isolationAlpha);
   const isolationView = useAppStore((state) => state.isolationView);
+  const isolationData = useIsolationDataset(
+    activeMode === 'isolation' && isolationView === 'city',
+  );
+  const isolationAlpha = useAppStore((state) => state.isolationAlpha);
+  const isolationReach = useAppStore((state) => state.isolationReach);
+  const field = useCityReachField(
+    isolationReach,
+    activeMode === 'isolation' && isolationView === 'field',
+  );
   const reshapedMetric = useAppStore(
     (state) => state.reshapedMetric ?? RESHAPED_DEFAULT_METRIC,
   );
@@ -338,11 +349,6 @@ export function useGlobePresentation(
     reshapedMetric,
   );
   const reshapedData = sharedReshapedData ?? localReshapedData;
-  const field = useIsolationField(
-    isolationData.status === 'ready' ? isolationData.data : null,
-    isolationAlpha,
-    activeMode === 'isolation' && isolationView === 'field',
-  );
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
@@ -383,34 +389,51 @@ export function useGlobePresentation(
     [isolationData.data],
   );
   const isolation = useMemo<IsolationGlobePresentation | null>(() => {
-    if (activeMode !== 'isolation' || isolationData.status !== 'ready')
-      return null;
+    if (activeMode !== 'isolation') return null;
+    if (isolationView === 'field') {
+      const fieldSelection =
+        field.metadata && field.frame
+          ? cityReachPointSelection(point, field.metadata, field.frame)
+          : null;
+      const city =
+        fieldSelection?.status === 'owned' ? fieldSelection.city : null;
+      return {
+        alpha: isolationAlpha,
+        view: isolationView,
+        field,
+        fieldSelection,
+        focalPoints:
+          field.metadata?.cities
+            .filter((candidate) =>
+              field.frame?.ownerIds.has(candidate.ownerIndex),
+            )
+            .map((candidate) => candidate.centrePoint ?? candidate.point) ?? [],
+        city: city?.centrePoint ?? city?.point ?? null,
+        competitor: null,
+        radiusKm: null,
+        cityId: city ? String(city.id) : '',
+        competitorId: '',
+        arcStatus: 'none',
+      };
+    }
+    if (isolationData.status !== 'ready') return null;
     const dataset = isolationData.data;
-    const selection = computeIsolationSelection(
-      point,
-      isolationAlpha,
-      dataset,
-      isolationView === 'field'
-        ? isolationFieldSelection(point, dataset, field.sites)
-        : null,
-    );
+    const selection = computeIsolationSelection(point, isolationAlpha, dataset);
     if (!selection) return null;
     const city = dataset.cities[selection.cityIndex];
     if (!city) return null;
     const competitor = selection.competitor;
     const competitorCity = competitor ? dataset.cities[competitor.index] : null;
-    const arcStatus =
-      isolationView === 'field'
-        ? 'none'
-        : !competitorCity
-          ? 'none'
-          : greatCircleArcPoints(city.point, competitorCity.point).length > 1
-            ? 'drawn'
-            : 'antipodal';
+    const arcStatus = !competitorCity
+      ? 'none'
+      : greatCircleArcPoints(city.point, competitorCity.point).length > 1
+        ? 'drawn'
+        : 'antipodal';
     return {
       alpha: isolationAlpha,
       view: isolationView,
       field,
+      fieldSelection: null,
       focalPoints,
       city: city.point,
       competitor: competitor ? competitorCity!.point : null,

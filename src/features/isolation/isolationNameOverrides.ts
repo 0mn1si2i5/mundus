@@ -1,4 +1,4 @@
-/** Reviewed GHSL name corrections, keyed by GHSL id. Owner-approved 2026-10-08. */
+/** Reviewed GHSL name corrections, keyed by GHSL id. Owner-approved 2026-10-08 and 2026-10-12. */
 export interface IsolationNameOverride {
   /** Reviewed English display name when the GHSL main name misleads. */
   nameEn?: string;
@@ -105,7 +105,6 @@ export const ISOLATION_NAME_OVERRIDES: Readonly<
   '4407': { nameZh: '非斯' }, // Fez
   '9251': { nameZh: '滨海新区' }, // Binhai New Area
   '4694': { nameZh: '巴淡' }, // Batam City
-  '4478': { nameZh: '莱昂' }, // León
   '4034': { nameZh: '纳杰夫' }, // Al-Najaf
   '9860': { nameZh: '吉扬布尔' }, // Gyanpur
   '40': { nameZh: '塞雷昆达' }, // Serrekunda
@@ -120,7 +119,6 @@ export const ISOLATION_NAME_OVERRIDES: Readonly<
   '5500': { nameZh: '仙台' }, // Sendai
   '1063': { nameZh: '塔科拉迪' }, // Takoradi
   '7991': { nameZh: '萨哈兰布尔' }, // Saharanpur
-  '564': { nameZh: '卡宾达' }, // Cabinda
   '7181': { nameZh: '明尼阿波利斯－圣保罗' }, // Minneapolis [Saint Paul]
   '4644': { nameZh: '下诺夫哥罗德' }, // Nizhny Novgorod
   '5294': { nameZh: '岘港' }, // Đà Nẵng
@@ -148,4 +146,63 @@ export const ISOLATION_NAME_OVERRIDES: Readonly<
   '6525': { nameZh: '萨尔韦斯坦' }, // Sarvestan
   '5215': { nameZh: '圣路易斯波托西' }, // San Luis Potosí
   '9676': { nameZh: '科拉切尔' }, // Colachel
+  // Owner-approved explanatory label; GHSL's main name is empty, not a verified place name.
+  '4893': { nameEn: 'Unnamed urban centre (GHSL 4893)', nameZh: null },
+  // D. Owner-reviewed 2026-10-12: county, state and country disambiguation.
+  '8903': { nameZh: '承德' }, // reviewed name distinction: Chengde (China)
+  '9011': { nameEn: 'Chengde County', nameZh: '承德县' }, // county centre: Chengde (China)
+  '10101': { nameZh: '岳阳' }, // reviewed name distinction: Yueyang (China)
+  '10151': { nameEn: 'Yueyang County', nameZh: '岳阳县' }, // county centre: Yueyang (China)
+  '10335': { nameZh: '衡阳' }, // reviewed name distinction: Hengyang (China)
+  '10285': { nameEn: 'Hengyang County', nameZh: '衡阳县' }, // county centre: Hengyang (China)
+  '9757': { nameZh: '东营' }, // reviewed name distinction: Dongying (China)
+  '9809': { nameEn: 'Guangli', nameZh: '广利' }, // Guangli fishing port: Dongying (China)
+  '6682': {
+    nameEn: 'Springfield (Missouri)',
+    nameZh: '斯普林菲尔德（密苏里州）',
+  }, // state distinction: Springfield (United States)
+  '8225': {
+    nameEn: 'Springfield (Massachusetts)',
+    nameZh: '斯普林菲尔德（马萨诸塞州）',
+  }, // state distinction: Springfield (United States)
+  '5816': { nameZh: '伦敦' }, // reviewed name distinction: London (United Kingdom)
+  '2255': { nameEn: 'London (Canada)', nameZh: '伦敦（加拿大）' }, // reviewed name distinction: London (Canada)
+  '6080': { nameZh: '剑桥' }, // reviewed name distinction: Cambridge (United Kingdom)
+  '2549': { nameEn: 'Cambridge (Canada)', nameZh: '剑桥（加拿大）' }, // reviewed name distinction: Cambridge (Canada)
+  '3888': { nameZh: '伯明翰' }, // reviewed name distinction: Birmingham (United Kingdom)
+  '6862': { nameEn: 'Birmingham (United States)', nameZh: '伯明翰（美国）' }, // reviewed name distinction: Birmingham (United States)
+  '5071': { nameZh: '巴塞罗那' }, // reviewed name distinction: Barcelona (Spain)
+  '4175': { nameEn: 'Barcelona (Venezuela)', nameZh: '巴塞罗那（委内瑞拉）' }, // reviewed name distinction: Barcelona (Venezuela)
+  '1186': { nameZh: '科隆' }, // reviewed name distinction: Cologne (Germany)
+  '203': { nameEn: 'Colón (Panama)', nameZh: '科隆（巴拿马）' }, // reviewed name distinction: Colón (Panama)
+  '5194': { nameZh: '巴里' }, // reviewed name distinction: Bari (Italy)
+  '3110': { nameEn: 'Barrie (Canada)', nameZh: '巴里（加拿大）' }, // reviewed name distinction: Barrie (Canada)
+  '1756': { nameEn: 'Manzanillo (Cuba)', nameZh: '曼萨尼约（古巴）' }, // reviewed name distinction: Manzanillo (Cuba)
+  '2672': { nameEn: 'Manzanillo (Mexico)', nameZh: '曼萨尼约（墨西哥）' }, // reviewed name distinction: Manzanillo (México)
+  '1031': { nameEn: 'Hamilton (New Zealand)', nameZh: '汉密尔顿（新西兰）' }, // reviewed name distinction: Hamilton (New Zealand)
+  '2679': { nameEn: 'Hamilton (Canada)', nameZh: '汉密尔顿（加拿大）' }, // reviewed name distinction: Hamilton (Canada)
+  '2335': { nameEn: 'Cordoba (Argentina)', nameZh: '科尔多瓦（阿根廷）' }, // reviewed name distinction: Cordoba (Argentina)
+  '2812': { nameEn: 'Córdoba (Spain)', nameZh: '科尔多瓦（西班牙）' }, // reviewed name distinction: Córdoba (Spain)
+  '6316': { nameEn: 'Córdoba (Mexico)', nameZh: '科尔多瓦（墨西哥）' }, // reviewed name distinction: Córdoba (México)
+  '2087': { nameEn: 'Santa Rosa (United States)', nameZh: '圣罗莎（美国）' }, // reviewed name distinction: Santa Rosa (United States)
+  '2871': { nameEn: 'Santa Rosa (Argentina)', nameZh: '圣罗莎（阿根廷）' }, // reviewed name distinction: Santa Rosa (Argentina)
+  '648': { nameEn: 'Santa Maria (United States)', nameZh: '圣玛丽亚（美国）' }, // reviewed name distinction: Santa Maria (United States)
+  '4014': { nameEn: 'Santa Maria (Brazil)', nameZh: '圣玛丽亚（巴西）' }, // reviewed name distinction: Santa Maria (Brazil)
+  '3275': { nameEn: 'Cartagena (Colombia)', nameZh: '卡塔赫纳（哥伦比亚）' }, // reviewed name distinction: Cartagena (Colombia)
+  '4295': { nameEn: 'Cartagena (Spain)', nameZh: '卡塔赫纳（西班牙）' }, // reviewed name distinction: Cartagena (Spain)
+  '199': { nameEn: 'León (Nicaragua)', nameZh: '莱昂（尼加拉瓜）' }, // reviewed name distinction: León (Nicaragua)
+  '4478': { nameEn: 'León (Mexico)', nameZh: '莱昂（墨西哥）' }, // reviewed name distinction: León (México)
+  '564': { nameEn: 'Cabinda (Angola)', nameZh: '卡宾达（安哥拉）' }, // reviewed name distinction: Cabinda (Angola)
+  '5331': {
+    nameEn: 'Kabinda (Democratic Republic of the Congo)',
+    nameZh: '卡宾达（刚果（金））',
+  }, // reviewed name distinction: Kabinda (Democratic Republic of the Congo)
+  '3651': { nameEn: 'Formosa (Argentina)', nameZh: '福莫萨（阿根廷）' }, // reviewed name distinction: Formosa (Argentina)
+  '6413': { nameEn: 'Formosa (Brazil)', nameZh: '福莫萨（巴西）' }, // reviewed name distinction: Formosa (Brazil)
+  '2930': { nameEn: 'San Carlos (Venezuela)', nameZh: '圣卡洛斯（委内瑞拉）' }, // reviewed name distinction: San Carlos (Venezuela)
+  '6638': { nameEn: 'São Carlos (Brazil)', nameZh: '圣卡洛斯（巴西）' }, // reviewed name distinction: São Carlos (Brazil)
+  '5796': { nameEn: 'Lincoln (United Kingdom)', nameZh: '林肯（英国）' }, // reviewed name distinction: Lincoln (United Kingdom)
+  '6652': { nameEn: 'Lincoln (United States)', nameZh: '林肯（美国）' }, // reviewed name distinction: Lincoln (United States)
+  '1445': { nameEn: 'Bharatpur (Nepal)', nameZh: '婆罗多布尔（尼泊尔）' }, // reviewed name distinction: Bharatpur (Nepal)
+  '8544': { nameEn: 'Bharatpur (India)', nameZh: '婆罗多布尔（印度）' }, // reviewed name distinction: Bharatpur (India)
 };

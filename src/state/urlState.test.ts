@@ -8,6 +8,10 @@ import {
   type ShareableState,
 } from './urlState';
 import { ALPHA_DEFAULT } from '../features/isolation/isolationMetric';
+import {
+  CITY_REACH_DEFAULT,
+  CITY_REACH_LEVELS,
+} from '../features/isolation/cityReachLevel';
 
 describe('URL state codec', () => {
   const nowMs = Date.parse('2026-07-14T09:37:00Z');
@@ -23,6 +27,7 @@ describe('URL state codec', () => {
     surnameDisplayMode: DEFAULT_SURNAME_DISPLAY_MODE,
     isolationAlpha: ALPHA_DEFAULT,
     isolationView: 'city',
+    isolationReach: CITY_REACH_DEFAULT,
   };
 
   describe('parseUrlState', () => {
@@ -102,6 +107,7 @@ describe('URL state codec', () => {
         activeMode: 'sunline',
         isolationAlpha: ALPHA_DEFAULT,
         isolationView: 'city',
+        isolationReach: CITY_REACH_DEFAULT,
       });
     });
 
@@ -342,6 +348,7 @@ describe('URL state codec', () => {
         surnameDisplayMode: 'local',
         isolationAlpha: ALPHA_DEFAULT,
         isolationView: 'city',
+        isolationReach: CITY_REACH_DEFAULT,
       });
     });
 
@@ -390,6 +397,60 @@ describe('URL state codec', () => {
         activeMode: null,
         point: { latitude: 12.3457, longitude: -98.7654 },
       });
+    });
+
+    it('round-trips every approved reach level independently of alpha', () => {
+      for (const isolationReach of CITY_REACH_LEVELS) {
+        const state: ShareableState = {
+          ...lobby,
+          activeMode: 'isolation',
+          isolationView: 'field',
+          isolationAlpha: 0.37,
+          isolationReach,
+        };
+        const query = serializeUrlState(state);
+        expect(new URLSearchParams(query).get('reach')).toBe(
+          isolationReach === CITY_REACH_DEFAULT ? null : String(isolationReach),
+        );
+        expect(new URLSearchParams(query).get('alpha')).toBe('0.37');
+        expect(parseUrlState(query, nowMs)).toEqual(state);
+      }
+    });
+
+    it('defaults invalid reach values without clamping and ignores reach outside field', () => {
+      for (const value of [
+        '',
+        'abc',
+        'NaN',
+        'Infinity',
+        '0',
+        '0.24',
+        '3',
+        '17',
+        '-1',
+      ]) {
+        expect(
+          parseUrlState(
+            `?v=2&mode=isolation&view=field&reach=${encodeURIComponent(value)}`,
+            nowMs,
+          ).isolationReach,
+        ).toBe(CITY_REACH_DEFAULT);
+      }
+      for (const query of [
+        '?v=2&mode=isolation&reach=8',
+        '?v=2&mode=sunline&view=field&reach=8',
+        '?v=2&view=field&reach=8',
+      ]) {
+        expect(parseUrlState(query, nowMs).isolationReach).toBe(
+          CITY_REACH_DEFAULT,
+        );
+      }
+      const state = {
+        ...lobby,
+        activeMode: 'isolation' as const,
+        isolationReach: 8 as const,
+      };
+      expect(serializeUrlState(state)).toBe('?mode=isolation&v=2');
     });
   });
 });

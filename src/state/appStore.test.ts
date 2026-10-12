@@ -201,6 +201,7 @@ describe('shell mode state', () => {
       cameraFocusIntent: { side: 'free', target: null },
       sunlinePlaying: false,
       isolationAlpha: 0.5,
+      isolationReach: 4,
       hoveredCountry: null,
     });
   });
@@ -222,6 +223,18 @@ describe('shell mode state', () => {
 
     useAppStore.getState().setIsolationAlpha(Number.NaN);
     expect(useAppStore.getState().isolationAlpha).toBe(0.5);
+  });
+
+  it('keeps reach independent of alpha and accepts only approved levels', () => {
+    useAppStore.getState().setIsolationAlpha(0.37);
+    useAppStore.getState().setIsolationReach(8);
+    expect(useAppStore.getState().isolationReach).toBe(8);
+    expect(useAppStore.getState().isolationAlpha).toBe(0.37);
+    for (const invalid of [3, 17, Number.NaN, Number.POSITIVE_INFINITY]) {
+      useAppStore.getState().setIsolationReach(invalid);
+      expect(useAppStore.getState().isolationReach).toBe(4);
+      expect(useAppStore.getState().isolationAlpha).toBe(0.37);
+    }
   });
 
   it('exitMode returns to the lobby and preserves point and camera intent', () => {

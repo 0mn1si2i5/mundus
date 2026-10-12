@@ -18,6 +18,11 @@ import {
   isReshapedMetric,
   type ReshapedMetricId,
 } from '../features/reshaped/metrics';
+import {
+  CITY_REACH_DEFAULT,
+  parseCityReachParam,
+  type CityReachLevel,
+} from '../features/isolation/cityReachLevel';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
@@ -45,6 +50,7 @@ export interface ShareableState {
   isolationAlpha: number;
   isolationView: IsolationView;
   reshapedMetric?: ReshapedMetricId;
+  isolationReach: CityReachLevel;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
@@ -121,6 +127,10 @@ export function parseUrlState(
     activeMode === 'reshaped' && isReshapedMetric(rawReshapedMetric)
       ? rawReshapedMetric
       : RESHAPED_DEFAULT_METRIC;
+  const isolationReach =
+    activeMode === 'isolation' && isolationView === 'field'
+      ? parseCityReachParam(params.get('reach'))
+      : CITY_REACH_DEFAULT;
 
   return {
     activeMode,
@@ -138,6 +148,7 @@ export function parseUrlState(
     isolationAlpha,
     isolationView,
     ...(activeMode === 'reshaped' ? { reshapedMetric } : {}),
+    isolationReach,
   };
 }
 
@@ -197,6 +208,13 @@ export function serializeUrlState(state: ShareableState): string {
       ) {
         params.set('metric', state.reshapedMetric ?? RESHAPED_DEFAULT_METRIC);
       }
+    }
+    if (
+      state.activeMode === 'isolation' &&
+      state.isolationView === 'field' &&
+      state.isolationReach !== CITY_REACH_DEFAULT
+    ) {
+      params.set('reach', String(state.isolationReach));
     }
     params.set('v', '2');
   }

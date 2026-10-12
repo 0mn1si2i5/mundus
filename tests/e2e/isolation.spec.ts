@@ -1,5 +1,14 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import {
+  decodeOwnerPng,
+  decodeDensityPng,
+} from '../../scripts/city-reach/png.mjs';
+import type {
+  CityReachCity,
+  CityReachManifest,
+  CityReachTextureAsset,
+} from '../../src/features/isolation/cityReachTypes';
 import {
   globeRegion,
   globeCenter,
@@ -8,67 +17,226 @@ import {
   switchMode,
 } from './helpers';
 
-const asset = JSON.parse(
-  readFileSync(
-    new URL('../../src/data/generated/urban-isolation.json', import.meta.url),
-    'utf8',
-  ),
-) as {
-  strings: string[];
-  cities: Array<
-    [
-      string,
-      number,
-      number,
-      number,
-      number,
-      number | null,
-      number,
-      number | null,
-      boolean,
-    ]
-  >;
-  holders: Array<Array<[number, number]> | null>;
-};
-
-// Independent browser acceptance calculation from the reviewed compact asset.
-function expectedRegionCity(
-  latitude: number,
-  longitude: number,
-  alpha: number,
-) {
-  const radians = Math.PI / 180;
-  const candidates = asset.cities
-    .filter((row) => row[8])
-    .sort((a, b) => b[3] - a[3] || a[0].localeCompare(b[0]));
-  let minimum = Infinity;
-  let winner = '';
-  for (const city of candidates) {
-    const index = asset.cities.indexOf(city);
-    const holder = asset.holders[index]?.find(
-      ([other]) => asset.cities[other]![3] >= city[3] * alpha,
-    );
-    if (!holder || holder[1] <= 0) continue;
-    const lat = city[1] / 1e4;
-    const lon = city[2] / 1e4;
-    const a =
-      Math.sin(((latitude - lat) * radians) / 2) ** 2 +
-      Math.cos(latitude * radians) *
-        Math.cos(lat * radians) *
-        Math.sin(((longitude - lon) * radians) / 2) ** 2;
-    const score =
-      (2 * 6371.0088 * Math.asin(Math.sqrt(Math.min(1, a)))) / holder[1];
-    if (score < minimum) {
-      minimum = score;
-      winner = city[0];
-    }
-  }
-  return winner;
+type ReachLevel = 4 | 8;
+interface ReachTile extends CityReachTextureAsset {
+  owners: Uint16Array;
+  density: Uint8Array;
+}
+interface ReachAssets {
+  manifest: CityReachManifest;
+  cities: CityReachCity[];
+  level: ReachLevel;
+  tiles: ReachTile[];
 }
 
-test('loads the Urban Proximity asset only after entering the mode', async ({
+// Read only when a field test starts: missing new assets must fail field tests,
+// while the existing city tests remain independently collectable.
+function readReachAssets(level: ReachLevel = 4): ReachAssets {
+  const manifest = JSON.parse(
+    readFileSync(
+      new URL('../../src/data/manifests/city-reach.json', import.meta.url),
+      'utf8',
+    ),
+  ) as CityReachManifest;
+  const { cities } = JSON.parse(
+    readFileSync(
+      new URL(`../../${manifest.cityAsset.path}`, import.meta.url),
+      'utf8',
+    ),
+  ) as { cities: CityReachCity[] };
+  const tiles = manifest.ownershipAssets[level].low.map((asset) => {
+    // Independent Node PNG parser, not the browser's decoder or selection code.
+    const decoded = decodeOwnerPng(
+      readFileSync(new URL(`../../${asset.path}`, import.meta.url)),
+    ) as {
+      width: number;
+      height: number;
+      owners: Uint16Array;
+    };
+    expect(decoded.width).toBe(asset.width);
+    expect(decoded.height).toBe(asset.height);
+    const densityAsset = manifest.densityAsset;
+    const density = decodeDensityPng(
+      readFileSync(new URL(`../../${densityAsset.path}`, import.meta.url)),
+    );
+    expect(density.width).toBe(asset.width);
+    expect(density.height).toBe(asset.height);
+    return { ...asset, owners: decoded.owners, density: density.density };
+  });
+  expect(cities).toHaveLength(manifest.recordCount);
+  return { manifest, cities, level, tiles };
+}
+
+function sampledOwner(
+  assets: ReachAssets,
+  point: { latitude: number; longitude: number },
+) {
+  const { grid } = assets.manifest;
+  const stride = assets.manifest.qualityTiers.low.stride;
+  const sourceRow = Math.floor((grid.north - point.latitude) / grid.step);
+  const unwrappedColumn = Math.floor((point.longitude - grid.west) / grid.step);
+  const sourceColumn = grid.wrapLongitude
+    ? ((unwrappedColumn % grid.width) + grid.width) % grid.width
+    : unwrappedColumn;
+  if (
+    sourceRow < 0 ||
+    sourceRow >= grid.height ||
+    sourceColumn < 0 ||
+    sourceColumn >= grid.width
+  )
+    throw new Error('Browser selected point outside the real city-reach grid');
+  const row = Math.floor(sourceRow / stride);
+  const column = Math.floor(sourceColumn / stride);
+  const tile = assets.tiles.find(
+    (entry) =>
+      column >= entry.x &&
+      column < entry.x + entry.width &&
+      row >= entry.y &&
+      row < entry.y + entry.height,
+  );
+  if (!tile)
+    throw new Error('Real city-reach PNG has no sample for selected point');
+  return tile.owners[(row - tile.y) * tile.width + column - tile.x]!;
+}
+
+function pointInReachCell(
+  assets: ReachAssets,
+  owner: number,
+  populatedLand = false,
+) {
+  const { grid, qualityTiers } = assets.manifest;
+  for (const tile of assets.tiles) {
+    const index = tile.owners.findIndex(
+      (value, offset) =>
+        value === owner && (!populatedLand || tile.density[offset] !== 255),
+    );
+    if (index < 0) continue;
+    const row = tile.y + Math.floor(index / tile.width);
+    const column = tile.x + (index % tile.width);
+    const stride = qualityTiers.low.stride;
+    return {
+      latitude: Number(
+        (
+          grid.north -
+          Math.min(grid.height - 0.5, row * stride + stride / 2) * grid.step
+        ).toFixed(4),
+      ),
+      longitude: Number(
+        (grid.west + (column * stride + stride / 2) * grid.step).toFixed(4),
+      ),
+    };
+  }
+  throw new Error(
+    `Required real city-reach fixture has no owner code ${owner}`,
+  );
+}
+
+function fieldUrl(
+  point: { latitude: number; longitude: number },
+  level: ReachLevel = 4,
+) {
+  const params = new URLSearchParams({
+    mode: 'isolation',
+    view: 'field',
+    v: '2',
+    point: `${point.latitude},${point.longitude}`,
+  });
+  if (level !== 4) params.set('reach', String(level));
+  return `./?${params}`;
+}
+
+function selectedPoint(page: Page) {
+  const value = new URL(page.url()).searchParams.get('point');
+  if (!value) return { latitude: 31.2304, longitude: 121.4737 };
+  const [latitude, longitude] = value.split(',').map(Number);
+  return { latitude: latitude!, longitude: longitude! };
+}
+
+function reachResult(page: Page) {
+  return page.getByRole('complementary', { name: '城市邻近性结果' });
+}
+function reachPanel(page: Page) {
+  return page.locator('[data-mode-panel="isolation-controls"]');
+}
+async function expandReachControls(page: Page) {
+  const panel = reachPanel(page);
+  // Mode controls load lazily; wait for the panel before reading its state.
+  await expect(panel).toBeVisible();
+  const expand = page.getByRole('button', { name: '展开城市邻近性控件' });
+  if ((await panel.getAttribute('data-expanded')) === 'false')
+    await expand.click();
+  await expect(panel).toHaveAttribute('data-expanded', 'true');
+}
+async function expectReachRendered(page: Page, assets: ReachAssets) {
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-isolation-field-state', 'ready');
+  await expect(globe).toHaveAttribute(
+    'data-isolation-field-rendered-level',
+    String(assets.level),
+  );
+  await expect(globe).toHaveAttribute('data-isolation-field-quality', 'low');
+  const owners = new Set<number>();
+  for (const tile of assets.tiles)
+    for (const owner of tile.owners) owners.add(owner);
+  owners.delete(0);
+  owners.delete(65535);
+  await expect(globe).toHaveAttribute(
+    'data-isolation-field-site-count',
+    String(owners.size),
+  );
+}
+async function expectSampledOwner(
+  page: Page,
+  assets: ReachAssets,
+  point = selectedPoint(page),
+) {
+  const ownerIndex = sampledOwner(assets, point);
+  const globe = globeRegion(page);
+  const result = reachResult(page);
+  if (ownerIndex === 0 || ownerIndex === 65535) {
+    const status = ownerIndex === 0 ? 'unreachable' : 'disputed';
+    await expect(result).toHaveAttribute('data-city-reach-selection', status);
+    await expect(result).not.toHaveAttribute('data-city-reach-owner-id', /.+/);
+    await expect(globe).not.toHaveAttribute(
+      'data-isolation-field-owner-id',
+      /.+/,
+    );
+    await expect(globe).toHaveAttribute('data-isolation-city-id', '');
+    await expect(
+      result.getByText(
+        ownerIndex === 0 ? '无城市可达；模型不计渡轮' : '争议地区，不显示归属',
+        { exact: true },
+      ),
+    ).toBeVisible();
+    return null;
+  }
+  const city = assets.cities[ownerIndex - 1]!;
+  expect(city.ownerIndex).toBe(ownerIndex);
+  expect(city.country.zh).not.toBeNull();
+  await expect(result).toHaveAttribute('data-city-reach-selection', 'owned');
+  await expect(result).toHaveAttribute(
+    'data-city-reach-owner-id',
+    String(city.id),
+  );
+  await expect(globe).toHaveAttribute(
+    'data-isolation-field-owner-id',
+    String(city.id),
+  );
+  await expect(globe).toHaveAttribute(
+    'data-isolation-city-id',
+    String(city.id),
+  );
+  await expect(result.locator('em')).toHaveText(city.name.zh ?? city.name.en);
+  await expect(
+    result.locator('em').locator('..').locator(':scope > small'),
+  ).toHaveText(city.country.zh!);
+  return city;
+}
+
+test('loads city and traffic-region assets only after entering their view', async ({
   page,
 }) => {
+  const assets = readReachAssets();
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
   await page.goto('./');
@@ -76,11 +244,15 @@ test('loads the Urban Proximity asset only after entering the mode', async ({
     page.getByRole('heading', { name: '选择一种观察' }),
   ).toBeVisible();
   expect(
-    requests.filter((url) => url.includes('urban-isolation')),
+    requests.filter(
+      (url) => url.includes('urban-isolation') || url.includes('city-reach'),
+    ),
   ).toHaveLength(0);
   await switchMode(page, '地球另一端');
   expect(
-    requests.filter((url) => url.includes('urban-isolation')),
+    requests.filter(
+      (url) => url.includes('urban-isolation') || url.includes('city-reach'),
+    ),
   ).toHaveLength(0);
   await switchMode(page, '城市邻近性');
   await expect
@@ -88,58 +260,75 @@ test('loads the Urban Proximity asset only after entering the mode', async ({
       () => requests.filter((url) => url.includes('urban-isolation')).length,
     )
     .toBe(1);
+  expect(requests.filter((url) => url.includes('city-reach'))).toHaveLength(0);
+  await expandReachControls(page);
+  await reachPanel(page)
+    .getByRole('button', { name: '全球分区', exact: true })
+    .click();
+  await expectReachRendered(page, assets);
+  expect(
+    requests.filter(
+      (url) => url.includes('/city-reach/') && url.endsWith('.png'),
+    ),
+  ).toHaveLength(assets.tiles.length + 1);
+  expect(
+    requests.filter((url) => url.endsWith('/density-low.png')),
+  ).toHaveLength(1);
 });
 
-test('global regions load on demand, follow alpha, and preserve sharing and history', async ({
+test('traffic regions change k with the keyboard while preserving alpha, sharing, reload and history', async ({
   page,
-}, testInfo) => {
-  const workers: string[] = [];
-  page.on('worker', (worker) => workers.push(worker.url()));
+}) => {
+  const four = readReachAssets();
+  const eight = readReachAssets(8);
   const errors: string[] = [];
+  const densityRequests: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().endsWith('/density-low.png'))
+      densityRequests.push(request.url());
+  });
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./?mode=isolation&point=1.35%2C103.84&v=2');
   await expect(globeRegion(page)).toHaveAttribute(
     'data-isolation-city-id',
     /.+/,
   );
-  expect(
-    workers.filter((url) => url.includes('isolationField.worker')),
-  ).toHaveLength(0);
-  if (testInfo.project.name === 'mobile')
-    await page.getByRole('button', { name: '展开城市邻近性控件' }).click();
-  await page.getByRole('button', { name: '全球分区', exact: true }).click();
+  await expandReachControls(page);
+  await reachPanel(page)
+    .getByRole('button', { name: '全球分区', exact: true })
+    .click();
+  await expectReachRendered(page, four);
+  const levels = reachPanel(page).getByRole('group', {
+    name: '投射力 k',
+    exact: true,
+  });
+  await expect(
+    levels.getByRole('radio', { name: '4', exact: true }),
+  ).toBeChecked();
+  await levels.getByRole('radio', { name: '4', exact: true }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(
+    levels.getByRole('radio', { name: '8', exact: true }),
+  ).toBeChecked();
+  await expectReachRendered(page, eight);
+  expect(densityRequests).toHaveLength(1);
   await expect(globeRegion(page)).toHaveAttribute(
-    'data-isolation-field-rendered-alpha',
+    'data-isolation-alpha',
     '0.50',
   );
-  await expect(globeRegion(page)).toHaveAttribute(
-    'data-isolation-field-site-count',
-    '524',
-  );
-  expect(
-    workers.filter((url) => url.includes('isolationField.worker')),
-  ).toHaveLength(1);
-  await expect(page).toHaveURL(/view=field/);
-  const slider = page.getByRole('slider', { name: '规模门槛 α' });
-  await slider.focus();
-  await slider.press('End');
-  await expect(globeRegion(page)).toHaveAttribute(
-    'data-isolation-field-rendered-alpha',
-    '1.00',
-  );
-  await expect(globeRegion(page)).toHaveAttribute(
-    'data-isolation-field-site-count',
-    '523',
-  );
+  await expect(page).toHaveURL(/reach=8/);
+  expect(new URL(page.url()).searchParams.get('alpha')).toBeNull();
   await page.getByRole('button', { name: '分享', exact: true }).click();
   const share = page.getByRole('dialog');
   await expect(share.getByRole('textbox')).toHaveValue(/view=field/);
-  await expect(share.getByRole('textbox')).toHaveValue(/alpha=1.00/);
+  await expect(share.getByRole('textbox')).toHaveValue(/reach=8/);
+  await expect(share.getByRole('textbox')).not.toHaveValue(/alpha=/);
   await share.getByRole('button', { name: '关闭' }).click();
   await page.reload();
+  await expectReachRendered(page, eight);
   await expect(globeRegion(page)).toHaveAttribute(
-    'data-isolation-field-rendered-alpha',
-    '1.00',
+    'data-isolation-alpha',
+    '0.50',
   );
   await page.goBack();
   await expect(globeRegion(page)).toHaveAttribute(
@@ -153,122 +342,283 @@ test('global regions load on demand, follow alpha, and preserve sharing and hist
   expect(errors).toEqual([]);
 });
 
-test('global regions select the weighted owner through the globe and all centres through the keyboard', async ({
+test('traffic regions match the actual PNG after globe selection and keep keyboard centre inspection separate', async ({
   page,
 }) => {
+  const assets = readReachAssets();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./?mode=isolation&point=1.35%2C103.84&view=field&v=2');
-  const globe = globeRegion(page);
-  await expect(globe).toHaveAttribute(
-    'data-isolation-field-rendered-alpha',
-    '0.50',
-  );
+  await expectReachRendered(page, assets);
+  // Initial camera faces the Gulf of Guinea. Rotate toward inland central Africa
+  // before testing a territory selection; the gulf itself has no city owner.
+  await globeRegion(page).press('Shift+ArrowLeft');
   const center = await globeCenter(page);
   await page.mouse.click(center.x, center.y);
   await expect(page).not.toHaveURL(/point=1.35%2C103.84/);
-  const [latitude, longitude] = new URL(page.url()).searchParams
-    .get('point')!
-    .split(',')
-    .map(Number);
-  await expect(globe).toHaveAttribute(
-    'data-isolation-city-id',
-    expectedRegionCity(latitude!, longitude!, 0.5),
+  const city = await expectSampledOwner(page, assets);
+  expect(city).not.toBeNull();
+  const url = page.url();
+  const picker = reachResult(page).getByRole('combobox', {
+    name: '中心检视（不改变地点归属）',
+    exact: true,
+  });
+  const reviewed = assets.cities.filter(
+    (candidate) =>
+      candidate.name.en.trim() &&
+      candidate.country.en.trim() &&
+      candidate.country.zh?.trim(),
   );
-  const picker = page.getByRole('combobox', { name: '选择中心城市' });
-  await expect(picker.locator('option')).toHaveCount(524);
+  await expect(picker.locator('option')).toHaveCount(reviewed.length + 1);
   await picker.focus();
-  await picker.press('Home');
-  await picker.press('ArrowDown');
-  await picker.press('Enter');
+  // Native typeahead emits real input/change events even in headless macOS,
+  // where the select's OS popup does not commit synthetic arrow-key changes.
+  const fallbackCity = assets.cities.find((candidate) => candidate.id === 6729);
+  expect(fallbackCity?.name).toEqual({ en: 'Ubiaja', zh: null });
+  await page.keyboard.press('u');
+  await expect(picker).toHaveValue('6729');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Escape');
   const chosen = await picker.inputValue();
-  await expect(globe).toHaveAttribute('data-isolation-city-id', chosen);
-  const city = asset.cities.find((row) => row[0] === chosen)!;
-  await expect(page.getByLabel('城市邻近性结果').locator('em')).toHaveText(
-    asset.strings[city[5]!]!,
-  );
+  await expect(
+    reachResult(page).locator('[data-city-reach-inspected-id]'),
+  ).toHaveAttribute('data-city-reach-inspected-id', chosen);
+  await expectSampledOwner(page, assets);
+  await expect(page).toHaveURL(url);
 });
 
-test('global regions retain the largest centre without claiming an undefined region', async ({
+test('traffic regions distinguish global roots, disputed land and unreachable land from real assets', async ({
   page,
 }) => {
-  await page.goto(
-    './?mode=isolation&point=22.881%2C113.6067&alpha=1.00&view=field&v=2',
+  const assets = readReachAssets();
+  const root = assets.cities.find((city) => city.status === 'root');
+  expect(root).toBeDefined();
+  expect(root!.population).toBe(
+    Math.max(...assets.cities.map((city) => city.population)),
   );
-  await expect(globeRegion(page)).toHaveAttribute(
-    'data-isolation-field-rendered-alpha',
-    '1.00',
-  );
-  await expect(globeRegion(page)).toHaveAttribute(
-    'data-isolation-field-site-count',
-    '523',
-  );
-  await expect(page.getByText(/没有人口至少为它 100%/u)).toBeVisible();
-  await expect(globeRegion(page)).toHaveAttribute(
-    'data-isolation-competitor-id',
-    '',
-  );
+  const rootPoint = pointInReachCell(assets, root!.ownerIndex);
+  await page.goto(fieldUrl(rootPoint));
+  await expectReachRendered(page, assets);
+  await expectSampledOwner(page, assets, rootPoint);
+  await reachResult(page)
+    .getByRole('combobox', { name: '中心检视（不改变地点归属）', exact: true })
+    .selectOption(String(root!.id));
   await expect(
-    page.getByRole('combobox', { name: '选择中心城市' }),
-  ).toHaveValue(
-    (await globeRegion(page).getAttribute('data-isolation-city-id')) ?? '',
-  );
+    reachResult(page).getByText('数据集中人口最大的城市', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    reachResult(page).getByText('阈值处接替的城市', { exact: true }),
+  ).toHaveCount(0);
+  const disputedPoint = pointInReachCell(assets, 65535, true);
+  await page.goto(fieldUrl(disputedPoint));
+  await expectReachRendered(page, assets);
+  await expectSampledOwner(page, assets, disputedPoint);
+  await expect(reachResult(page).locator('em')).toHaveCount(0);
+
+  // A known inland Greenland point: valid ocean density is not proof of land.
+  const unreachableLand = { latitude: 70, longitude: -40 };
+  expect(sampledOwner(assets, unreachableLand)).toBe(0);
+  await page.goto(fieldUrl(unreachableLand));
+  await expectReachRendered(page, assets);
+  await expectSampledOwner(page, assets, unreachableLand);
+  await expect(reachResult(page).locator('em')).toHaveCount(0);
+  await switchMode(page, '地球另一端');
+  await expect(page.getByText('Greenland', { exact: true })).toBeVisible();
 });
 
-test('global regions recover from a worker download failure', async ({
+for (const assetKind of ['owner', 'density'] as const) {
+  test(`traffic regions retry a failed first ${assetKind} PNG download`, async ({
+    page,
+  }) => {
+    const assets = readReachAssets();
+    let fail = true;
+    await page.route(
+      assetKind === 'owner'
+        ? '**/city-reach/population-4-low-*.png'
+        : '**/city-reach/density-low.png',
+      (route) => (fail ? route.abort() : route.continue()),
+    );
+    await page.goto('./?mode=isolation&view=field&v=2');
+    await expect(globeRegion(page)).toHaveAttribute(
+      'data-isolation-field-state',
+      'error',
+    );
+    await expect(globeRegion(page)).not.toHaveAttribute(
+      'data-isolation-field-rendered-level',
+      /.+/,
+    );
+    await expect(
+      reachResult(page).getByText('分区载入失败，可重试或切回单城观察。', {
+        exact: true,
+      }),
+    ).toBeVisible();
+    fail = false;
+    await reachResult(page)
+      .getByRole('button', { name: '重试', exact: true })
+      .click();
+    await expectReachRendered(page, assets);
+    await expectSampledOwner(page, assets);
+  });
+}
+
+test('traffic regions retain the displayed PNG after a failed level change and retry the requested level', async ({
   page,
-}, testInfo) => {
+}) => {
+  const four = readReachAssets();
+  const eight = readReachAssets(8);
   let fail = true;
-  await page.route('**/isolationField.worker-*.js', (route) =>
+  await page.route('**/city-reach/population-8-low-*.png', (route) =>
     fail ? route.abort() : route.continue(),
   );
-  await page.goto('./?mode=isolation&view=field&v=2');
-  if (testInfo.project.name === 'mobile')
-    await page.getByRole('button', { name: '展开城市邻近性控件' }).click();
+  await page.goto('./?mode=isolation&point=1.35%2C103.84&view=field&v=2');
+  await expectReachRendered(page, four);
+  await expandReachControls(page);
+  await reachPanel(page)
+    .getByRole('radio', { name: '8', exact: true })
+    .locator('..')
+    .click();
   await expect(globeRegion(page)).toHaveAttribute(
     'data-isolation-field-state',
     'error',
   );
-  await expect(
-    page.getByText('分区计算失败，可重试或切回单城观察。'),
-  ).toBeVisible();
-  fail = false;
-  await page.getByRole('button', { name: '重试', exact: true }).click();
   await expect(globeRegion(page)).toHaveAttribute(
-    'data-isolation-field-rendered-alpha',
-    '0.50',
+    'data-isolation-field-requested-level',
+    '8',
   );
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-isolation-field-rendered-level',
+    '4',
+  );
+  await expect(
+    reachResult(page).getByText('所选地点的归属 · k = 4', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    reachResult(page).getByText(/目前仍显示 k = 4。/u),
+  ).toBeVisible();
+  await expectSampledOwner(page, four);
+  fail = false;
+  await reachPanel(page)
+    .getByRole('button', { name: '重试', exact: true })
+    .click();
+  await expectReachRendered(page, eight);
+  await expectSampledOwner(page, eight);
 });
 
-test('global regions keep controls reachable in short desktop and phone layouts', async ({
+test('traffic regions reject a shader link failure before committing and retry successfully', async ({
   page,
 }) => {
+  const assets = readReachAssets();
+  await page.addInitScript(() => {
+    type ProbeWindow = Window & { failCityReachShader?: boolean };
+    (window as ProbeWindow).failCityReachShader = true;
+    for (const Context of [
+      window.WebGLRenderingContext,
+      window.WebGL2RenderingContext,
+    ]) {
+      if (!Context) continue;
+      const original = Context.prototype.shaderSource;
+      Context.prototype.shaderSource = function (shader, source) {
+        const candidate =
+          (window as ProbeWindow).failCityReachShader &&
+          source.includes('uniform sampler2D uOwner0;') &&
+          source.includes('uniform float uSelected;');
+        original.call(
+          this,
+          shader,
+          candidate ? `${source}\nCITY_REACH_INVALID_SHADER;` : source,
+        );
+      };
+    }
+  });
   await page.goto('./?mode=isolation&view=field&v=2');
   await expect(globeRegion(page)).toHaveAttribute(
-    'data-isolation-field-rendered-alpha',
-    '0.50',
+    'data-isolation-field-state',
+    'error',
   );
+  await expect(globeRegion(page)).not.toHaveAttribute(
+    'data-isolation-field-rendered-level',
+    /.+/,
+  );
+  await expect(reachResult(page)).not.toHaveAttribute(
+    'data-city-reach-owner-id',
+    /.+/,
+  );
+  await page.evaluate(() => {
+    (window as Window & { failCityReachShader?: boolean }).failCityReachShader =
+      false;
+  });
+  await reachResult(page)
+    .getByRole('button', { name: '重试', exact: true })
+    .click();
+  await expectReachRendered(page, assets);
+  await expectSampledOwner(page, assets);
+});
+
+test('traffic regions release their frame on exit and reload after re-entering', async ({
+  page,
+}) => {
+  const assets = readReachAssets();
+  const requests: string[] = [];
+  page.on('request', (request) => {
+    if (
+      request.url().includes('/city-reach/') &&
+      request.url().endsWith('.png')
+    )
+      requests.push(request.url());
+  });
+  await page.goto('./?mode=isolation&view=field&v=2');
+  await expectReachRendered(page, assets);
+  expect(requests).toHaveLength(assets.tiles.length + 1);
+  await expandReachControls(page);
+  await reachPanel(page)
+    .getByRole('button', { name: '单城观察', exact: true })
+    .click();
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-isolation-view',
+    'city',
+  );
+  await expect(reachResult(page).getByRole('img')).toBeVisible();
+  await expect(globeRegion(page)).not.toHaveAttribute(
+    'data-isolation-field-owner-id',
+    /.+/,
+  );
+  await reachPanel(page)
+    .getByRole('button', { name: '全球分区', exact: true })
+    .click();
+  await expectReachRendered(page, assets);
+  expect(requests).toHaveLength((assets.tiles.length + 1) * 2);
+});
+
+test('traffic regions keep k controls and centre inspection reachable in short desktop and phone layouts', async ({
+  page,
+}) => {
+  const assets = readReachAssets();
+  await page.goto('./?mode=isolation&view=field&v=2');
+  await expectReachRendered(page, assets);
   for (const viewport of [
     { width: 1024, height: 520 },
     { width: 393, height: 851 },
   ]) {
     await page.setViewportSize(viewport);
-    const expand = page.getByRole('button', { name: '展开城市邻近性控件' });
-    if (viewport.width <= 760) {
-      await expect(expand).toBeVisible();
-      await expand.click();
+    await expandReachControls(page);
+    const panel = reachPanel(page);
+    const levels = panel.getByRole('group', { name: '投射力 k', exact: true });
+    await expect(levels).toBeVisible();
+    for (const radio of await levels.getByRole('radio').all()) {
+      const target = radio.locator('..');
+      await expect(target).toBeInViewport();
+      await expectMinimumHeight(target, 44);
+      expect((await target.boundingBox())!.width).toBeGreaterThanOrEqual(44);
     }
-    const panel = page.locator('[data-mode-panel="isolation-controls"]');
-    const slider = panel.getByRole('slider');
-    await expect(slider).toBeVisible();
-    const sliderBox = (await slider.boundingBox())!;
-    const last = panel.locator('ol button').last();
-    await last.scrollIntoViewIfNeeded();
-    await expect(last).toBeInViewport();
-    expect((await slider.boundingBox())!.y).toBe(sliderBox.y);
+    const picker = reachResult(page).getByRole('combobox', {
+      name: '中心检视（不改变地点归属）',
+      exact: true,
+    });
+    await expect(picker).toBeInViewport();
+    await expectMinimumHeight(picker, 44);
     expect(
       overlaps(
         await panel.boundingBox(),
-        await page.getByLabel('城市邻近性结果').boundingBox(),
+        await reachResult(page).boundingBox(),
       ),
     ).toBe(false);
     await expectMinimumHeight(
@@ -276,6 +626,59 @@ test('global regions keep controls reachable in short desktop and phone layouts'
       44,
     );
   }
+});
+
+test('traffic regions re-upload and redraw their displayed frame after WebGL context restoration', async ({
+  page,
+}) => {
+  const assets = readReachAssets();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page.goto('./?mode=isolation&view=field&point=31.2304%2C121.4737&v=2');
+  await expectReachRendered(page, assets);
+  await expectSampledOwner(page, assets, {
+    latitude: 31.2304,
+    longitude: 121.4737,
+  });
+  const canvas = page.locator('canvas');
+  const before = await canvas.screenshot();
+  const revision = Number(
+    await globeRegion(page).getAttribute('data-vector-render-revision'),
+  );
+  const canLoseContext = await canvas.evaluate((element) => {
+    const context = (element as HTMLCanvasElement).getContext('webgl2');
+    const extension = context?.getExtension('WEBGL_lose_context');
+    if (!extension) return false;
+    extension.loseContext();
+    window.setTimeout(() => extension.restoreContext(), 500);
+    return true;
+  });
+  expect(canLoseContext).toBe(true);
+  const contextStatus = page.getByText(
+    '图形上下文暂时中断，正在等待浏览器恢复。',
+    { exact: true },
+  );
+  await expect(contextStatus).toBeVisible();
+  await expect(globeRegion(page)).not.toHaveAttribute(
+    'data-isolation-field-rendered-level',
+    /.+/,
+  );
+  await expect(contextStatus).toBeHidden();
+  await expectReachRendered(page, assets);
+  await expectSampledOwner(page, assets, {
+    latitude: 31.2304,
+    longitude: 121.4737,
+  });
+  await expect
+    .poll(async () =>
+      Number(
+        await globeRegion(page).getAttribute('data-vector-render-revision'),
+      ),
+    )
+    .toBeGreaterThan(revision);
+  expect(await canvas.screenshot()).toEqual(before);
+  expect(errors).toEqual([]);
 });
 
 test('selects Tokyo and draws its competitor arc', async ({ page }) => {
