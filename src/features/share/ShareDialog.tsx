@@ -53,6 +53,7 @@ export function ShareDialog({
       surnameDisplayMode: state.surnameDisplayMode,
       isolationAlpha: state.isolationAlpha,
       isolationView: state.isolationView,
+      isolationReach: state.isolationReach,
     };
     return {
       activeMode: state.activeMode,

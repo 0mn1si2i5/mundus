@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
+import { verifyCityReach } from './city-reach/verify.mjs';
 
 const assets = [
   {
@@ -132,6 +133,17 @@ for (const entry of assets) {
       console.error(`${entry.asset}: GeoNames budget exceeded`);
     }
   }
+}
+
+try {
+  const reach = await verifyCityReach();
+  if (reach.present)
+    console.log(
+      `City reach: verified ${reach.assets} city, source-capture and texture assets`,
+    );
+} catch (error) {
+  failed = true;
+  console.error(error.message);
 }
 
 if (failed) process.exitCode = 1;
