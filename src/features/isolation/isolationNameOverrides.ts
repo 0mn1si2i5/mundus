@@ -205,4 +205,105 @@ export const ISOLATION_NAME_OVERRIDES: Readonly<
   '6652': { nameEn: 'Lincoln (United States)', nameZh: '林肯（美国）' }, // reviewed name distinction: Lincoln (United States)
   '1445': { nameEn: 'Bharatpur (Nepal)', nameZh: '婆罗多布尔（尼泊尔）' }, // reviewed name distinction: Bharatpur (Nepal)
   '8544': { nameEn: 'Bharatpur (India)', nameZh: '婆罗多布尔（印度）' }, // reviewed name distinction: Bharatpur (India)
+  // E. Owner-reviewed 2026-10-12: the complete 99-row city-name review.
+  '2454': { nameZh: '撒马尔罕' }, // reviewed name: Samarqand
+  '10160': { nameZh: '比拉斯布尔' }, // 印度有多处同名，此为恰蒂斯加尔邦的比拉斯布尔
+  '7790': { nameZh: '马辰' }, // reviewed name: Banjarmasin
+  '4438': { nameZh: '伊洛伊洛' }, // reviewed name: Iloilo City
+  '2115': { nameZh: '马拉迪' }, // reviewed name: Maradi
+  '6867': { nameZh: '马哈奇卡拉' }, // reviewed name: Makhachkala
+  '5451': { nameZh: '塔克洛班' }, // 近距离候选“独鲁万市”为闽南语社群用名，不采用
+  '11608': { nameZh: '英帕尔' }, // reviewed name: Imphal
+  '3400': { nameZh: '法兰克福' }, // reviewed name: Frankfurt
+  '2558': { nameZh: '塔马利' }, // reviewed name: Tamale
+  '6745': { nameZh: '布卡武' }, // reviewed name: Bukavu
+  '11310': { nameZh: '库奇比哈尔' }, // 译名不统一
+  '11172': { nameZh: '杰尔拜古里' }, // 译名不统一
+  '4509': { nameZh: '占碑' }, // reviewed name: Jambi
+  '2224': { nameEn: 'Toamasina', nameZh: '图阿马西纳' }, // GHSL 名是局部地名，中心位于图阿马西纳
+  '1119': { nameEn: 'Fianarantsoa', nameZh: '菲亚纳兰楚阿' }, // GHSL 名是局部地名，中心位于菲亚纳兰楚阿
+  '3129': { nameZh: '杰梅纳' }, // reviewed name: Gemena
+  '213': { nameEn: 'San Juan (Puerto Rico)', nameZh: '圣胡安（波多黎各）' }, // GHSL 名带方括号别名；与阿根廷圣胡安（id 29，现名“圣胡安”）重名，按先例加地区名，阿根廷一条也应改为“圣胡安（阿根廷）”
+  '8866': { nameZh: '达尔瓦德' }, // 与胡布利（Hubballi）是双子城；也可写作“胡布利-达尔瓦德”
+  '10524': { nameZh: '拉贾蒙德里' }, // 旧称 Rajahmundry
+  '2377': { nameZh: '海米斯穆谢特' }, // reviewed name: Khamis Mushayt
+  '3259': { nameZh: '马扎里沙里夫' }, // reviewed name: Mazar i sharif
+  '2024': { nameZh: '塞维利亚' }, // reviewed name: Seville
+  '6261': { nameZh: null }, // reviewed name: Kavar
+  '3858': { nameZh: '欧拜伊德' }, // reviewed name: Al-Ubayyid
+  '756': { nameZh: null }, // reviewed name: Ambovombe
+  '4576': { nameZh: '安集延' }, // reviewed name: Andijon
+  '6477': { nameZh: '迪亚巴克尔' }, // reviewed name: Diyarbakir
+  '7499': { nameZh: '克拉斯诺亚尔斯克' }, // reviewed name: Krasnoyarsk
+  '1006': { nameZh: '乌尔根奇' }, // reviewed name: Urgench
+  '4382': { nameZh: '沃罗涅日' }, // reviewed name: Voronezh
+  '2025': { nameZh: '塞瓦雷' }, // 与莫普提（Mopti）相连；如果负责人想用通行城市名，可改为 Mopti／莫普提
+  '3380': { nameZh: '哥打基纳巴卢' }, // 马来西亚华人通称“亚庇”；中国官方领馆名用“哥打基纳巴卢”
+  '11578': { nameZh: '迪马布尔' }, // reviewed name: Dimapur
+  '2045': { nameZh: '格贝哈' }, // 旧称伊丽莎白港（Port Elizabeth），2021 年更名
+  '782': { nameZh: '芒特哈根' }, // reviewed name: Mount Hagen
+  '8128': { nameZh: '帕卢' }, // reviewed name: Palu
+  '5781': { nameZh: '斯塔夫罗波尔' }, // reviewed name: Stavropol
+  '894': { nameEn: 'Yining', nameZh: '伊宁' }, // 近距离候选“伊梨”为错字
+  '6577': { nameZh: '塔尔萨' }, // reviewed name: Tulsa
+  '5114': { nameEn: 'Aden', nameZh: '亚丁' }, // GHSL 名是局部地名，中心位于亚丁
+  '504': { nameZh: '门迪' }, // reviewed name: Mendi
+  '4134': { nameZh: '奇瓦瓦' }, // reviewed name: Chihuahua
+  '3015': { nameZh: '代恩' }, // reviewed name: Ad Da'ein
+  '3613': { nameZh: '奎托' }, // reviewed name: Cuito
+  '6540': { nameZh: null }, // reviewed name: Kharameh
+  '3766': { nameZh: '扎波罗热' }, // reviewed name: Zaporizhzhia
+  '6430': { nameZh: '马诺诺' }, // reviewed name: Manono
+  '1313': { nameZh: null }, // reviewed name: Kebkabiya
+  '11582': { nameZh: '焦尔哈德' }, // reviewed name: Jorhat
+  '8242': { nameZh: '哥伦打洛' }, // reviewed name: Gorontalo
+  '4698': { nameZh: '巴科洛德' }, // reviewed name: Bacolod
+  '2404': { nameZh: '塔拉波托' }, // reviewed name: Tarapoto
+  '11612': { nameZh: '丁苏吉亚' }, // reviewed name: Tinsukia
+  '4820': { nameZh: '卡塔尼亚' }, // reviewed name: Catania
+  '2575': { nameZh: '法希尔' }, // reviewed name: Al-Fashir
+  '1210': { nameZh: '马斯温戈' }, // reviewed name: Masvingo
+  '5436': { nameZh: '梅尔辛' }, // reviewed name: Mersin
+  '472': { nameZh: '荷台达' }, // reviewed name: Hodeidah
+  '75': { nameZh: '哥德堡' }, // reviewed name: Gothenburg
+  '5383': { nameZh: '卡米纳' }, // reviewed name: Kamina
+  '518': { nameZh: '帕斯托' }, // reviewed name: Pasto
+  '2338': { nameZh: '恩泽雷科雷' }, // reviewed name: Nzérékoré
+  '11056': { nameZh: '大吉岭' }, // reviewed name: Darjeeling
+  '4055': { nameZh: '哈利法克斯' }, // reviewed name: Halifax
+  '232': { nameZh: '曼' }, // reviewed name: Man
+  '6046': { nameZh: null }, // reviewed name: Malemba-Nkulu
+  '6904': { nameZh: '圣彼得斯堡' }, // 美国佛罗里达州，与俄罗斯“圣彼得堡”区分
+  '2898': { nameZh: '辛吉达' }, // reviewed name: Singida
+  '5453': { nameZh: '阿尔伯克基' }, // reviewed name: Albuquerque
+  '1975': { nameZh: null }, // reviewed name: Riwoto
+  '7110': { nameZh: null }, // reviewed name: Narmashir
+  '5156': { nameZh: '塔比拉兰' }, // reviewed name: Tagbilaran
+  '2181': { nameZh: '锡吉里' }, // reviewed name: Siguiri
+  '3816': { nameZh: null }, // reviewed name: El Wak
+  '4109': { nameZh: '利萨拉' }, // reviewed name: Lisala
+  '401': { nameZh: '朱古' }, // reviewed name: Djougou
+  '879': { nameZh: '乌尔米耶' }, // reviewed name: Urmia
+  '885': { nameZh: '达绍古兹' }, // reviewed name: Dashoguz
+  '8332': { nameZh: '安汶' }, // reviewed name: Ambon
+  '6038': { nameZh: '归仁' }, // reviewed name: Quy Nhơn
+  '6448': { nameZh: '卡马河畔切尔尼' }, // reviewed name: Naberezhnye Chelny
+  '5546': { nameZh: '槟港' }, // reviewed name: Pangkalpinang
+  '1358': { nameZh: '公主港' }, // reviewed name: Puerto Princesa
+  '1938': { nameZh: '康康' }, // reviewed name: Kankan
+  '8424': { nameZh: null }, // reviewed name: Elelim
+  '1308': { nameZh: '伊万诺-弗兰科夫斯克' }, // reviewed name: Ivano-Frankivsk
+  '496': { nameZh: '波贝' }, // reviewed name: Poipet
+  '6273': { nameZh: '孔戈洛' }, // reviewed name: Kongolo
+  '2582': { nameZh: '米兰热' }, // reviewed name: Milange
+  '7608': { nameZh: '雅库茨克' }, // reviewed name: Yakutsk
+  '5188': { nameZh: '帕尔马斯' }, // reviewed name: Palmas
+  '8402': { nameZh: null }, // reviewed name: Mulia
+  '882': { nameZh: '基斯马尤' }, // reviewed name: Kismayo
+  '736': { nameZh: '阿鲁阿' }, // reviewed name: Arua
+  '2508': { nameZh: null }, // reviewed name: Buram
+  '3224': { nameZh: '蒙特港' }, // reviewed name: Puerto Montt
+  '2803': { nameZh: '蒙特里亚' }, // reviewed name: Montería
+  '3526': { nameZh: null }, // reviewed name: Denov
+  '29': { nameEn: 'San Juan (Argentina)', nameZh: '圣胡安（阿根廷）' }, // paired with the reviewed Puerto Rico San Juan (id 213)
 };

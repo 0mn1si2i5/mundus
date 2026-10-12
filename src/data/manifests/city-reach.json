@@ -58,9 +58,9 @@
   },
   "cityAsset": {
     "path": "src/data/generated/city-reach.json",
-    "sha256": "53a9b813836b4cc7b4a60d6eea5c1cc65a2d4a027199a7bad57681aaf445eb54",
-    "rawBytes": 2283931,
-    "gzipBytes": 439360,
+    "sha256": "f650124353aa3b705843af56ca7593a31a18d7fc956fd168541bb20d24568d3c",
+    "rawBytes": 2285107,
+    "gzipBytes": 440441,
     "formatVersion": 1
   },
   "sourceCapture": {
@@ -332,8 +332,8 @@
   "recordCount": 5944,
   "nameReview": {
     "requiredCityCount": 5246,
-    "missingChineseCityCount": 3636,
-    "requiredMissingChineseCityCount": 3033,
-    "matchCounts": { "override": 182, "exact": 2126, "none": 3636 }
+    "missingChineseCityCount": 3549,
+    "requiredMissingChineseCityCount": 2946,
+    "matchCounts": { "override": 270, "exact": 2125, "none": 3549 }
   }
 }

@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CityReachResult } from './CityReachResult';
+import { sortCityReachCities } from './cityReachData';
 import { cityReachCentreStatus } from './cityReachPresentation';
 import type { CityReachCity, CityReachMetadata } from './cityReachTypes';
 import type { CityReachFieldState } from './useCityReachField';
@@ -55,6 +56,27 @@ function field(): CityReachFieldState {
 
 describe('city reach result meaning', () => {
   afterEach(cleanup);
+
+  it.each([
+    ['en', [5, 4, 6, 7, 3]],
+    ['zh', [4, 7, 6, 5, 3]],
+  ] as const)(
+    'sorts leading catalog punctuation by the current language (%s)',
+    (locale, expectedIds) => {
+      const cities = [
+        { ...smaller, id: 3, name: { en: "'Gamma", zh: "'西安" } },
+        { ...smaller, id: 4, name: { en: '`Beta', zh: '`北京' } },
+        { ...smaller, id: 5, name: { en: 'ʻAlpha', zh: 'ʻ上海' } },
+        { ...smaller, id: 6, name: { en: 'ʿDelta', zh: 'ʿ广州' } },
+        { ...smaller, id: 7, name: { en: 'Epsilon', zh: '成都' } },
+      ];
+      expect(
+        sortCityReachCities(cities, locale).map((city) => city.id),
+      ).toEqual(expectedIds);
+      expect(cities[0]?.name).toEqual({ en: "'Gamma", zh: "'西安" });
+    },
+  );
+
   it('shows an English fallback for a required owner and parent with no reviewed Chinese name', () => {
     const owner = {
       ...smaller,

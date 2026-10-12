@@ -189,11 +189,15 @@ is a parent, or is a component root must have a nonempty English display name.
 Missing approved Chinese city names remain null and the Chinese interface
 falls back to English. The manifest and build name report record both the total
 and required-city missing counts, with override, exact and none provenance.
+After the 99-row correction, those counts are 270 override, 2,125 exact and
+3,549 none; 2,946 required cities still have no reviewed Chinese name and
+fall back to English.
 All asset countries require reviewed Chinese labels. Chinese duplicates fail
 unless both assignments are reviewed overrides. The owner-approved labels
 for Kosovo and Northern Cyprus are 塞尔维亚（科索沃） and 塞浦路斯（北部）,
-respectively, consistent with the drawing-country view. Agents must not invent
-or approve city translations; the 99-city draft list remains unapproved.
+respectively, consistent with the drawing-country view. The complete 99-row
+owner-reviewed city-name table was applied in the names correction following
+v1.2.0; no additional translations are inferred by the build.
 The owner separately approved the explanatory English label
 **Unnamed urban centre (GHSL 4893)** for the unnamed Sudanese centre at
 11.5391°N, 34.3126°E. Its Chinese name stays null. This label records the
