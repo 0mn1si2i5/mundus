@@ -11,7 +11,8 @@ const HOST_LITTLE_ENDIAN =
   new Uint8Array(new Uint16Array([0x0102]).buffer)[0] === 0x02;
 export const INVERSE_GRID = Object.freeze({ width: 1024, height: 512 });
 
-let meshoptWorkerEnabled = false;
+let pendingWorkerDecodes = 0;
+let workerPoolEnabled = false;
 
 async function decodePayload(source, count) {
   await MeshoptDecoder.ready;
@@ -21,9 +22,9 @@ async function decodePayload(source, count) {
     typeof MeshoptDecoder.decodeGltfBufferAsync === 'function'
   ) {
     try {
-      if (!meshoptWorkerEnabled) {
+      if (pendingWorkerDecodes++ === 0) {
         MeshoptDecoder.useWorkers(1);
-        meshoptWorkerEnabled = true;
+        workerPoolEnabled = true;
       }
       return await MeshoptDecoder.decodeGltfBufferAsync(
         count,
@@ -34,7 +35,11 @@ async function decodePayload(source, count) {
     } catch {
       // A restricted browser may reject a Blob worker. Keep the verified
       // synchronous decoder as a portable fallback for that environment.
-      meshoptWorkerEnabled = false;
+    } finally {
+      if (--pendingWorkerDecodes === 0 && workerPoolEnabled) {
+        workerPoolEnabled = false;
+        MeshoptDecoder.useWorkers(0);
+      }
     }
   }
   const decoded = new Uint8Array(count * STRIDE);
