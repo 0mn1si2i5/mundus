@@ -1,7 +1,7 @@
 import { buildReshapedPatchBins } from '../../src/features/reshaped/patchSampling.mjs';
 import type { DecodedIdRaster } from '../../src/features/reshaped/labelSampling.mjs';
 import type { ReshapedPatchAtlas } from '../../src/features/reshaped/reshapedData';
-import type { Page } from '@playwright/test';
+import type { CDPSession, Page } from '@playwright/test';
 import type { InverseField } from '../../src/features/reshaped/inverseFormat.mjs';
 
 /** Upload once per field; morph stages share the same shader and GPU inputs. */
@@ -463,4 +463,321 @@ result=index>=0 && weight>=0.5 ? classifyPatch(local,uPatchRects[index]) : class
           : null,
     },
   );
+}
+
+export interface BrowserResourceCounts {
+  renderersCreated: number;
+  renderersAlive: number;
+  textures: number;
+  geometries: number;
+  programs: number;
+  contextsCreated: number;
+  contextsAlive: number;
+  contextCanvasesConnected: number;
+  workersCreated: number;
+  workersTerminated: number;
+  workersCloseRequested: number;
+  workerUrls: string[];
+  timeouts: number;
+  intervals: number;
+  animationFrames: number;
+}
+
+export interface ReshapedResourceSample extends BrowserResourceCounts {
+  label: string;
+  heapUsedBytes: number;
+  heapTotalBytes: number;
+  backingStorageBytes: number;
+  arrayBuffers: number;
+  arrayBufferBytes: number;
+  imageBitmaps: number;
+  imageBitmapEstimatedBytes: number;
+  workersAlive: number;
+  cdpWorkersAlive: number;
+  documents: number;
+  nodes: number;
+  eventListeners: number;
+}
+
+export async function installReshapedResourceProbe(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    type Renderer = {
+      isWebGLRenderer: boolean;
+      info: {
+        memory: { textures: number; geometries: number };
+        programs: unknown[] | null;
+      };
+    };
+    const renderers: WeakRef<Renderer>[] = [];
+    const contexts: WeakRef<WebGLRenderingContext | WebGL2RenderingContext>[] =
+      [];
+    const knownContexts = new WeakSet<
+      WebGLRenderingContext | WebGL2RenderingContext
+    >();
+    const workerUrls = new Set<string>();
+    let workersCreated = 0;
+    let workersTerminated = 0;
+    let workersCloseRequested = 0;
+    const terminated = new WeakSet<Worker>();
+    const closeRequested = new WeakSet<Worker>();
+    const timeouts = new Set<number>();
+    const intervals = new Set<number>();
+    const animationFrames = new Set<number>();
+
+    // Three already emits this event at renderer construction. WeakRef prevents
+    // the test probe from keeping a detached renderer or its resources alive.
+    const devtools = new EventTarget();
+    devtools.addEventListener('observe', (event) => {
+      const renderer = (event as CustomEvent<Renderer>).detail;
+      if (renderer?.isWebGLRenderer) renderers.push(new WeakRef(renderer));
+    });
+    Object.defineProperty(window, '__THREE_DEVTOOLS__', { value: devtools });
+
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+      ...args
+    ) {
+      const context = getContext.apply(this, args);
+      if (
+        (args[0] === 'webgl' ||
+          args[0] === 'webgl2' ||
+          args[0] === 'experimental-webgl') &&
+        context &&
+        !knownContexts.has(context as WebGLRenderingContext)
+      ) {
+        knownContexts.add(context as WebGLRenderingContext);
+        contexts.push(new WeakRef(context as WebGLRenderingContext));
+      }
+      return context;
+    } as typeof getContext;
+
+    const NativeWorker = window.Worker;
+    window.Worker = new Proxy(NativeWorker, {
+      construct(target, args, newTarget) {
+        const worker = Reflect.construct(target, args, newTarget) as Worker;
+        workersCreated += 1;
+        workerUrls.add(String(args[0]));
+        return worker;
+      },
+    });
+    const terminate = NativeWorker.prototype.terminate;
+    NativeWorker.prototype.terminate = function () {
+      if (!terminated.has(this)) {
+        terminated.add(this);
+        workersTerminated += 1;
+      }
+      terminate.call(this);
+    };
+    const postMessage = NativeWorker.prototype.postMessage;
+    NativeWorker.prototype.postMessage = function (this: Worker, ...args) {
+      // Meshopt's useWorkers(0) sends {} and the worker calls self.close().
+      // This only records the request; CDP/Page worker counts prove it exited.
+      const message = args[0] as unknown;
+      if (
+        message &&
+        typeof message === 'object' &&
+        Object.keys(message).length === 0 &&
+        !closeRequested.has(this)
+      ) {
+        closeRequested.add(this);
+        workersCloseRequested += 1;
+      }
+      return Reflect.apply(postMessage, this, args);
+    } as typeof postMessage;
+
+    const setTimeoutNative = window.setTimeout.bind(window);
+    const clearTimeoutNative = window.clearTimeout.bind(window);
+    window.setTimeout = ((
+      handler: TimerHandler,
+      delay?: number,
+      ...args: unknown[]
+    ) => {
+      // No application timer uses string handlers; preserve their native path.
+      if (typeof handler !== 'function')
+        return setTimeoutNative(handler, delay, ...args);
+      let id = 0;
+      id = setTimeoutNative(() => {
+        timeouts.delete(id);
+        Reflect.apply(handler, window, args);
+      }, delay);
+      timeouts.add(id);
+      return id;
+    }) as typeof window.setTimeout;
+    window.clearTimeout = (id) => {
+      if (typeof id === 'number') {
+        timeouts.delete(id);
+        intervals.delete(id);
+      }
+      clearTimeoutNative(id);
+    };
+    const setIntervalNative = window.setInterval.bind(window);
+    const clearIntervalNative = window.clearInterval.bind(window);
+    window.setInterval = ((
+      handler: TimerHandler,
+      delay?: number,
+      ...args: unknown[]
+    ) => {
+      const id = setIntervalNative(handler, delay, ...args);
+      intervals.add(id);
+      return id;
+    }) as typeof window.setInterval;
+    window.clearInterval = (id) => {
+      if (typeof id === 'number') {
+        timeouts.delete(id);
+        intervals.delete(id);
+      }
+      clearIntervalNative(id);
+    };
+    const requestFrame = window.requestAnimationFrame.bind(window);
+    const cancelFrame = window.cancelAnimationFrame.bind(window);
+    window.requestAnimationFrame = (callback) => {
+      let id = 0;
+      id = requestFrame((time) => {
+        animationFrames.delete(id);
+        Reflect.apply(callback, window, [time]);
+      });
+      animationFrames.add(id);
+      return id;
+    };
+    window.cancelAnimationFrame = (id) => {
+      animationFrames.delete(id);
+      cancelFrame(id);
+    };
+
+    const probe = {
+      snapshot(): BrowserResourceCounts {
+        const liveRenderers = renderers
+          .map((ref) => ref.deref())
+          .filter((value): value is Renderer => Boolean(value));
+        const liveContexts = contexts
+          .map((ref) => ref.deref())
+          .filter(
+            (value): value is WebGLRenderingContext =>
+              Boolean(value) && !value!.isContextLost(),
+          );
+        return {
+          renderersCreated: renderers.length,
+          renderersAlive: liveRenderers.length,
+          textures: liveRenderers.reduce(
+            (sum, renderer) => sum + renderer.info.memory.textures,
+            0,
+          ),
+          geometries: liveRenderers.reduce(
+            (sum, renderer) => sum + renderer.info.memory.geometries,
+            0,
+          ),
+          programs: liveRenderers.reduce(
+            (sum, renderer) => sum + (renderer.info.programs?.length ?? 0),
+            0,
+          ),
+          contextsCreated: contexts.length,
+          contextsAlive: liveContexts.length,
+          contextCanvasesConnected: liveContexts.filter(
+            (context) =>
+              context.canvas instanceof HTMLCanvasElement &&
+              context.canvas.isConnected,
+          ).length,
+          workersCreated,
+          workersTerminated,
+          workersCloseRequested,
+          workerUrls: [...workerUrls],
+          timeouts: timeouts.size,
+          intervals: intervals.size,
+          animationFrames: animationFrames.size,
+        };
+      },
+    };
+    Object.defineProperty(window, '__reshapedResourceProbe', { value: probe });
+  });
+}
+
+/** queryObjects temporarily roots its result. Always release it before measuring heap. */
+async function queryNativeObjects(
+  session: CDPSession,
+  constructor: 'ArrayBuffer' | 'ImageBitmap',
+) {
+  const objectGroup = `reshaped-resource-${constructor}`;
+  try {
+    const prototype = await session.send('Runtime.evaluate', {
+      expression: `${constructor}.prototype`,
+      objectGroup,
+    });
+    if (!prototype.result.objectId)
+      throw new Error(`No ${constructor} prototype`);
+    const objects = await session.send('Runtime.queryObjects', {
+      prototypeObjectId: prototype.result.objectId,
+      objectGroup,
+    });
+    if (!objects.objects.objectId)
+      throw new Error(`Cannot enumerate ${constructor}`);
+    const result = await session.send('Runtime.callFunctionOn', {
+      objectId: objects.objects.objectId,
+      functionDeclaration:
+        constructor === 'ArrayBuffer'
+          ? 'function(){return {count:this.length,bytes:this.reduce((sum,value)=>sum+value.byteLength,0)}}'
+          : 'function(){return this.reduce((sum,value)=>({count:sum.count+(value.width>0&&value.height>0?1:0),bytes:sum.bytes+value.width*value.height*4}),{count:0,bytes:0})}',
+      returnByValue: true,
+      objectGroup,
+    });
+    if (result.exceptionDetails)
+      throw new Error(`Cannot read ${constructor} objects`);
+    return result.result.value as { count: number; bytes: number };
+  } finally {
+    await session.send('Runtime.releaseObjectGroup', { objectGroup });
+  }
+}
+
+/** Both configured browser projects are Chromium; callers must sample serially. */
+export async function createReshapedResourceSampler(page: Page) {
+  const session = await page.context().newCDPSession(page);
+  await session.send('HeapProfiler.enable');
+  return {
+    async sample(label: string): Promise<ReshapedResourceSample> {
+      // WeakRef dereferences are performed only after GC and never saved by the
+      // test. Probe entries retain a few strings/numbers, never app objects.
+      await session.send('HeapProfiler.collectGarbage');
+      const arrayBuffers = await queryNativeObjects(session, 'ArrayBuffer');
+      const imageBitmaps = await queryNativeObjects(session, 'ImageBitmap');
+      await session.send('HeapProfiler.collectGarbage');
+      const usage = await session.send('Runtime.getHeapUsage');
+      if (usage.backingStorageSize === undefined)
+        throw new Error('CDP did not expose backing storage size');
+      const dom = await session.send('Memory.getDOMCounters');
+      const browserCounts = await page.evaluate(() => {
+        const probe = (
+          window as typeof window & {
+            __reshapedResourceProbe: { snapshot(): BrowserResourceCounts };
+          }
+        ).__reshapedResourceProbe;
+        if (!probe)
+          throw new Error('Reshaped resource probe was not installed');
+        return probe.snapshot();
+      });
+      const targets = await session.send('Target.getTargets');
+      const workerUrls = new Set(browserCounts.workerUrls);
+      return {
+        ...browserCounts,
+        label,
+        heapUsedBytes: usage.usedSize,
+        heapTotalBytes: usage.totalSize,
+        backingStorageBytes: usage.backingStorageSize,
+        arrayBuffers: arrayBuffers.count,
+        arrayBufferBytes: arrayBuffers.bytes,
+        imageBitmaps: imageBitmaps.count,
+        imageBitmapEstimatedBytes: imageBitmaps.bytes,
+        workersAlive: page.workers().length,
+        cdpWorkersAlive: targets.targetInfos.filter(
+          (target) => target.type === 'worker' && workerUrls.has(target.url),
+        ).length,
+        documents: dom.documents,
+        nodes: dom.nodes,
+        eventListeners: dom.jsEventListeners,
+      };
+    },
+    async dispose() {
+      await session.send('HeapProfiler.disable');
+      await session.detach();
+    },
+  };
 }

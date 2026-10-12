@@ -63,7 +63,7 @@ jobs:
           name: mundus-dist
           path: dist
       - run: pnpm release:verify
-      - run: pnpm test:e2e -- --skip-build --split-reshaped --project=${{ matrix.project }}
+      - run: pnpm test:e2e -- --skip-build --project=${{ matrix.project }}
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

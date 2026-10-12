@@ -1,13 +1,11 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
 import { createConnection } from 'node:net';
 
 const arguments_ = process.argv.slice(2);
 if (arguments_[0] === '--') arguments_.shift();
 const skipBuild = arguments_.includes('--skip-build');
-const splitReshaped = arguments_.includes('--split-reshaped');
 const playwrightArguments = arguments_.filter(
-  (argument) => argument !== '--skip-build' && argument !== '--split-reshaped',
+  (argument) => argument !== '--skip-build',
 );
 
 const environment = { ...process.env, MUNDUS_E2E_EXTERNAL_SERVER: '1' };
@@ -52,40 +50,6 @@ function signalProcess(child, signal) {
   } catch (error) {
     if (error?.code !== 'ESRCH') throw error;
   }
-}
-
-function reshapedTestTitles(playwrightOptions) {
-  const listed = spawnSync(
-    'pnpm',
-    [
-      'exec',
-      'playwright',
-      'test',
-      'tests/e2e/reshaped.spec.ts',
-      ...playwrightOptions,
-      '--list',
-      '--reporter=json',
-    ],
-    { env: environment, encoding: 'utf8' },
-  );
-  if (listed.error) throw listed.error;
-  if (listed.status !== 0)
-    throw new Error('Unable to enumerate Reshaped Earth E2E tests.');
-  const report = JSON.parse(listed.stdout);
-  const titles = [];
-  const visit = (suites) => {
-    for (const suite of suites) {
-      for (const spec of suite.specs ?? []) titles.push(spec.title);
-      visit(suite.suites ?? []);
-    }
-  };
-  visit(report.suites ?? []);
-  if (!titles.length) throw new Error('No Reshaped Earth E2E tests found.');
-  return titles;
-}
-
-function grepLiteral(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function terminate(child, signal = 'SIGTERM') {
@@ -195,57 +159,11 @@ if (arguments_.includes('--list')) {
     );
 
     if (hasExplicitProject) {
-      if (splitReshaped) {
-        const specFiles = readdirSync(new URL('../tests/e2e/', import.meta.url))
-          .filter((file) => file.endsWith('.spec.ts'))
-          .sort()
-          .map((file) => `tests/e2e/${file}`);
-        const requestedSpecs = playwrightArguments.filter((argument) =>
-          argument.endsWith('.spec.ts'),
-        );
-        const playwrightOptions = playwrightArguments.filter(
-          (argument) => !argument.endsWith('.spec.ts'),
-        );
-        const specs = requestedSpecs.length ? requestedSpecs : specFiles;
-        const reshaped = specs.filter((file) =>
-          file.endsWith('/reshaped.spec.ts'),
-        );
-        const remaining = specs.filter(
-          (file) => !file.endsWith('/reshaped.spec.ts'),
-        );
-        if (remaining.length) {
-          await run(
-            'pnpm',
-            ['exec', 'playwright', 'test', ...playwrightOptions, ...remaining],
-            { env: environment },
-          );
-        }
-        if (reshaped.length) {
-          for (const title of reshapedTestTitles(playwrightOptions)) {
-            await run(
-              'pnpm',
-              [
-                'exec',
-                'playwright',
-                'test',
-                ...playwrightOptions,
-                '--grep',
-                grepLiteral(title),
-                'tests/e2e/reshaped.spec.ts',
-              ],
-              { env: environment },
-            );
-          }
-        }
-      } else {
-        await run(
-          'pnpm',
-          ['exec', 'playwright', 'test', ...playwrightArguments],
-          {
-            env: environment,
-          },
-        );
-      }
+      await run(
+        'pnpm',
+        ['exec', 'playwright', 'test', ...playwrightArguments],
+        { env: environment },
+      );
     } else {
       // SwiftShader degrades when both GPU-heavy projects share one browser
       // lifetime. Keep tests serial, but give each device project a fresh process.
