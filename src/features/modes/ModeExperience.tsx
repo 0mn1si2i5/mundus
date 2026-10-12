@@ -2,7 +2,10 @@ import type { Locale } from '../../i18n/messages';
 import type { GeoPoint } from '../globe/geo';
 import { ModeControls } from './ModeControls';
 import { ModeResult } from './ModeResult';
-import { useModePresentation } from './useModePresentation';
+import {
+  useModePresentation,
+  type ReshapedLoadState,
+} from './useModePresentation';
 
 /**
  * Renders the active-mode result and controls from a single bounded
@@ -13,11 +16,13 @@ import { useModePresentation } from './useModePresentation';
 export function ModeExperience({
   locale,
   onCameraFocus,
+  reshapedData,
 }: {
   locale: Locale;
+  reshapedData?: ReshapedLoadState;
   onCameraFocus: (point: GeoPoint) => void;
 }) {
-  const presentation = useModePresentation();
+  const presentation = useModePresentation(reshapedData);
   if (presentation === null) return null;
 
   return (

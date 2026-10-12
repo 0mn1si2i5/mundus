@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../../state/appStore';
 import type { GeoPoint } from '../globe/geo';
 import type { CountryRef } from '../globe/countryData';
@@ -33,6 +33,16 @@ import {
 import type { RecordHolder } from '../isolation/isolationMetric';
 import { greatCircleArcPoints } from '../isolation/isolationGeometry';
 import type { IsolationView } from '../../state/urlState';
+import type {
+  ReshapedDataset,
+  ReshapedPatchAtlas,
+} from '../reshaped/reshapedData';
+import { sampleReshapedLabel } from '../reshaped/labelSampling.mjs';
+import { sampleReshapedPatchLabel } from '../reshaped/patchSampling.mjs';
+import {
+  RESHAPED_DEFAULT_METRIC,
+  type ReshapedMetricId,
+} from '../reshaped/metrics';
 import {
   useCityReachField,
   type CityReachFieldState,
@@ -48,6 +58,12 @@ export interface GlobePresentation {
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
   isolation: IsolationGlobePresentation | null;
+  reshaped: {
+    metric: ReshapedMetricId;
+    shape: 'true' | 'reshaped';
+    data: ReshapedLoadState;
+    replayKey: number;
+  } | null;
 }
 
 export interface IsolationGlobePresentation {
@@ -62,6 +78,13 @@ export interface IsolationGlobePresentation {
   cityId: string;
   competitorId: string;
   arcStatus: 'drawn' | 'none' | 'antipodal';
+}
+
+export interface ReshapedLoadState {
+  status: 'idle' | 'loading' | 'error' | 'ready';
+  data?: ReshapedDataset;
+  retry: () => void;
+  onPatchesReady?: (atlas: ReshapedPatchAtlas) => void;
 }
 
 export type AntipodeRelationLoadState = 'idle' | 'loading' | 'error' | 'ready';
@@ -109,6 +132,16 @@ export type ModePresentation =
         city: IsolationDataset['cities'][number];
         distanceKm: number;
       }[];
+    }
+  | {
+      id: 'reshaped';
+      metric: ReshapedMetricId;
+      point: GeoPoint;
+      selectedCountry: CountryRef | null;
+      data: ReshapedLoadState;
+      selectedUnit: import('../reshaped/reshapedData').ReshapedUnit | null;
+      selectedValue: import('../reshaped/reshapedData').ReshapedValueRow | null;
+      ranking: readonly import('../reshaped/reshapedData').ReshapedValueRow[];
     };
 
 /**
@@ -116,7 +149,9 @@ export type ModePresentation =
  * neutral lobby. Inactive-mode resources stay idle and inactive-mode
  * computations are skipped.
  */
-export function useModePresentation(): ModePresentation | null {
+export function useModePresentation(
+  sharedReshapedData?: ReshapedLoadState,
+): ModePresentation | null {
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
   const selectedCountry = useAppStore((state) => state.selectedCountry);
@@ -137,6 +172,15 @@ export function useModePresentation(): ModePresentation | null {
     isolationReach,
     activeMode === 'isolation' && isolationView === 'field',
   );
+  const reshapedMetric = useAppStore(
+    (state) => state.reshapedMetric ?? RESHAPED_DEFAULT_METRIC,
+  );
+  const localReshapedLoad = useReshapedDataset(
+    activeMode === 'reshaped' && !sharedReshapedData,
+    reshapedMetric,
+  );
+  const reshapedLoad = sharedReshapedData ?? localReshapedLoad;
+  const selectedUnitId = useAppStore((state) => state.reshapedSelectedUnitId);
 
   const relation = useMemo(
     () =>
@@ -216,13 +260,65 @@ export function useModePresentation(): ModePresentation | null {
           : null,
         ranking: isolation?.ranking ?? [],
       };
+    case 'reshaped': {
+      const dataset = reshapedLoad.data;
+      const selectedId =
+        sampleReshapedPatchLabel(
+          dataset?.patchAtlas ?? null,
+          point.latitude,
+          point.longitude,
+        )?.id ??
+        sampleReshapedLabel(
+          dataset?.ids ?? null,
+          point.latitude,
+          point.longitude,
+        ).id;
+      const rasterUnit = dataset?.unitsByRasterId.get(selectedId);
+      const unit =
+        selectedUnitId !== undefined
+          ? selectedUnitId === null
+            ? null
+            : (dataset?.unitsById.get(selectedUnitId) ?? null)
+          : (rasterUnit ??
+            (selectedCountry
+              ? dataset?.unitsById.get(selectedCountry.countryId)
+              : null) ??
+            null);
+      const selectedValue = unit
+        ? (dataset?.values.get(unit.id) ?? null)
+        : null;
+      const ranking = dataset
+        ? [...dataset.values.values()]
+            .sort(
+              (a, b) =>
+                (b.worldShare[reshapedMetric] ?? 0) -
+                (a.worldShare[reshapedMetric] ?? 0),
+            )
+            .filter((row) => row.worldShare[reshapedMetric] !== null)
+            .slice(0, 10)
+        : [];
+      if (selectedValue && !ranking.some((row) => row.id === selectedValue.id))
+        ranking.push(selectedValue);
+      return {
+        id: activeMode,
+        metric: reshapedMetric,
+        point,
+        selectedCountry,
+        data: reshapedLoad,
+        selectedUnit: unit,
+        selectedValue,
+        ranking,
+      };
+    }
     default:
       return assertNever(activeMode);
   }
 }
 
 /** Globe-only presentation; isolation uses the same selection as the card. */
-export function useGlobePresentation(): GlobePresentation {
+export function useGlobePresentation(
+  sharedReshapedData?: ReshapedLoadState,
+): GlobePresentation {
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
   const sunlineTimeMs = useAppStore((state) => state.sunlineTimeMs);
@@ -241,6 +337,18 @@ export function useGlobePresentation(): GlobePresentation {
     isolationReach,
     activeMode === 'isolation' && isolationView === 'field',
   );
+  const reshapedMetric = useAppStore(
+    (state) => state.reshapedMetric ?? RESHAPED_DEFAULT_METRIC,
+  );
+  const reshapedShape = useAppStore(
+    (state) => state.reshapedShape ?? 'reshaped',
+  );
+  const reshapedReplayKey = useAppStore((state) => state.reshapedReplayKey);
+  const localReshapedData = useReshapedDataset(
+    activeMode === 'reshaped' && !sharedReshapedData,
+    reshapedMetric,
+  );
+  const reshapedData = sharedReshapedData ?? localReshapedData;
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
@@ -351,6 +459,93 @@ export function useGlobePresentation(): GlobePresentation {
     surnameMapLabels,
     surnameDisplayMode,
     isolation,
+    reshaped:
+      activeMode === 'reshaped'
+        ? {
+            metric: reshapedMetric,
+            shape: reshapedShape,
+            data: reshapedData,
+            replayKey: reshapedReplayKey,
+          }
+        : null,
+  };
+}
+
+/** Share only the asynchronous resource between globe and result; mode
+ * calculations remain inside their existing failure boundary. */
+export function useSharedReshapedData(): ReshapedLoadState {
+  const activeMode = useAppStore((state) => state.activeMode);
+  const metric = useAppStore(
+    (state) => state.reshapedMetric ?? RESHAPED_DEFAULT_METRIC,
+  );
+  return useReshapedDataset(activeMode === 'reshaped', metric);
+}
+
+function useReshapedDataset(
+  enabled: boolean,
+  metric: ReshapedMetricId,
+): ReshapedLoadState {
+  const [state, setState] = useState<Omit<ReshapedLoadState, 'retry'>>({
+    status: 'idle',
+  });
+  const [retryKey, setRetryKey] = useState(0);
+  const previous = useRef<ReshapedDataset | undefined>(undefined);
+  useEffect(() => {
+    const controller = new AbortController();
+    if (!enabled) {
+      previous.current = undefined;
+      void Promise.resolve().then(() => {
+        if (!controller.signal.aborted) setState({ status: 'idle' });
+      });
+      return () => controller.abort();
+    }
+    void import('../reshaped/reshapedData')
+      .then(({ loadReshapedData }) => {
+        if (controller.signal.aborted) return;
+        setState({ status: 'loading', data: previous.current });
+        return loadReshapedData(
+          metric,
+          controller.signal,
+          previous.current,
+        ).then((data) => {
+          if (controller.signal.aborted) return;
+          const readyData = {
+            ...data,
+            patchAtlas: previous.current?.patchAtlas ?? data.patchAtlas,
+          };
+          previous.current = readyData;
+          setState({ status: 'ready', data: readyData });
+        });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          previous.current = undefined;
+          setState({ status: 'error' });
+        }
+      });
+    return () => controller.abort();
+  }, [enabled, metric, retryKey]);
+  const onPatchesReady = useCallback(
+    (atlas: ReshapedPatchAtlas) => {
+      if (!enabled || !previous.current) return;
+      previous.current = { ...previous.current, patchAtlas: atlas };
+      setState((current) =>
+        current.data
+          ? { ...current, data: { ...current.data, patchAtlas: atlas } }
+          : current,
+      );
+    },
+    [enabled],
+  );
+  const matching = state.data?.metric === metric;
+  return {
+    ...(enabled
+      ? state.status === 'ready' && !matching
+        ? { status: 'loading' as const, data: state.data }
+        : state
+      : { status: 'idle' as const }),
+    retry: () => setRetryKey((v) => v + 1),
+    onPatchesReady,
   };
 }
 

@@ -162,9 +162,7 @@ if (arguments_.includes('--list')) {
       await run(
         'pnpm',
         ['exec', 'playwright', 'test', ...playwrightArguments],
-        {
-          env: environment,
-        },
+        { env: environment },
       );
     } else {
       // SwiftShader degrades when both GPU-heavy projects share one browser

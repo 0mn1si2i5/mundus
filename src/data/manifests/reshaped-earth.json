@@ -1,0 +1,598 @@
+{
+  "id": "reshaped-earth",
+  "sourceName": "Reshaped Earth 2020 country snapshots",
+  "sourceUrl": "https://github.com/0mn1si2i5/mundus",
+  "licenseName": "CC BY 4.0 and Public Domain",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "version": "2026-10-10",
+  "retrievedAt": "2026-10-10",
+  "attribution": "European Commission JRC GHS-POP; Kummu et al.; Jones et al. GCP-GridFED; Li, Zhou, Zhao & Zhao; Natural Earth",
+  "redistribution": "allowed",
+  "transformations": [
+    "30-arcsecond classification with the existing Mundus country ownership and coastal fallback",
+    "Area-weighted country aggregation of the published 2020 source snapshots",
+    "Offline JS GSM2018 flow with bounded residual-density corrections",
+    "MRE3 uniform 1024×512 periodic node inverse; Int16 delta longitude and sine latitude, meshopt vertex encoding",
+    "Lossless country JSON metadata; budgets measured with gzip level 6",
+    "Spherical 8-neighbour chamfer selects the intended solid core; country ID in R, stable metric padding bits in G, vector boundary distance in B quantized to 0-4 pixels"
+  ],
+  "missingValuePolicy": "Missing is null; true zero uses 0.01 mean density; ocean, Antarctica and missing receive mean density.",
+  "boundaryPolicy": "Existing Mundus full-detail country policy; the retained admin-1 classification preserves coastal label ties but only country records are published.",
+  "coverageNote": "239 named countries; 2020 global snapshots; unreconciled source cells remain explicitly unassigned.",
+  "formatVersion": 5,
+  "buildFingerprint": "2605b3ab1aff7793deb5c5ef4e3e883853c37c5af54ea76813eefdc84fc5cad3",
+  "publishedMetrics": ["population", "gdp", "co2", "lights"],
+  "unpublishedMetrics": [],
+  "metricBits": { "population": 0, "gdp": 1, "co2": 2, "lights": 3 },
+  "year": 2020,
+  "grid": {
+    "projection": "cylindrical-equal-area",
+    "width": 2048,
+    "height": 1024
+  },
+  "sources": [
+    {
+      "id": "ghs-pop-r2023a",
+      "name": "GHS-POP R2023A",
+      "url": "https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php",
+      "license": "CC BY 4.0",
+      "year": 2020
+    },
+    {
+      "id": "kummu-gdp-v4",
+      "name": "Kummu et al. downscaled GDP v4",
+      "url": "https://zenodo.org/records/18429133",
+      "license": "CC BY 4.0",
+      "year": 2020
+    },
+    {
+      "id": "gridfed-v2025-1",
+      "name": "GCP-GridFED v2025.1",
+      "url": "https://zenodo.org/records/17467681",
+      "license": "CC BY 4.0",
+      "year": 2020
+    },
+    {
+      "id": "harmonized-ntl-v10",
+      "name": "Harmonized DMSP–VIIRS NTL v10",
+      "url": "https://figshare.com/articles/dataset/9828827/10",
+      "license": "CC BY 4.0",
+      "year": 2020
+    },
+    {
+      "id": "natural-earth-admin1",
+      "name": "Natural Earth admin-1 5.1.2 (classification input)",
+      "url": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "license": "Public domain"
+    },
+    {
+      "id": "mundus-countries-chn",
+      "name": "Mundus country boundary China view",
+      "url": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "license": "Public domain"
+    },
+    {
+      "id": "mundus-countries-default",
+      "name": "Mundus country boundary default view",
+      "url": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "license": "Public domain"
+    }
+  ],
+  "sourceAssets": {
+    "population": {
+      "key": "population",
+      "published": true,
+      "fileName": "GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.zip",
+      "distributionUrl": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E2020_GLOBE_R2023A_4326_30ss/V1-0/GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.zip",
+      "sha256": "579fb7477b33d9be61e9562b170ea108a670b85ef6fe23b61a22d17200929636",
+      "rawBytes": 482351880,
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "version": "R2023A V1-0",
+      "retrievedAt": "2026-10-10",
+      "year": 2020,
+      "selection": "Single float64 population-count band, epoch 2020; this published file has no nodata tag and declares 100% valid cells. Preserve its shifted 30-arcsecond affine grid and map by pixel centres."
+    },
+    "gdp": {
+      "key": "gdp",
+      "published": true,
+      "fileName": "rast_gdpTot_1990_2024_5arcmin.tif",
+      "distributionUrl": "https://zenodo.org/api/records/18429133/files/rast_gdpTot_1990_2024_5arcmin.tif/content",
+      "sha256": "3e11f274d342a0af6a81385ca749b6712aea0f0102f353f05c6edbc6c02ef366",
+      "rawBytes": 184157771,
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "version": "v4",
+      "retrievedAt": "2026-10-10",
+      "year": 2020,
+      "selection": "Band whose GDAL description is 2020; 2021 international dollars (PPP), as explicitly stated by v4 metadata."
+    },
+    "co2": {
+      "key": "co2",
+      "published": true,
+      "fileName": "GCP-GridFEDv2025.1_2020.zip",
+      "distributionUrl": "https://opendap.uea.ac.uk/opendap/hyrax/greenocean/GridFED/GridFEDv2025.1/GCP-GridFEDv2025.1_2020.zip",
+      "sha256": "1ac433fcb3ad1fa3b4fffd3bfa0f740d13eff66db2571c955bc08ecf98973433",
+      "rawBytes": 1329127164,
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "version": "GCP-GridFEDv2025.1",
+      "retrievedAt": "2026-10-10",
+      "year": 2020,
+      "selection": "Twelve months; CO2 oil, coal, gas and cement calcination; exclude bunkers and cement carbonation; inspect variable units before conversion to tonnes CO2/year."
+    },
+    "lights": {
+      "key": "lights",
+      "published": true,
+      "fileName": "Harmonized_DN_NTL_2020_simVIIRS.tif",
+      "distributionUrl": "https://ndownloader.figshare.com/files/57065297",
+      "sha256": "099d73bb65c7f399feec58cf28a9f119e2e9bcd339be03b03f2b0c5860ab466d",
+      "rawBytes": 24996479,
+      "licenseName": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "version": "v10",
+      "retrievedAt": "2026-10-10",
+      "year": 2020,
+      "selection": "DN sum, relative index, 0-63; not radiance."
+    },
+    "admin1": {
+      "key": "admin1",
+      "published": true,
+      "fileName": "ne_10m_admin_1_states_provinces.geojson",
+      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson",
+      "sha256": "22d0e3ad85eb3e27f17cabf8ba2d50e554fbc27a87796ff891d958185da62fb5",
+      "rawBytes": 40726851,
+      "licenseName": "Public domain",
+      "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "version": "5.1.2",
+      "retrievedAt": "2026-10-10",
+      "selection": "Full-detail admin-1; name and name_zh; Mundus raster reassignment policy."
+    },
+    "chn": {
+      "key": "chn",
+      "published": true,
+      "fileName": "ne_10m_admin_0_countries_chn.geojson",
+      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+      "sha256": "a13bf5f310fde87bc0a5f994f8ce9bd706cc198d8ee37d221e61c2546b945372",
+      "rawBytes": 13205107,
+      "licenseName": "Public domain",
+      "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "version": "5.1.2",
+      "retrievedAt": "2026-10-10",
+      "selection": "Full-detail China boundary view combined through the existing mundusCountryFeatures boundary policy."
+    },
+    "default": {
+      "key": "default",
+      "published": true,
+      "fileName": "ne_10m_admin_0_countries.geojson",
+      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries.geojson",
+      "sha256": "239eec57ac17f100a11e2536cffc56752c318b50ae765b0918ff7aab4ce8f255",
+      "rawBytes": 13287234,
+      "licenseName": "Public domain",
+      "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "version": "5.1.2",
+      "retrievedAt": "2026-10-10",
+      "selection": "Full-detail default boundary view combined through the existing mundusCountryFeatures boundary policy."
+    }
+  },
+  "derivedAssets": {
+    "units.json": {
+      "path": "src/data/generated/reshaped-earth/units.json",
+      "sha256": "d59f45ca46819c18719cb082533c24d265e259628b5c60227ecec4abf7800f93",
+      "rawBytes": 52854,
+      "gzipBytes": 12242,
+      "gpuBytes": 0,
+      "kind": "metadata",
+      "content": "units"
+    },
+    "values.json": {
+      "path": "src/data/generated/reshaped-earth/values.json",
+      "sha256": "265bef13d88133556f09ed4fda6b4da4c4aa2b069273313559903e4e86e966a1",
+      "rawBytes": 151306,
+      "gzipBytes": 41292,
+      "gpuBytes": 0,
+      "kind": "metadata",
+      "content": "values"
+    },
+    "ids-country.png": {
+      "path": "src/data/generated/reshaped-earth/ids-country.png",
+      "sha256": "6ef5a0b7013e62bc664f85685e403b268ec1d2d5f9a34e85040074ee69a0cf8c",
+      "rawBytes": 1182541,
+      "gzipBytes": 1162743,
+      "gpuBytes": 25165824,
+      "kind": "id-raster",
+      "width": 4096,
+      "height": 2048,
+      "encoding": "country-padding-distance-rgb8"
+    },
+    "ids-patches.png": {
+      "path": "src/data/generated/reshaped-earth/ids-patches.png",
+      "sha256": "26e482d0c518251b1dbe8f97ef6e2787dd601c0416935c44b125bfec7a189b3d",
+      "rawBytes": 91688,
+      "gzipBytes": 88161,
+      "gpuBytes": 2660352,
+      "kind": "id-patch-atlas",
+      "width": 2048,
+      "height": 433,
+      "encoding": "country-padding-distance-rgb8-atlas",
+      "patches": 17
+    },
+    "ids-patches.json": {
+      "path": "src/data/generated/reshaped-earth/ids-patches.json",
+      "sha256": "12beea01762a42f1759902351a9e735802befccb16a1d01f4ed66c8e21332916",
+      "rawBytes": 22440,
+      "gzipBytes": 4058,
+      "gpuBytes": 0,
+      "kind": "metadata",
+      "content": "patches"
+    },
+    "inverse-population.bin": {
+      "path": "src/data/generated/reshaped-earth/inverse-population.bin",
+      "sha256": "a28ffe7bfe3b87dc3891865daf43308c7a629d97b25e5d6112153e7b6ececc13",
+      "rawBytes": 871566,
+      "gzipBytes": 504130,
+      "gpuBytes": 4206600,
+      "kind": "inverse-field",
+      "metric": "population",
+      "width": 1024,
+      "height": 512,
+      "encoding": "regular-node-int16",
+      "stepLongitude": 0.015333110718054599,
+      "stepS": 0.000016602767642657175
+    },
+    "inverse-gdp.bin": {
+      "path": "src/data/generated/reshaped-earth/inverse-gdp.bin",
+      "sha256": "128ebd61f10ccbc2c0ac5f976d37524ed12727d3de5e6a36f693006b8c4e218b",
+      "rawBytes": 837484,
+      "gzipBytes": 489316,
+      "gpuBytes": 4206600,
+      "kind": "inverse-field",
+      "metric": "gdp",
+      "width": 1024,
+      "height": 512,
+      "encoding": "regular-node-int16",
+      "stepLongitude": 0.014198784027507298,
+      "stepS": 0.000023037951950491142
+    },
+    "inverse-co2.bin": {
+      "path": "src/data/generated/reshaped-earth/inverse-co2.bin",
+      "sha256": "117f1e9bf8fb215197321ae26048636a5f816c877ade640a42833f28e9463407",
+      "rawBytes": 841048,
+      "gzipBytes": 484263,
+      "gpuBytes": 4206600,
+      "kind": "inverse-field",
+      "metric": "co2",
+      "width": 1024,
+      "height": 512,
+      "encoding": "regular-node-int16",
+      "stepLongitude": 0.018496953051748966,
+      "stepS": 0.000019629643022647042
+    },
+    "inverse-lights.bin": {
+      "path": "src/data/generated/reshaped-earth/inverse-lights.bin",
+      "sha256": "785394a598d4d0b6a5417c3393c5802000caffb426a893784041a049cc69b578",
+      "rawBytes": 760265,
+      "gzipBytes": 436410,
+      "gpuBytes": 4206600,
+      "kind": "inverse-field",
+      "metric": "lights",
+      "width": 1024,
+      "height": 512,
+      "encoding": "regular-node-int16",
+      "stepLongitude": 0.01707242294021192,
+      "stepS": 0.000026263990035129588
+    }
+  },
+  "patchBudget": {
+    "removals": [],
+    "steps": [
+      {
+        "step": 0,
+        "removedCountryId": null,
+        "countryIds": [
+          "ne-048",
+          "ne-275",
+          "ne-344",
+          "ne-414",
+          "ne-422",
+          "ne-438",
+          "ne-442",
+          "ne-446",
+          "ne-470",
+          "ne-480",
+          "ne-492",
+          "ne-630",
+          "ne-634",
+          "ne-674",
+          "ne-702",
+          "ne-780",
+          "ne-831",
+          "ne-832",
+          "ne-833"
+        ],
+        "patches": 17,
+        "gzipBytes": 88161,
+        "width": 2048,
+        "height": 433,
+        "gpuBytes": 2660352
+      }
+    ]
+  },
+  "acceptance": {
+    "population": {
+      "triangleOrientation": true,
+      "minimumTriangleArea": 1.1358003707831886e-11,
+      "medianAreaError": 0.0028212781201890406,
+      "p90AreaError": 0.02980591419346722,
+      "rawMedianAreaError": 0.0034491829105031194,
+      "rawP90AreaError": 0.04365432868667408,
+      "totalAreaRelativeError": 3.9968028886505635e-14,
+      "quantizationMaxDegrees": 0.007678447128083553,
+      "iterations": 6,
+      "unitsChecked": 164,
+      "displaySamples": 400000,
+      "displaySeed": 1297237299,
+      "displayP50Degrees": 0.002198049806260059,
+      "displayP99Degrees": 0.022991220752106453,
+      "displayP999Degrees": 0.19488993186156425,
+      "displayMaxDegrees": 3.445737422328538
+    },
+    "gdp": {
+      "triangleOrientation": true,
+      "minimumTriangleArea": 4.51612276097481e-12,
+      "medianAreaError": 0.007348290121512943,
+      "p90AreaError": 0.06469700112939676,
+      "rawMedianAreaError": 0.009274735583985715,
+      "rawP90AreaError": 0.13908567779722553,
+      "totalAreaRelativeError": 3.2529534621517087e-14,
+      "quantizationMaxDegrees": 0.008868421219643714,
+      "iterations": 12,
+      "unitsChecked": 153,
+      "displaySamples": 400000,
+      "displaySeed": 1297237299,
+      "displayP50Degrees": 0.0022128391009870988,
+      "displayP99Degrees": 0.031230831245951485,
+      "displayP999Degrees": 0.13916216988411678,
+      "displayMaxDegrees": 3.2288322293119758
+    },
+    "co2": {
+      "triangleOrientation": true,
+      "minimumTriangleArea": 4.477968094536175e-12,
+      "medianAreaError": 0.004490519234503935,
+      "p90AreaError": 0.07631874195971551,
+      "rawMedianAreaError": 0.0074123946091609735,
+      "rawP90AreaError": 0.11356860055270555,
+      "totalAreaRelativeError": 3.530509218307998e-14,
+      "quantizationMaxDegrees": 0.009260983836275345,
+      "iterations": 8,
+      "unitsChecked": 142,
+      "displaySamples": 400000,
+      "displaySeed": 1297237299,
+      "displayP50Degrees": 0.0026661106699068116,
+      "displayP99Degrees": 0.029025643036198555,
+      "displayP999Degrees": 0.16713284121034055,
+      "displayMaxDegrees": 3.375087761510519
+    },
+    "lights": {
+      "triangleOrientation": true,
+      "minimumTriangleArea": 3.522909550161365e-12,
+      "medianAreaError": 0.002927498931693445,
+      "p90AreaError": 0.030944950732245825,
+      "rawMedianAreaError": 0.004726232006132359,
+      "rawP90AreaError": 0.04593153788620092,
+      "totalAreaRelativeError": 7.993605777301127e-15,
+      "quantizationMaxDegrees": 0.009225129567008083,
+      "iterations": 6,
+      "unitsChecked": 151,
+      "displaySamples": 400000,
+      "displaySeed": 1297237299,
+      "displayP50Degrees": 0.002384543689227835,
+      "displayP99Degrees": 0.014216574081925136,
+      "displayP999Degrees": 0.06289949259901484,
+      "displayMaxDegrees": 3.164881489784901
+    }
+  },
+  "parameters": {
+    "population": {
+      "algorithm": "gsm2018-fast-flow",
+      "grid": [2048, 1024],
+      "initialBlur": 32,
+      "blurSchedule": [32, 16, 8, 4, 2, 1],
+      "integrationTolerance": 0.000009765625,
+      "maxRounds": 16,
+      "stopReason": "raw-pass",
+      "minimumJacobian": 0.001,
+      "regularizationPasses": 8,
+      "quantization": {
+        "rule": "minimum-gzip6-among-15-choices-with-source-quantization-lt-0.01-and-display-p99-le-0.1-p999-le-0.5",
+        "stepLongitudeFactor": 16,
+        "stepSFactor": 1.5,
+        "stepLongitude": 0.015333110718054599,
+        "stepS": 0.000016602767642657175
+      }
+    },
+    "gdp": {
+      "algorithm": "gsm2018-fast-flow",
+      "grid": [2048, 1024],
+      "initialBlur": 32,
+      "blurSchedule": [32, 16, 8, 4, 2, 1, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25],
+      "integrationTolerance": 0.000009765625,
+      "maxRounds": 16,
+      "stopReason": "raw-pass",
+      "minimumJacobian": 0.001,
+      "regularizationPasses": 8,
+      "quantization": {
+        "rule": "minimum-gzip6-among-15-choices-with-source-quantization-lt-0.01-and-display-p99-le-0.1-p999-le-0.5",
+        "stepLongitudeFactor": 16,
+        "stepSFactor": 1.25,
+        "stepLongitude": 0.014198784027507298,
+        "stepS": 0.000023037951950491142
+      }
+    },
+    "co2": {
+      "algorithm": "gsm2018-fast-flow",
+      "grid": [2048, 1024],
+      "initialBlur": 32,
+      "blurSchedule": [32, 16, 8, 4, 2, 1, 0.5, 0.25],
+      "integrationTolerance": 0.000009765625,
+      "maxRounds": 16,
+      "stopReason": "raw-pass",
+      "minimumJacobian": 0.001,
+      "regularizationPasses": 8,
+      "quantization": {
+        "rule": "minimum-gzip6-among-15-choices-with-source-quantization-lt-0.01-and-display-p99-le-0.1-p999-le-0.5",
+        "stepLongitudeFactor": 16,
+        "stepSFactor": 1.5,
+        "stepLongitude": 0.018496953051748966,
+        "stepS": 0.000019629643022647042
+      }
+    },
+    "lights": {
+      "algorithm": "gsm2018-fast-flow",
+      "grid": [2048, 1024],
+      "initialBlur": 32,
+      "blurSchedule": [32, 16, 8, 4, 2, 1],
+      "integrationTolerance": 0.000009765625,
+      "maxRounds": 16,
+      "stopReason": "raw-pass",
+      "minimumJacobian": 0.001,
+      "regularizationPasses": 8,
+      "quantization": {
+        "rule": "minimum-gzip6-among-15-choices-with-source-quantization-lt-0.01-and-display-p99-le-0.1-p999-le-0.5",
+        "stepLongitudeFactor": 24,
+        "stepSFactor": 1.5,
+        "stepLongitude": 0.01707242294021192,
+        "stepS": 0.000026263990035129588
+      }
+    }
+  },
+  "determinism": {
+    "population": {
+      "builds": 2,
+      "byteIdentical": true,
+      "forwardSha256": "a23817b404cd3eadaab508888f6a6a17731fa6d89eb6af50d7bdd651014cf2fe",
+      "inverseSha256": "a28ffe7bfe3b87dc3891865daf43308c7a629d97b25e5d6112153e7b6ececc13",
+      "paddingSha256": "d8dfd58d728529167d89d9e92a040b148e9ca2c3d7fd7319143806f599a195dc"
+    },
+    "gdp": {
+      "builds": 2,
+      "byteIdentical": true,
+      "forwardSha256": "8b3c877ef00d54752fc62ef01f63cd6dff9757b26c1c85656f7fcb779d7aef3d",
+      "inverseSha256": "128ebd61f10ccbc2c0ac5f976d37524ed12727d3de5e6a36f693006b8c4e218b",
+      "paddingSha256": "70b873ad3e4942b4899292981547b1035ff98534c5d2082b01e7fdba5d725921"
+    },
+    "co2": {
+      "builds": 2,
+      "byteIdentical": true,
+      "forwardSha256": "6bc1e2d2282e9410b75b27610eb880d1a433daf612fcfd6b6b1229c7fc4f25ed",
+      "inverseSha256": "117f1e9bf8fb215197321ae26048636a5f816c877ade640a42833f28e9463407",
+      "paddingSha256": "4750a9e8eaf74087f25c1f2bf80832527c4f8aa93f1a05f196559ef9dd17282a"
+    },
+    "lights": {
+      "builds": 2,
+      "byteIdentical": true,
+      "forwardSha256": "ff2127baf362c5b52c0be95aa5ffef91afca03a923d335c00fcbe9c375fc9ea9",
+      "inverseSha256": "785394a598d4d0b6a5417c3393c5802000caffb426a893784041a049cc69b578",
+      "paddingSha256": "78be6f3338cdd92571344cd3259764ac9db28d4875ebbf73f1fb02c2eddc6fce"
+    }
+  },
+  "padding": {
+    "population": {
+      "countryCount": 16,
+      "skippedCountryCount": 11,
+      "maxFraction": 0.9797164706933963,
+      "maxOnePixelRelativeError": 0.6547148915731736,
+      "maxCoreTargetRelativeError": 0.30903474337222664,
+      "detailSha256": "45637e080713e5021a8e07585a667ce864d026c1f391116b3d3f93715477ff0b",
+      "algorithm": "spherical-chamfer-8",
+      "triggerRatio": 1.1,
+      "minimumPixels": 64
+    },
+    "gdp": {
+      "countryCount": 28,
+      "skippedCountryCount": 8,
+      "maxFraction": 0.9141507961087562,
+      "maxOnePixelRelativeError": 0.07176750251724082,
+      "maxCoreTargetRelativeError": 0.03883828740594837,
+      "detailSha256": "b462f412c149b05f8cea9ee032584b2f01942a0796f9cdd3b36b50519e2bd701",
+      "algorithm": "spherical-chamfer-8",
+      "triggerRatio": 1.1,
+      "minimumPixels": 64
+    },
+    "co2": {
+      "countryCount": 40,
+      "skippedCountryCount": 34,
+      "maxFraction": 0.9773528488936841,
+      "maxOnePixelRelativeError": 0.5223367927335906,
+      "maxCoreTargetRelativeError": 0.09295176139062798,
+      "detailSha256": "ab951e070e28e587ab8f4a910d98391c577b581189bfd43c4fabd6940c8f08f5",
+      "algorithm": "spherical-chamfer-8",
+      "triggerRatio": 1.1,
+      "minimumPixels": 64
+    },
+    "lights": {
+      "countryCount": 29,
+      "skippedCountryCount": 25,
+      "maxFraction": 0.9797349092759371,
+      "maxOnePixelRelativeError": 0.6607431800237368,
+      "maxCoreTargetRelativeError": 0.30744030442826603,
+      "detailSha256": "1177a791c217574fdb55ece5653a6eb61b8a96c64d94a5ea081db656ea1cb83f",
+      "algorithm": "spherical-chamfer-8",
+      "triggerRatio": 1.1,
+      "minimumPixels": 64
+    }
+  },
+  "nameCoverage": { "countries": 239, "chinese": 239, "fraction": 1 },
+  "unassigned": {
+    "population": 0.0012389899659337933,
+    "gdp": 0.0005006793680015936,
+    "co2": 0.0025121186919499117,
+    "lights": 0.01823317366504805
+  },
+  "aggregation": {
+    "population": {
+      "published": true,
+      "diagnostics": {
+        "validTotal": 7840952947.013647,
+        "assignedTotal": 7831238084.988938,
+        "unassigned": 9714862.024708914,
+        "relativeError": 0,
+        "unassignedFraction": 0.0012389899659337933
+      },
+      "metadataSha256": "9f57f61b858b71f096b5a708569cbf6fa0a1bdb3f41c30ccdfddb2e55547e821"
+    },
+    "gdp": {
+      "published": true,
+      "diagnostics": {
+        "validTotal": 140135224581047,
+        "assignedTotal": 140065061765369,
+        "unassigned": 70162815678,
+        "relativeError": 0,
+        "unassignedFraction": 0.0005006793680015936
+      },
+      "metadataSha256": "ad8500235a704fb86e75be3d2923c7f175cadbc9b03ff99aabb2dd0c30fe6a32"
+    },
+    "co2": {
+      "published": true,
+      "diagnostics": {
+        "validTotal": 34252401457.24564,
+        "assignedTotal": 34166355359.30072,
+        "unassigned": 86046097.94491917,
+        "relativeError": 0,
+        "unassignedFraction": 0.0025121186919499117
+      },
+      "metadataSha256": "6ef3e32072ec2115171b8c9c24618943f7ea3a85ca6db924212e02f8545c1b4c"
+    },
+    "lights": {
+      "published": true,
+      "diagnostics": {
+        "validTotal": 445414065,
+        "assignedTotal": 437292753,
+        "unassigned": 8121312,
+        "relativeError": 0,
+        "unassignedFraction": 0.01823317366504805
+      },
+      "metadataSha256": "6aa9477fb021cc4e25d0a4d5b66326921625356b3aebdad0ed92aa277d5b2a2e"
+    }
+  }
+}

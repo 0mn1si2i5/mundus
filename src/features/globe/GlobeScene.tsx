@@ -7,8 +7,11 @@ import {
   useMemo,
   useRef,
   useState,
+  lazy,
+  Suspense,
   type MutableRefObject,
   type Ref,
+  type ComponentRef,
 } from 'react';
 import type {
   Group,
@@ -17,6 +20,8 @@ import type {
   MeshStandardMaterial,
 } from 'three';
 import { Quaternion, Vector3 } from 'three';
+import { Color } from 'three';
+import { RESHAPED_METRIC_THEMES } from '../reshaped/metrics';
 import { useAppStore } from '../../state/appStore';
 import {
   createCountryHighlightTexture,
@@ -89,6 +94,13 @@ import { IsolationLayer } from './IsolationLayer';
 import { CityReachFieldLayer } from './CityReachFieldLayer';
 import type { CityReachFrame } from '../isolation/cityReachTypes';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
+import type { ReshapedMappingHandle } from './ReshapedLayer';
+import type { GlobePresentation } from '../modes/useModePresentation';
+const ReshapedLayer = lazy(() =>
+  import('./ReshapedLayer').then((module) => ({
+    default: module.ReshapedLayer,
+  })),
+);
 
 export interface GlobeKeyboardController {
   rotateHorizontal: (radians: number) => void;
@@ -109,6 +121,13 @@ export interface SunlineRenderState {
   subsolarPoint: GeoPoint;
 }
 
+export interface RasterLayerVisibility {
+  reshaped: boolean;
+  baseSurface: boolean;
+  outerShell: boolean;
+  highlight: boolean;
+}
+
 interface GlobeSceneProps {
   profile: QualityProfile;
   benchmarkActive: boolean;
@@ -122,6 +141,7 @@ interface GlobeSceneProps {
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
   isolation: IsolationGlobePresentation | null;
+  reshaped: GlobePresentation['reshaped'];
   onIsolationFieldRendered: (frame: CityReachFrame) => void;
   cameraGestureCancelRef: MutableRefObject<(() => void) | null>;
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
@@ -138,6 +158,7 @@ interface GlobeSceneProps {
     state: VectorGlobeState,
     resources: VectorGlobeResources | null,
   ) => void;
+  onRasterLayerVisibilityChange: (visibility: RasterLayerVisibility) => void;
   onVectorPaletteUpdate: (version: number) => void;
   onVectorDragMaterialChange: (transparent: boolean) => void;
   onVectorDragEvidence: (alphaEvidence: string, orderEvidence: string) => void;
@@ -161,11 +182,13 @@ export function GlobeScene({
   surnameMapLabels,
   surnameDisplayMode,
   isolation,
+  reshaped,
   onIsolationFieldRendered,
   cameraGestureCancelRef,
   onSurnameLabelVisibilityChange,
   onSurnameLabelLayoutChange,
   onVectorStateChange,
+  onRasterLayerVisibilityChange,
   onVectorPaletteUpdate,
   onVectorDragMaterialChange,
   onVectorDragEvidence,
@@ -195,6 +218,10 @@ export function GlobeScene({
   } = diagnostics;
   const activeMode = useAppStore((state) => state.activeMode);
   const point = useAppStore((state) => state.point);
+  const reshapedMapping = useRef<ReshapedMappingHandle | null>(null);
+  const setReshapedSelectedUnitId = useAppStore(
+    (state) => state.setReshapedSelectedUnitId,
+  );
   const selectedCountry = useAppStore((state) => state.selectedCountry);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
   const cameraTarget = useAppStore((state) => state.cameraFocusIntent.target);
@@ -267,6 +294,28 @@ export function GlobeScene({
     Readonly<Record<string, SurnameLabelSlot>>
   >({});
   const { camera, gl, invalidate, size } = useThree();
+  const graphicsUnavailable = useAppStore(
+    (state) => state.reshapedGraphicsUnavailable,
+  );
+  const setGraphicsUnavailable = useAppStore(
+    (state) => state.setReshapedGraphicsUnavailable,
+  );
+  const reshapedData = reshaped?.data.data;
+  const reshapedRenderable = Boolean(
+    !graphicsUnavailable &&
+    reshaped &&
+    reshaped.data.status !== 'error' &&
+    reshapedData?.ids &&
+    reshapedData.inverse,
+  );
+  useEffect(() => {
+    setGraphicsUnavailable(
+      Boolean(reshaped) &&
+        (gl.capabilities.maxTextureSize <
+          (profile.level === 'low' ? 2048 : 4096) ||
+          !(gl.getContext() instanceof WebGL2RenderingContext)),
+    );
+  }, [gl, profile.level, reshaped, setGraphicsUnavailable]);
   const surnameOverrideKey = `${selectedCountry?.countryId ?? ''}:${surnameDisplayMode}:${size.width}:${size.height}`;
   const clearCameraFocus = useCallback(() => {
     cameraFocusGeneration.current += 1;
@@ -703,10 +752,16 @@ export function GlobeScene({
       },
       selectCenter() {
         if (!group.current) return;
-        const center = vector3ToGeo(
+        const hit = vector3ToGeo(
           group.current.worldToLocal(camera.position.clone()).normalize(),
         );
+        const center = reshapedMapping.current?.inverse(hit) ?? hit;
         selectPoint(center);
+        setReshapedSelectedUnitId(
+          reshapedMapping.current
+            ? reshapedMapping.current.unitId(center)
+            : undefined,
+        );
         setSelectedCountry(countries.findCountry(center));
         invalidate();
       },
@@ -719,6 +774,7 @@ export function GlobeScene({
     markMeaningfulInteraction,
     onCameraFocusStart,
     selectPoint,
+    setReshapedSelectedUnitId,
     setSelectedCountry,
     setCameraFocusFree,
     clearCameraFocus,
@@ -836,7 +892,7 @@ export function GlobeScene({
     vectorReady,
   ]);
   useEffect(() => {
-    if (vectorReady) return;
+    if (vectorReady || reshapedRenderable) return;
     highlights.update(
       hoveredCountry?.countryId ?? null,
       selectedCountry?.countryId ?? null,
@@ -847,6 +903,20 @@ export function GlobeScene({
     hoveredCountry?.countryId,
     invalidate,
     selectedCountry?.countryId,
+    reshapedRenderable,
+    vectorReady,
+  ]);
+  useEffect(() => {
+    onRasterLayerVisibilityChange({
+      reshaped: reshapedRenderable,
+      baseSurface: baseSurface.current?.visible ?? false,
+      outerShell: outerShell.current?.visible ?? false,
+      highlight: highlightMesh.current?.visible ?? false,
+    });
+  }, [
+    antipodeDragActive,
+    onRasterLayerVisibilityChange,
+    reshapedRenderable,
     vectorReady,
   ]);
 
@@ -858,6 +928,7 @@ export function GlobeScene({
     }
     if (
       activeMode !== 'surnames' &&
+      activeMode !== 'reshaped' &&
       isolation?.view !== 'field' &&
       !hasInteracted &&
       !manualCameraInteraction.current &&
@@ -883,14 +954,22 @@ export function GlobeScene({
               ? cameraFocusRequest.current.startedAt
               : performance.now(),
           startDirection: currentDirection,
-          targetDirection: geoToVector3(activeCameraTarget)
+          targetDirection: geoToVector3(
+            reshapedMapping.current?.forward(activeCameraTarget) ??
+              activeCameraTarget,
+          )
             .applyQuaternion(group.current.quaternion)
             .normalize(),
         };
       }
       const animation = cameraFocusAnimation.current;
       animation.targetDirection
-        .copy(geoToVector3(activeCameraTarget))
+        .copy(
+          geoToVector3(
+            reshapedMapping.current?.forward(activeCameraTarget) ??
+              activeCameraTarget,
+          ),
+        )
         .applyQuaternion(group.current.quaternion)
         .normalize();
       const { progress, complete } = cameraFocusAnimationProgress(
@@ -1049,11 +1128,18 @@ export function GlobeScene({
       return;
     }
     if (!group.current) return;
-    const selectedPoint = vector3ToGeo(
+    const hitPoint = vector3ToGeo(
       group.current.worldToLocal(event.point.clone()),
     );
+    const selectedPoint =
+      reshapedMapping.current?.inverse(hitPoint) ?? hitPoint;
     onGlobePick(selectedPoint);
     selectPoint(selectedPoint);
+    setReshapedSelectedUnitId(
+      reshapedMapping.current
+        ? reshapedMapping.current.unitId(selectedPoint)
+        : undefined,
+    );
     setSelectedCountry(countries.findCountry(selectedPoint));
     invalidate();
   }
@@ -1065,9 +1151,10 @@ export function GlobeScene({
     // while the globe itself is moving.
     if (cameraGestureActiveRef.current || pointerActiveRef.current) return;
     if (!group.current) return;
-    const hoverPoint = vector3ToGeo(
+    const hoverHit = vector3ToGeo(
       group.current.worldToLocal(event.point.clone()),
     );
+    const hoverPoint = reshapedMapping.current?.inverse(hoverHit) ?? hoverHit;
     setHoveredCountry(countries.findCountry(hoverPoint));
   }
 
@@ -1099,21 +1186,34 @@ export function GlobeScene({
           <sphereGeometry args={[1, ...profile.sphereSegments]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
-        <VectorGlobeLayer
-          key={`vector-surface:${vectorSurfaceRetryKey}`}
-          profile={profile}
-          hoveredCountryId={hoveredCountry?.countryId ?? null}
-          selectedCountryId={selectedCountry?.countryId ?? null}
-          dragActive={antipodeDragActive}
-          onStateChange={handleVectorStateChange}
-          onPaletteUpdate={onVectorPaletteUpdate}
-          onDragMaterialChange={onVectorDragMaterialChange}
-          onDragEvidence={onVectorDragEvidence}
-          sunlineActive={Boolean(sunline)}
-          onSunlineHighlightChange={onVectorSunlineHighlightChange}
-          onRenderEvidence={onVectorRenderEvidence}
-          renderSampleKey={vectorRenderSampleKey}
-        />
+        {reshapedRenderable && reshaped && reshapedData ? (
+          <Suspense fallback={null}>
+            <ReshapedLayer
+              profile={profile}
+              shape={reshaped.shape}
+              data={reshapedData}
+              replayKey={reshaped.replayKey}
+              mappingRef={reshapedMapping}
+              onPatchesReady={reshaped.data.onPatchesReady}
+            />
+          </Suspense>
+        ) : (
+          <VectorGlobeLayer
+            key={`vector-surface:${vectorSurfaceRetryKey}`}
+            profile={profile}
+            hoveredCountryId={hoveredCountry?.countryId ?? null}
+            selectedCountryId={selectedCountry?.countryId ?? null}
+            dragActive={antipodeDragActive}
+            onStateChange={handleVectorStateChange}
+            onPaletteUpdate={onVectorPaletteUpdate}
+            onDragMaterialChange={onVectorDragMaterialChange}
+            onDragEvidence={onVectorDragEvidence}
+            sunlineActive={Boolean(sunline)}
+            onSunlineHighlightChange={onVectorSunlineHighlightChange}
+            onRenderEvidence={onVectorRenderEvidence}
+            renderSampleKey={vectorRenderSampleKey}
+          />
+        )}
         {vectorReady && surnameLabelEntries.length > 0 ? (
           <SurnameMapLabelLayer
             key={`surname-label-layer:${surnameDisplayMode}`}
@@ -1131,7 +1231,7 @@ export function GlobeScene({
         ) : null}
         <mesh
           ref={baseSurface}
-          visible={!vectorReady && !antipodeDragActive}
+          visible={!reshapedRenderable && !vectorReady && !antipodeDragActive}
           renderOrder={0}
           raycast={ignoreRaycast}
         >
@@ -1147,7 +1247,7 @@ export function GlobeScene({
         </mesh>
         <mesh
           ref={outerShell}
-          visible={!vectorReady && antipodeDragActive}
+          visible={!reshapedRenderable && !vectorReady && antipodeDragActive}
           renderOrder={ANTIPODE_DRAG_RENDERING.outerShell.renderOrder}
           raycast={ignoreRaycast}
         >
@@ -1185,7 +1285,7 @@ export function GlobeScene({
         </mesh>
         <mesh
           ref={highlightMesh}
-          visible={!vectorReady}
+          visible={!reshapedRenderable && !vectorReady}
           scale={
             sunline
               ? SUNLINE_RENDERING.highlight.radius
@@ -1207,7 +1307,11 @@ export function GlobeScene({
             depthWrite={false}
           />
         </mesh>
-        <GeographicGraticule sunline={Boolean(sunline)} />
+        <GeographicGraticule
+          sunline={Boolean(sunline)}
+          lightsTheme={reshaped?.metric === 'lights'}
+          reshapedMapping={reshaped ? reshapedMapping : undefined}
+        />
         {sunline ? (
           <>
             <SunlineLayer
@@ -1311,20 +1415,56 @@ export function GlobeScene({
   );
 }
 
-function GeographicGraticule({ sunline }: { sunline: boolean }) {
+function GeographicGraticule({
+  sunline,
+  lightsTheme,
+  reshapedMapping,
+}: {
+  sunline: boolean;
+  lightsTheme: boolean;
+  reshapedMapping?: MutableRefObject<ReshapedMappingHandle | null>;
+}) {
   const lines = useMemo(
     () => createGraticuleLines(sunline ? 1.018 : 1.006),
     [sunline],
   );
+  const lineRefs = useRef<(ComponentRef<typeof Line> | null)[]>([]);
+  const [color] = useState(() => new Color());
+  const [targetColor] = useState(() => new Color());
+  useFrame(() => {
+    const theme = reshapedMapping?.current?.theme();
+    if (!theme) return;
+    color
+      .set(RESHAPED_METRIC_THEMES[theme.from].graticule)
+      .lerp(
+        targetColor.set(RESHAPED_METRIC_THEMES[theme.to].graticule),
+        theme.t,
+      );
+    const opacity =
+      (theme.from === 'lights' ? 0.28 : GLOBE_RENDERING.graticule.opacity) *
+        (1 - theme.t) +
+      (theme.to === 'lights' ? 0.28 : GLOBE_RENDERING.graticule.opacity) *
+        theme.t;
+    for (const line of lineRefs.current)
+      if (line) {
+        line.material.color.copy(color);
+        line.material.opacity = opacity;
+      }
+  });
 
-  return lines.map((line) => (
+  return lines.map((line, index) => (
     <Line
+      ref={(value) => {
+        lineRefs.current[index] = value;
+      }}
       key={`${line.kind}-${line.coordinate}`}
       points={line.points}
-      color={GLOBE_RENDERING.graticule.color}
+      color={lightsTheme ? '#718096' : GLOBE_RENDERING.graticule.color}
       lineWidth={line.coordinate === 0 ? 0.85 : 0.55}
       transparent
-      opacity={sunline ? 0.42 : GLOBE_RENDERING.graticule.opacity}
+      opacity={
+        sunline ? 0.42 : lightsTheme ? 0.28 : GLOBE_RENDERING.graticule.opacity
+      }
       depthTest
       renderOrder={3}
     />
