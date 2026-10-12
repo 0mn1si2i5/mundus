@@ -40,7 +40,7 @@ export function IsolationLayer({
   useEffect(() => () => focalPositions.dispose(), [focalPositions]);
   const ring = useMemo(
     () =>
-      isolation.radiusKm === null
+      isolation.radiusKm === null || !isolation.city
         ? []
         : smallCirclePoints(
             isolation.city,
@@ -50,7 +50,7 @@ export function IsolationLayer({
   );
   const arc = useMemo(
     () =>
-      isolation.competitor
+      isolation.competitor && isolation.city
         ? greatCircleArcPoints(isolation.city, isolation.competitor)
         : [],
     [isolation.city, isolation.competitor],
@@ -67,7 +67,9 @@ export function IsolationLayer({
           depthWrite={false}
         />
       </points>
-      <IsolationMarker point={isolation.city} color="#b88746" />
+      {isolation.city ? (
+        <IsolationMarker point={isolation.city} color="#b88746" />
+      ) : null}
       {isolation.view === 'city' && isolation.competitor ? (
         <IsolationMarker point={isolation.competitor} color="#79bba9" />
       ) : null}
