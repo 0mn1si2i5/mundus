@@ -5,6 +5,56 @@ verifies committed derived snapshots with `pnpm data:verify`. Raw downloads are
 not committed. The code license does not replace any data license described
 below.
 
+The traffic-weighted city-reach inputs below belong to the owner-approved
+global field view. Its About dialog includes MAP, GHS-POP and OpenStreetMap
+credits alongside the existing GHSL and GeoNames credits.
+
+## City-reach transport and density inputs
+
+- MAP Global Motorized Friction Surface **2019**, WCS coverage
+  `Accessibility__202001_Global_Motorized_Friction_Surface` at
+  <https://data.malariaatlas.org/geoserver/Accessibility/wcs>.
+  [MAP's accessibility project](https://malariaatlas.org/research-project/accessibility-to-cities/)
+  and the [published dataset terms](https://developers.google.com/earth-engine/datasets/catalog/Oxford_MAP_friction_surface_2019)
+  describe this as CC BY 4.0. Reference: Weiss et al. (2020), _Global maps of
+  travel time to healthcare facilities_, Nature Medicine,
+  <https://doi.org/10.1038/s41591-020-1059-1>.
+- Use: symmetric travel-cost edges for an offline population-weighted city
+  competition model. The raster is aggregated by minimum valid non-water
+  friction from 1/120° to 1/30°. The output is a thought experiment, not an
+  observed commuting, healthcare or administrative catchment.
+- Provenance: the road inputs include OpenStreetMap (ODbL). The owner accepted
+  MAP's published CC BY terms with the residual derivative-licence risk on
+  2026-10-11, provided that only calculated ownership results are distributed,
+  the source friction raster is not distributed, and both **Malaria Atlas
+  Project (CC BY 4.0)** and **© OpenStreetMap contributors** are credited.
+  OSM terms: <https://www.openstreetmap.org/copyright>.
+- Reproducibility: MAP has no official checksums. Explicit source capture pins
+  every exact WCS request and its response/decoded-pixel SHA-256; rebuilding
+  rejects changed pixels. Research NPZ aggregates are not accepted as
+  production sources without this capture chain.
+- [GHS-POP R2023A](https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php),
+  V1.0, **2020** population, EPSG:4326 30 arcseconds, CC BY 4.0. Fixed ZIP:
+  <https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E2020_GLOBE_R2023A_4326_30ss/V1-0/GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.zip>,
+  SHA-256 `579fb7477b33d9be61e9562b170ea108a670b85ef6fe23b61a22d17200929636`.
+  It supplies display brightness by local density and population-impact
+  reports only; the competing city masses stay GHSL UCDB **2025** values.
+- Natural Earth 5.1.2 default boundaries govern the graph's explicit border
+  policy; the same-version Mundus view governs display. Differences in
+  sovereignty labels are hatched rather than assigned a displayed city owner.
+  No additional ferry connections are modelled.
+
+The model, approved open-border policy, name review, missing states,
+categorical RGB8 encoding and decoded-memory budgets are specified in
+[docs/data/city-reach.md](docs/data/city-reach.md). All source identities and
+derived asset hashes are pinned in the city-reach manifest. Missing reviewed
+Chinese city names remain null and display in English; the manifest records
+the missing counts. Required English city names and reviewed Chinese names
+for every asset country remain mandatory. The sole display resolution is
+about 15 km, while computation remains on the 1/30° grid. Complete source
+capture and waterway review records stay in the external build cache; the
+repository retains their summaries and SHA-256 identities.
+
 Where the product shows attribution: every notice below appears in the
 **About** dialog (header button "关于" / "About"), which is always one click
 away, and the desktop layout keeps a compact credit line ("Data: Natural Earth

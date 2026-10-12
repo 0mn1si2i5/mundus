@@ -1,0 +1,339 @@
+{
+  "id": "city-reach",
+  "formatVersion": 1,
+  "sourceName": "Traffic-weighted city competition field",
+  "sourceUrl": "https://malariaatlas.org/research-project/accessibility-to-cities/",
+  "licenseName": "CC BY 4.0 and public domain",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "version": "MAP 2019 / GHSL R2024A V1.1 / NE 5.1.2 / GHS-POP R2023A",
+  "retrievedAt": "2026-10-11",
+  "attribution": "MAP: Weiss et al. (2020), Nature Medicine, DOI 10.1038/s41591-020-1059-1; © OpenStreetMap contributors; GHSL: European Commission Joint Research Centre; Made with Natural Earth; Contains GeoNames data, CC BY 4.0",
+  "redistribution": "allowed",
+  "transformations": [
+    "Minimum valid nonwater MAP friction over each 4×4 pixel block",
+    "Centre-in-polygon Natural Earth labels with owner-reviewed routing table and disputed mask",
+    "GHSL population >=100,000; all_touched urban footprints, larger population wins overlaps, majority routing-country clipping",
+    "UC_centroids with nearest retained source-cell fallback",
+    "Fixed population additive lead and deterministic (distance, -population, GHSL id) ties",
+    "Exact bounded centre-switch threshold search; no ferries",
+    "Single 15 km display tier; RGB8 owner PNGs with B = 0 and a separate shared RGB8 quantised 2020 density texture"
+  ],
+  "missingValuePolicy": "0 means no reachable city; 65535 means disputed. A city with no transport source, no larger reachable centre, or a resolution merge keeps a distinct status. Missing reviewed Chinese city names remain null and the Chinese UI falls back to English. Required English city names and Chinese names for every asset country are mandatory; missing Chinese city-name counts are recorded.",
+  "boundaryPolicy": "Drawn countries use Mundus China viewpoint with Taiwan separate; routing uses Natural Earth default de facto polygons. Unknown land inherits the nearest known country without longitude wrapping. Nonlisted cross-border edges are closed; water and ferries are impassable.",
+  "grid": {
+    "width": 10800,
+    "height": 4350,
+    "west": -180,
+    "north": 85,
+    "step": 0.03333333333333333,
+    "wrapLongitude": true
+  },
+  "levels": [0.25, 0.5, 1, 2, 4, 8, 16],
+  "defaultLevel": 4,
+  "defaultQuality": "low",
+  "universeMinPopulation": 100000,
+  "ownerEncoding": {
+    "format": "RGB8: R + 256 * G; B = 0",
+    "cityIndexOffset": 1,
+    "unreachable": 0,
+    "disputed": 65535
+  },
+  "densityEncoding": {
+    "format": "RGB8: R = log-density; G = B = 0",
+    "year": 2020,
+    "unit": "people/km²",
+    "transform": "round(254 * min(1, log10(1 + density) / 4)); 255 = missing",
+    "missing": 255,
+    "source": "GHS-POP R2023A"
+  },
+  "densityAsset": {
+    "path": "public/data/city-reach/density-low.png",
+    "sha256": "cdfeebcd1e0c2d54c85cb8b97a49e993af8cf97c75c5bf62d85f396ac2211081",
+    "rawBytes": 530915,
+    "gzipBytes": 525543,
+    "x": 0,
+    "y": 0,
+    "width": 2700,
+    "height": 1088
+  },
+  "cityAsset": {
+    "path": "src/data/generated/city-reach.json",
+    "sha256": "53a9b813836b4cc7b4a60d6eea5c1cc65a2d4a027199a7bad57681aaf445eb54",
+    "rawBytes": 2283931,
+    "gzipBytes": 439360,
+    "formatVersion": 1
+  },
+  "sourceCapture": {
+    "path": "src/data/generated/city-reach-source-summary.json",
+    "sha256": "392df091d7aa1e23969386ca17eece9b12ecba6d81688ce76863db9513be6c14",
+    "rawBytes": 27317,
+    "gzipBytes": 13299
+  },
+  "sourceAssets": {
+    "ghsl": {
+      "distributionUrl": "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_GLOBE_R2024A/V1-1/GHS_UCDB_GLOBE_R2024A_V1_1.zip",
+      "sha256": "7b644df16b0791f88c3db28ce56338b5e1725be02b6a79ca253849822db26b21"
+    },
+    "neDrawn": {
+      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+      "sha256": "a13bf5f310fde87bc0a5f994f8ce9bd706cc198d8ee37d221e61c2546b945372"
+    },
+    "neRoute": {
+      "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries.geojson",
+      "sha256": "239eec57ac17f100a11e2536cffc56752c318b50ae765b0918ff7aab4ce8f255"
+    },
+    "population": {
+      "distributionUrl": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E2020_GLOBE_R2023A_4326_30ss/V1-0/GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.zip",
+      "sha256": "579fb7477b33d9be61e9562b170ea108a670b85ef6fe23b61a22d17200929636"
+    }
+  },
+  "openBorderRules": [
+    {
+      "countries": [
+        "AUT",
+        "BEL",
+        "BGR",
+        "HRV",
+        "CZE",
+        "DNK",
+        "EST",
+        "FIN",
+        "FRA",
+        "DEU",
+        "GRC",
+        "HUN",
+        "ISL",
+        "ITA",
+        "LVA",
+        "LIE",
+        "LTU",
+        "LUX",
+        "MLT",
+        "NLD",
+        "NOR",
+        "POL",
+        "PRT",
+        "ROU",
+        "SVK",
+        "SVN",
+        "ESP",
+        "SWE",
+        "CHE"
+      ],
+      "basis": "Schengen participants; transparent model omits checkpoint delays",
+      "sourceUrl": "https://home-affairs.ec.europa.eu/policies/schengen/schengen-area_en",
+      "verifiedAt": "2026-10-11"
+    },
+    {
+      "countries": [
+        "AUT",
+        "BEL",
+        "BGR",
+        "HRV",
+        "CZE",
+        "DNK",
+        "EST",
+        "FIN",
+        "FRA",
+        "DEU",
+        "GRC",
+        "HUN",
+        "ISL",
+        "ITA",
+        "LVA",
+        "LIE",
+        "LTU",
+        "LUX",
+        "MLT",
+        "NLD",
+        "NOR",
+        "POL",
+        "PRT",
+        "ROU",
+        "SVK",
+        "SVN",
+        "ESP",
+        "SWE",
+        "CHE",
+        "MCO",
+        "SMR",
+        "VAT",
+        "AND",
+        "ALD"
+      ],
+      "basis": "Owner-reviewed v0 extension to neighbouring microstates and Åland; this is a model rule, not a claim that all are Schengen members",
+      "sourceUrl": "https://home-affairs.ec.europa.eu/policies/schengen/schengen-area_en",
+      "verifiedAt": "2026-10-11"
+    },
+    {
+      "countries": ["GBR", "IRL", "IMN"],
+      "basis": "Common Travel Area; water remains impassable and ferries are excluded",
+      "sourceUrl": "https://www.gov.uk/government/publications/common-travel-area-guidance",
+      "verifiedAt": "2026-10-11"
+    },
+    {
+      "countries": ["IND", "NPL"],
+      "basis": "Owner-reviewed open-border scenario",
+      "sourceUrl": "https://www.mea.gov.in/Portal/ForeignRelation/India-Nepal_Bilateral_Brief.pdf",
+      "verifiedAt": "2026-10-11"
+    },
+    {
+      "countries": ["IND", "BTN"],
+      "basis": "Owner-reviewed India–Bhutan model scenario",
+      "sourceUrl": "https://www.mea.gov.in/Portal/ForeignRelation/Bhutan_Jan_2016.pdf",
+      "verifiedAt": "2026-10-11"
+    },
+    {
+      "countries": ["CHN", "HKG", "MAC"],
+      "basis": "Owner-reviewed within-sovereignty projection scenario; checkpoint delays omitted",
+      "sourceUrl": "https://www.gov.hk/en/nonresidents/visitinghk/entryinquiry/index.htm",
+      "verifiedAt": "2026-10-11"
+    },
+    {
+      "countries": ["CYP", "WSB"],
+      "basis": "Owner-reviewed Cyprus and Akrotiri routing scenario",
+      "sourceUrl": "https://www.sbaadministration.org/",
+      "verifiedAt": "2026-10-11"
+    },
+    {
+      "countries": ["CYP", "ESB"],
+      "basis": "Owner-reviewed Cyprus and Dhekelia routing scenario",
+      "sourceUrl": "https://www.sbaadministration.org/",
+      "verifiedAt": "2026-10-11"
+    },
+    {
+      "countries": ["FRA", "MAF"],
+      "basis": "Owner-reviewed French Saint Martin routing scenario",
+      "sourceUrl": "https://www.com-saint-martin.fr/",
+      "verifiedAt": "2026-10-11"
+    },
+    {
+      "countries": ["MAF", "SXM"],
+      "basis": "Owner-reviewed Saint Martin/Sint Maarten land-border scenario",
+      "sourceUrl": "https://www.com-saint-martin.fr/",
+      "verifiedAt": "2026-10-11"
+    }
+  ],
+  "routeMerges": { "KAS": "IND", "KAB": "KAZ", "SAH": "MAR" },
+  "routeUnknown": ["CNM", "BRT", "BJN", "SER", "SCR", "SPI", "PGA", "ATA"],
+  "qualityTiers": {
+    "low": {
+      "stride": 4,
+      "tileColumns": 1,
+      "tileRows": 1,
+      "width": 2700,
+      "height": 1088,
+      "gpuBytes": 11750400,
+      "densityGpuBytes": 11750400,
+      "cpuOwnerBytes": 5875200,
+      "transitionGpuBytes": 35251200
+    }
+  },
+  "ownershipAssets": {
+    "1": {
+      "low": [
+        {
+          "path": "public/data/city-reach/population-1-low-0-0.png",
+          "sha256": "a049c9acd9f4a9768e49268837d0d758ecf3edae6075de3db3845ce1a021dad1",
+          "rawBytes": 114119,
+          "gzipBytes": 105757,
+          "x": 0,
+          "y": 0,
+          "width": 2700,
+          "height": 1088
+        }
+      ]
+    },
+    "2": {
+      "low": [
+        {
+          "path": "public/data/city-reach/population-2-low-0-0.png",
+          "sha256": "7efc2117bbfb91fd8519ec4701676a17d43b24336f372d08d181fd8dbd37ca1f",
+          "rawBytes": 100034,
+          "gzipBytes": 92510,
+          "x": 0,
+          "y": 0,
+          "width": 2700,
+          "height": 1088
+        }
+      ]
+    },
+    "4": {
+      "low": [
+        {
+          "path": "public/data/city-reach/population-4-low-0-0.png",
+          "sha256": "7e7cd03f88b77039f715fa0d2dffed3c093493577924af0a591b04db44c2f276",
+          "rawBytes": 83504,
+          "gzipBytes": 76892,
+          "x": 0,
+          "y": 0,
+          "width": 2700,
+          "height": 1088
+        }
+      ]
+    },
+    "8": {
+      "low": [
+        {
+          "path": "public/data/city-reach/population-8-low-0-0.png",
+          "sha256": "d20202ea43726fac847579172d72440cbccd6d5efb0befb1b6d6f92aa5556cf6",
+          "rawBytes": 70160,
+          "gzipBytes": 64148,
+          "x": 0,
+          "y": 0,
+          "width": 2700,
+          "height": 1088
+        }
+      ]
+    },
+    "16": {
+      "low": [
+        {
+          "path": "public/data/city-reach/population-16-low-0-0.png",
+          "sha256": "a115323625383c15dcda5206a22bc5e6eae2f9594f4b35376fe0e2350f4e617f",
+          "rawBytes": 59429,
+          "gzipBytes": 53956,
+          "x": 0,
+          "y": 0,
+          "width": 2700,
+          "height": 1088
+        }
+      ]
+    },
+    "0.25": {
+      "low": [
+        {
+          "path": "public/data/city-reach/population-0.25-low-0-0.png",
+          "sha256": "287bbd632d0796213a8b1672e38ee50467b609d34743dd1cf6e4e7d4c75acdf5",
+          "rawBytes": 130199,
+          "gzipBytes": 121383,
+          "x": 0,
+          "y": 0,
+          "width": 2700,
+          "height": 1088
+        }
+      ]
+    },
+    "0.5": {
+      "low": [
+        {
+          "path": "public/data/city-reach/population-0.5-low-0-0.png",
+          "sha256": "63f4b2c40667c045664654d4d58345b8362584ead4f3d072d9b1e5199bee39a0",
+          "rawBytes": 124272,
+          "gzipBytes": 115620,
+          "x": 0,
+          "y": 0,
+          "width": 2700,
+          "height": 1088
+        }
+      ]
+    }
+  },
+  "recordCount": 5944,
+  "nameReview": {
+    "requiredCityCount": 5246,
+    "missingChineseCityCount": 3636,
+    "requiredMissingChineseCityCount": 3033,
+    "matchCounts": { "override": 182, "exact": 2126, "none": 3636 }
+  }
+}
