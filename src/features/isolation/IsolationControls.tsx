@@ -5,6 +5,7 @@ import { ModePanel } from '../controls/ModePanel';
 import type { ModePresentation } from '../modes/useModePresentation';
 import { displayIsolationName } from './isolationData';
 import styles from './IsolationControls.module.css';
+import { CITY_REACH_LEVELS } from './cityReachLevel';
 
 export function IsolationControls({
   locale,
@@ -14,6 +15,8 @@ export function IsolationControls({
   presentation: Extract<ModePresentation, { id: 'isolation' }>;
 }) {
   const alpha = useAppStore((state) => state.isolationAlpha);
+  const reach = useAppStore((state) => state.isolationReach);
+  const setReach = useAppStore((state) => state.setIsolationReach);
   const setAlpha = useAppStore((state) => state.setIsolationAlpha);
   const selectPoint = useAppStore((state) => state.selectPoint);
   const view = useAppStore((state) => state.isolationView);
@@ -29,10 +32,14 @@ export function IsolationControls({
       className={styles.isolationPanel}
       bodyClassName={styles.isolationBody}
       id="isolation-controls"
-      title={t.isolationPanelTitle}
-      subtitle={t.isolationSliderValue
-        .replace('{a}', alpha.toFixed(2))
-        .replace('{p}', String(Math.round(alpha * 100)))}
+      title={view === 'field' ? t.cityReachPanelTitle : t.isolationPanelTitle}
+      subtitle={
+        view === 'field'
+          ? t.cityReachValue.replace('{k}', String(reach))
+          : t.isolationSliderValue
+              .replace('{a}', alpha.toFixed(2))
+              .replace('{p}', String(Math.round(alpha * 100)))
+      }
       expandLabel={t.isolationExpand}
       collapseLabel={t.isolationCollapse}
     >
@@ -56,19 +63,39 @@ export function IsolationControls({
           {t.isolationFieldView}
         </button>
       </div>
-      <label className={styles.slider}>
-        <span>{t.isolationSliderLabel}</span>
-        <strong>{alpha.toFixed(2)}</strong>
-        <input
-          aria-label={t.isolationSliderLabel}
-          type="range"
-          min="0.1"
-          max="1"
-          step="0.01"
-          value={alpha}
-          onChange={(event) => setAlpha(Number(event.target.value))}
-        />
-      </label>
+      {view === 'field' ? (
+        <fieldset className={styles.reachLevels}>
+          <legend>{t.cityReachLabel}</legend>
+          <div>
+            {CITY_REACH_LEVELS.map((level) => (
+              <label key={level}>
+                <input
+                  type="radio"
+                  name="city-reach-level"
+                  value={level}
+                  checked={reach === level}
+                  onChange={() => setReach(level)}
+                />
+                <span>{level}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : (
+        <label className={styles.slider}>
+          <span>{t.isolationSliderLabel}</span>
+          <strong>{alpha.toFixed(2)}</strong>
+          <input
+            aria-label={t.isolationSliderLabel}
+            type="range"
+            min="0.1"
+            max="1"
+            step="0.01"
+            value={alpha}
+            onChange={(event) => setAlpha(Number(event.target.value))}
+          />
+        </label>
+      )}
       <div
         className={`${styles.details} ${view === 'field' ? styles.fieldDetails : ''}`}
       >
@@ -77,11 +104,19 @@ export function IsolationControls({
             <p>{t.isolationFieldRule}</p>
             {presentation.field.status === 'loading' ||
             presentation.field.status === 'idle' ? (
-              <p role="status">{t.isolationFieldLoading}</p>
+              <p role="status">
+                {t.isolationFieldLoading}
+                {presentation.field.frame
+                  ? ` ${t.cityReachShowingPrevious.replace('{k}', String(presentation.field.frame.level))}`
+                  : ''}
+              </p>
             ) : null}
             {presentation.field.status === 'error' ? (
               <p role="status">
-                {t.isolationFieldError}{' '}
+                {t.isolationFieldError}
+                {presentation.field.frame
+                  ? ` ${t.cityReachShowingPrevious.replace('{k}', String(presentation.field.frame.level))}`
+                  : ''}{' '}
                 <button type="button" onClick={presentation.field.retry}>
                   {t.isolationRetry}
                 </button>
@@ -91,39 +126,46 @@ export function IsolationControls({
               <p>
                 {t.isolationFieldCount.replace(
                   '{n}',
-                  String(presentation.field.sites.length),
+                  String(presentation.field.frame?.ownerIds.size ?? 0),
                 )}
               </p>
             ) : null}
           </div>
         ) : null}
-        <h3 className={styles.heading}>{t.isolationTopList}</h3>
-        <ol className={styles.list}>
-          {ranking.slice(0, 10).map((entry, index) => (
-            <li key={entry.city.id}>
-              <button
-                type="button"
-                aria-current={
-                  selectedCityIndex !== undefined &&
-                  presentation.dataset.status === 'ready' &&
-                  presentation.dataset.data.cities[selectedCityIndex]?.id ===
-                    entry.city.id
-                    ? 'true'
-                    : undefined
-                }
-                onClick={() => selectPoint(entry.city.point)}
-              >
-                {t.isolationTopListItem
-                  .replace('{n}', String(index + 1))
-                  .replace('{city}', displayIsolationName(entry.city, locale))
-                  .replace(
-                    '{d}',
-                    numberFormatter.format(Math.round(entry.distanceKm)),
-                  )}
-              </button>
-            </li>
-          ))}
-        </ol>
+        {view === 'city' ? (
+          <>
+            <h3 className={styles.heading}>{t.isolationTopList}</h3>
+            <ol className={styles.list}>
+              {ranking.slice(0, 10).map((entry, index) => (
+                <li key={entry.city.id}>
+                  <button
+                    type="button"
+                    aria-current={
+                      selectedCityIndex !== undefined &&
+                      presentation.dataset.status === 'ready' &&
+                      presentation.dataset.data.cities[selectedCityIndex]
+                        ?.id === entry.city.id
+                        ? 'true'
+                        : undefined
+                    }
+                    onClick={() => selectPoint(entry.city.point)}
+                  >
+                    {t.isolationTopListItem
+                      .replace('{n}', String(index + 1))
+                      .replace(
+                        '{city}',
+                        displayIsolationName(entry.city, locale),
+                      )
+                      .replace(
+                        '{d}',
+                        numberFormatter.format(Math.round(entry.distanceKm)),
+                      )}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : null}
       </div>
     </ModePanel>
   );

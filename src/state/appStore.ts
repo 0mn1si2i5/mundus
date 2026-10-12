@@ -14,6 +14,11 @@ import {
 import type { SunlineClockMode } from './urlState';
 import { clampSunlineTime } from '../features/sunline/solar';
 import { clampAlpha } from '../features/isolation/isolationMetric';
+import {
+  CITY_REACH_DEFAULT,
+  isCityReachLevel,
+  type CityReachLevel,
+} from '../features/isolation/cityReachLevel';
 
 export interface CameraFocusIntent {
   side: 'origin' | 'antipode' | 'free' | 'major-city';
@@ -31,6 +36,7 @@ interface AppState {
   surnameDisplayMode: SurnameDisplayMode;
   isolationAlpha: number;
   isolationView: IsolationView;
+  isolationReach: CityReachLevel;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -51,6 +57,7 @@ interface AppState {
   ) => void;
   setIsolationAlpha: (value: number) => void;
   setIsolationView: (view: IsolationView) => void;
+  setIsolationReach: (value: number) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
   setAntipodeCountry: (country: CountryRef | null) => void;
@@ -142,6 +149,10 @@ export const useAppStore = create<AppState>((set) => ({
   setSurnameDisplayMode: (surnameDisplayMode) => set({ surnameDisplayMode }),
   setIsolationAlpha: (value) => set({ isolationAlpha: clampAlpha(value) }),
   setIsolationView: (isolationView) => set({ isolationView }),
+  setIsolationReach: (value) =>
+    set({
+      isolationReach: isCityReachLevel(value) ? value : CITY_REACH_DEFAULT,
+    }),
   returnSunlineToLive: (timestampMs = Date.now()) =>
     set({
       sunlineTimeMs: clampSunlineTime(timestampMs),

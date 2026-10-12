@@ -13,6 +13,11 @@ import {
   ALPHA_DEFAULT,
   parseAlphaParam,
 } from '../features/isolation/isolationMetric';
+import {
+  CITY_REACH_DEFAULT,
+  parseCityReachParam,
+  type CityReachLevel,
+} from '../features/isolation/cityReachLevel';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
@@ -39,6 +44,7 @@ export interface ShareableState {
   surnameDisplayMode: SurnameDisplayMode;
   isolationAlpha: number;
   isolationView: IsolationView;
+  isolationReach: CityReachLevel;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
@@ -104,6 +110,10 @@ export function parseUrlState(
     activeMode === 'isolation' && params.get('view') === 'field'
       ? 'field'
       : DEFAULT_ISOLATION_VIEW;
+  const isolationReach =
+    activeMode === 'isolation' && isolationView === 'field'
+      ? parseCityReachParam(params.get('reach'))
+      : CITY_REACH_DEFAULT;
 
   return {
     activeMode,
@@ -120,6 +130,7 @@ export function parseUrlState(
       : DEFAULT_SURNAME_DISPLAY_MODE,
     isolationAlpha,
     isolationView,
+    isolationReach,
   };
 }
 
@@ -171,6 +182,13 @@ export function serializeUrlState(state: ShareableState): string {
       state.isolationView !== DEFAULT_ISOLATION_VIEW
     ) {
       params.set('view', state.isolationView);
+    }
+    if (
+      state.activeMode === 'isolation' &&
+      state.isolationView === 'field' &&
+      state.isolationReach !== CITY_REACH_DEFAULT
+    ) {
+      params.set('reach', String(state.isolationReach));
     }
     params.set('v', '2');
   }
