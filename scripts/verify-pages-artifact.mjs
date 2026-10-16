@@ -179,7 +179,11 @@ if (previewFiles.length > 0) {
       throw new Error(`Portfolio preview link is invalid: ${mode.id}`);
     }
     for (const locale of ['zh', 'en']) {
-      if (!mode.title?.[locale] || !mode.image?.alt?.[locale]) {
+      if (
+        !mode.title?.[locale] ||
+        !mode.question?.[locale] ||
+        !mode.image?.alt?.[locale]
+      ) {
         throw new Error(`Portfolio preview text is missing: ${mode.id}`);
       }
       const path = `previews/${mode.image?.src?.[locale] ?? ''}`;

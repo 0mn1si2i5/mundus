@@ -197,6 +197,16 @@ test('rejects preview files the manifest does not reference', async () => {
   await verifyFailure(root, 'Unreferenced portfolio preview files');
 });
 
+test('rejects a preview manifest without a localized question', async () => {
+  const root = await createArtifact();
+  await addPreviews(root);
+  const path = join(root, 'previews/manifest.json');
+  const manifest = JSON.parse(await readFile(path, 'utf8'));
+  manifest.modes[0].question.en = '';
+  await writeFile(path, JSON.stringify(manifest));
+  await verifyFailure(root, 'Portfolio preview text is missing: antipodes');
+});
+
 test('rejects an unsupported preview manifest schema', async () => {
   const root = await createArtifact();
   await addPreviews(root, { schemaVersion: 2 });

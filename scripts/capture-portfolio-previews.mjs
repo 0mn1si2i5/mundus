@@ -145,7 +145,10 @@ async function capture({ distDir, commit }) {
       lobbies[locale] = await readPrimaryModes(page);
 
       for (const mode of lobbies[locale]) {
-        assert.ok(mode.id && mode.title, 'a lobby card is missing its text');
+        assert.ok(
+          mode.id && mode.title && mode.question,
+          'a lobby card is missing its text',
+        );
         await page.goto(
           new URL(
             modeHref(mode.id),
