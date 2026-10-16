@@ -3,7 +3,9 @@ import { createHash } from 'node:crypto';
 import { relative, resolve, sep } from 'node:path';
 import vectorGlobeManifest from '../src/data/manifests/natural-earth-vector-globe.json' with { type: 'json' };
 
-const root = resolve(process.argv[2] ?? 'dist');
+const args = process.argv.slice(2);
+const requirePreviews = args.includes('--require-previews');
+const root = resolve(args.find((arg) => !arg.startsWith('--')) ?? 'dist');
 const files = new Set();
 const vectorReferences = { '110m': [], '50m': [] };
 
@@ -149,6 +151,49 @@ for (const detail of ['110m', '50m']) {
     if (gzipBytes > 1.5 * 1024 * 1024) {
       throw new Error(`50m vector globe gzip budget exceeded: ${gzipBytes}`);
     }
+  }
+}
+
+// Portfolio previews: written by scripts/capture-portfolio-previews.mjs in the
+// Pages workflow and read by external pages, so the manifest must stay valid.
+const previewFiles = [...files].filter((path) => path.startsWith('previews/'));
+if (requirePreviews && previewFiles.length === 0) {
+  throw new Error('Pages artifact is missing portfolio previews.');
+}
+if (previewFiles.length > 0) {
+  if (!files.has('previews/manifest.json')) {
+    throw new Error('Portfolio previews have no manifest.');
+  }
+  const manifest = JSON.parse(
+    await readFile(resolve(root, 'previews/manifest.json'), 'utf8'),
+  );
+  if (manifest.schemaVersion !== 1) {
+    throw new Error('Unsupported portfolio preview manifest schema.');
+  }
+  if (!Array.isArray(manifest.modes) || manifest.modes.length === 0) {
+    throw new Error('Portfolio preview manifest lists no modes.');
+  }
+  const referenced = new Set(['previews/manifest.json']);
+  for (const mode of manifest.modes) {
+    if (mode.href !== `../?v=2&mode=${mode.id}`) {
+      throw new Error(`Portfolio preview link is invalid: ${mode.id}`);
+    }
+    for (const locale of ['zh', 'en']) {
+      if (!mode.title?.[locale] || !mode.image?.alt?.[locale]) {
+        throw new Error(`Portfolio preview text is missing: ${mode.id}`);
+      }
+      const path = `previews/${mode.image?.src?.[locale] ?? ''}`;
+      if (!/^previews\/[a-z0-9-]+\.webp$/.test(path) || !files.has(path)) {
+        throw new Error(`Portfolio preview image is missing: ${path}`);
+      }
+      referenced.add(path);
+    }
+  }
+  const unreferenced = previewFiles.filter((path) => !referenced.has(path));
+  if (unreferenced.length > 0) {
+    throw new Error(
+      `Unreferenced portfolio preview files: ${unreferenced.join(', ')}`,
+    );
   }
 }
 

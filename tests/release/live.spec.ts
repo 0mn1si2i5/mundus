@@ -40,3 +40,23 @@ test('serves the release and renders the Exhibit Shell lobby', async ({
   expect(failedRequests).toEqual([]);
   expect(pageErrors).toEqual([]);
 });
+
+test('serves the portfolio preview manifest and its images', async ({
+  request,
+}) => {
+  const response = await request.get('./previews/manifest.json');
+  expect(response.ok()).toBe(true);
+  const manifest = (await response.json()) as {
+    schemaVersion: number;
+    modes: { image: { src: Record<string, string> } }[];
+  };
+  expect(manifest.schemaVersion).toBe(1);
+  expect(manifest.modes.length).toBeGreaterThan(0);
+  for (const mode of manifest.modes) {
+    for (const src of Object.values(mode.image.src)) {
+      const image = await request.get(`./previews/${src}`);
+      expect(image.ok()).toBe(true);
+      expect(image.headers()['content-type']).toBe('image/webp');
+    }
+  }
+});

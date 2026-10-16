@@ -171,6 +171,14 @@ or non-primary issues with a safe fallback: record, don't inflate scope.
 - Vite uses `base: './'`, targets ES2022 and ships no source maps.
   `scripts/verify-pages-artifact.mjs` rejects missing notices, symlinks, source
   maps and root-relative assets. `dist/` is never committed or uploaded by hand.
+- The `portfolio-previews` job screenshots every primary observation in
+  Chinese and English from the built artifact and adds them, with
+  `previews/manifest.json` (schema version 1), to the deployed site. The
+  author's portfolio reads that manifest at runtime, so its Mundus preview
+  follows the tier in `modeRegistry.ts`: promoting or demoting a mode changes
+  the portfolio without a portfolio commit. Keep the manifest backward
+  compatible; a breaking change needs a new `schemaVersion` and a portfolio
+  update first.
 - Only the deploy job has `pages: write` and `id-token: write`. Roll back by
   redeploying a previously verified run, then fix `main` with a reviewed
   revert. Procedure: `docs/RELEASE_RUNBOOK.md`.
