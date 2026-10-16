@@ -53,9 +53,37 @@ async function createArtifact({
   return root;
 }
 
-async function verifyFailure(root, expectedMessage) {
+async function addPreviews(root, manifestOverride = {}) {
+  await mkdir(join(root, 'previews'));
+  const manifest = {
+    schemaVersion: 1,
+    source: { repository: '0mn1si2i5/mundus', commit: null },
+    modes: [
+      {
+        id: 'antipodes',
+        href: '../?v=2&mode=antipodes',
+        title: { zh: '地球另一端', en: 'Other Side' },
+        question: { zh: '问题', en: 'Question' },
+        image: {
+          width: 1600,
+          height: 900,
+          src: { zh: 'antipodes-zh.webp', en: 'antipodes-en.webp' },
+          alt: { zh: '截图', en: 'Screenshot' },
+        },
+      },
+    ],
+    ...manifestOverride,
+  };
+  await Promise.all([
+    writeFile(join(root, 'previews/manifest.json'), JSON.stringify(manifest)),
+    writeFile(join(root, 'previews/antipodes-zh.webp'), 'RIFF0000WEBP'),
+    writeFile(join(root, 'previews/antipodes-en.webp'), 'RIFF0000WEBP'),
+  ]);
+}
+
+async function verifyFailure(root, expectedMessage, extraArgs = []) {
   await assert.rejects(
-    execFileAsync(process.execPath, [verifier, root]),
+    execFileAsync(process.execPath, [verifier, root, ...extraArgs]),
     (error) => error.stderr.includes(expectedMessage),
   );
 }
@@ -135,6 +163,67 @@ test('rejects a one-byte alteration to an emitted vector globe file', async () =
   bytes[bytes.byteLength - 1] ^= 1;
   await writeFile(path, bytes);
   await verifyFailure(root, '50m vector globe identity mismatch');
+});
+
+test('accepts complete portfolio previews when they are required', async () => {
+  const root = await createArtifact();
+  await addPreviews(root);
+  await execFileAsync(process.execPath, [verifier, root, '--require-previews']);
+});
+
+test('rejects a missing preview set when previews are required', async () => {
+  const root = await createArtifact();
+  await verifyFailure(root, 'Pages artifact is missing portfolio previews', [
+    '--require-previews',
+  ]);
+});
+
+test('rejects a preview manifest that points at a missing image', async () => {
+  const root = await createArtifact();
+  await addPreviews(root);
+  await import('node:fs/promises').then(({ rm }) =>
+    rm(join(root, 'previews/antipodes-en.webp')),
+  );
+  await verifyFailure(
+    root,
+    'Portfolio preview image is missing: previews/antipodes-en.webp',
+  );
+});
+
+test('rejects preview files the manifest does not reference', async () => {
+  const root = await createArtifact();
+  await addPreviews(root);
+  await writeFile(join(root, 'previews/sunline-zh.webp'), 'RIFF0000WEBP');
+  await verifyFailure(root, 'Unreferenced portfolio preview files');
+});
+
+test('rejects a preview manifest without a localized question', async () => {
+  const root = await createArtifact();
+  await addPreviews(root);
+  const path = join(root, 'previews/manifest.json');
+  const manifest = JSON.parse(await readFile(path, 'utf8'));
+  manifest.modes[0].question.en = '';
+  await writeFile(path, JSON.stringify(manifest));
+  await verifyFailure(root, 'Portfolio preview text is missing: antipodes');
+});
+
+test('rejects an unsupported preview manifest schema', async () => {
+  const root = await createArtifact();
+  await addPreviews(root, { schemaVersion: 2 });
+  await verifyFailure(root, 'Unsupported portfolio preview manifest schema');
+});
+
+test('Pages workflow publishes verified portfolio previews', async () => {
+  const workflow = await readFile(
+    resolve('.github/workflows/pages.yml'),
+    'utf8',
+  );
+  assert.match(workflow, /node scripts\/capture-portfolio-previews\.mjs dist/);
+  assert.match(workflow, /needs: \[build, e2e, previews\]/);
+  assert.match(
+    workflow,
+    /node scripts\/verify-pages-artifact\.mjs dist --require-previews/,
+  );
 });
 
 test('Pages workflow serializes the complete production deployment', async () => {
