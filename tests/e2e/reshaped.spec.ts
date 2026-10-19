@@ -975,6 +975,88 @@ test('exiting an active morph stops its GPU draws and keeps the selected place o
   await expect(page).toHaveURL(/point=30.25%2C120.75/);
 });
 
+test('a settled morph does not redraw the unchanged globe', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const state = { draws: 0, settles: 0, drawsAtSettle: 0, pendingFrames: 0 };
+    (window as typeof window & { settleProbe?: typeof state }).settleProbe =
+      state;
+    const proto = WebGL2RenderingContext.prototype;
+    const drawElements = proto.drawElements;
+    proto.drawElements = function (mode, count, type, offset) {
+      state.draws += 1;
+      drawElements.call(this, mode, count, type, offset);
+    };
+    const pending = new Set<number>();
+    const requestFrame = window.requestAnimationFrame.bind(window);
+    const cancelFrame = window.cancelAnimationFrame.bind(window);
+    window.requestAnimationFrame = (callback) => {
+      const id = requestFrame((time) => {
+        pending.delete(id);
+        state.pendingFrames = pending.size;
+        callback(time);
+      });
+      pending.add(id);
+      state.pendingFrames = pending.size;
+      return id;
+    };
+    window.cancelAnimationFrame = (id) => {
+      pending.delete(id);
+      state.pendingFrames = pending.size;
+      cancelFrame(id);
+    };
+    let previous: string | null = null;
+    // The settled attribute commits after the final animation frame. Any
+    // later draw comes from a scene render that changed nothing visible.
+    new MutationObserver(() => {
+      const value =
+        document
+          .querySelector('[data-morph-state]')
+          ?.getAttribute('data-morph-state') ?? null;
+      if (value === previous) return;
+      if (value === 'settled' && previous === 'animating') {
+        state.settles += 1;
+        state.drawsAtSettle = state.draws;
+      }
+      previous = value;
+    }).observe(document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['data-morph-state'],
+    });
+  });
+  // Keep the optional atlas from arriving, and drawing, after the replay.
+  await page.route(/\/ids-patches[^/]*\.png(?:\?|$)/u, (route) =>
+    route.abort(),
+  );
+  const probe = () =>
+    page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            settleProbe: {
+              draws: number;
+              settles: number;
+              drawsAtSettle: number;
+              pendingFrames: number;
+            };
+          }
+        ).settleProbe,
+    );
+  await page.goto('./?v=2&mode=reshaped&point=30.25%2C120.75');
+  await ready(page);
+  // The entry morph runs once the layer mounts; wait for it to finish.
+  await expect.poll(async () => (await probe()).settles).toBe(1);
+  await expect.poll(async () => (await probe()).pendingFrames).toBe(0);
+  await controls(page).getByRole('button', { name: '重播变形' }).click();
+  await expect.poll(async () => (await probe()).settles).toBe(2);
+  await expect.poll(async () => (await probe()).pendingFrames).toBe(0);
+  const settled = await probe();
+  expect(settled.draws).toBe(settled.drawsAtSettle);
+});
+
 test('four primary observations remain visible with 44px targets at the device width and 360px', async ({
   page,
 }) => {

@@ -1118,45 +1118,69 @@ export function GlobeScene({
     setCameraFocusFree,
   ]);
 
-  function handleSelect(event: ThreeEvent<PointerEvent>) {
-    event.stopPropagation();
-    onHitSpherePick();
-    const threshold =
-      event.pointerType === 'touch' ? TOUCH_CLICK_DRAG_THRESHOLD_PX : undefined;
-    if (!isSelectionGesture(event.delta, threshold)) {
-      markMeaningfulInteraction();
-      return;
-    }
-    if (!group.current) return;
-    const hitPoint = vector3ToGeo(
-      group.current.worldToLocal(event.point.clone()),
-    );
-    const selectedPoint =
-      reshapedMapping.current?.inverse(hitPoint) ?? hitPoint;
-    onGlobePick(selectedPoint);
-    selectPoint(selectedPoint);
-    setReshapedSelectedUnitId(
-      reshapedMapping.current
-        ? reshapedMapping.current.unitId(selectedPoint)
-        : undefined,
-    );
-    setSelectedCountry(countries.findCountry(selectedPoint));
-    invalidate();
-  }
+  // R3F redraws when any prop of the hit sphere changes identity, so its
+  // handlers must stay stable across scene renders that change nothing else.
+  const handleSelect = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      event.stopPropagation();
+      onHitSpherePick();
+      const threshold =
+        event.pointerType === 'touch'
+          ? TOUCH_CLICK_DRAG_THRESHOLD_PX
+          : undefined;
+      if (!isSelectionGesture(event.delta, threshold)) {
+        markMeaningfulInteraction();
+        return;
+      }
+      if (!group.current) return;
+      const hitPoint = vector3ToGeo(
+        group.current.worldToLocal(event.point.clone()),
+      );
+      const selectedPoint =
+        reshapedMapping.current?.inverse(hitPoint) ?? hitPoint;
+      onGlobePick(selectedPoint);
+      selectPoint(selectedPoint);
+      setReshapedSelectedUnitId(
+        reshapedMapping.current
+          ? reshapedMapping.current.unitId(selectedPoint)
+          : undefined,
+      );
+      setSelectedCountry(countries.findCountry(selectedPoint));
+      invalidate();
+    },
+    [
+      countries,
+      invalidate,
+      markMeaningfulInteraction,
+      onGlobePick,
+      onHitSpherePick,
+      selectPoint,
+      setReshapedSelectedUnitId,
+      setSelectedCountry,
+    ],
+  );
 
-  function handleHover(event: ThreeEvent<PointerEvent>) {
-    event.stopPropagation();
-    // OrbitControls owns pointer movement during a camera gesture. Country
-    // hit-testing walks geographic polygons and offers no useful hover result
-    // while the globe itself is moving.
-    if (cameraGestureActiveRef.current || pointerActiveRef.current) return;
-    if (!group.current) return;
-    const hoverHit = vector3ToGeo(
-      group.current.worldToLocal(event.point.clone()),
-    );
-    const hoverPoint = reshapedMapping.current?.inverse(hoverHit) ?? hoverHit;
-    setHoveredCountry(countries.findCountry(hoverPoint));
-  }
+  const handleHover = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      event.stopPropagation();
+      // OrbitControls owns pointer movement during a camera gesture. Country
+      // hit-testing walks geographic polygons and offers no useful hover result
+      // while the globe itself is moving.
+      if (cameraGestureActiveRef.current || pointerActiveRef.current) return;
+      if (!group.current) return;
+      const hoverHit = vector3ToGeo(
+        group.current.worldToLocal(event.point.clone()),
+      );
+      const hoverPoint = reshapedMapping.current?.inverse(hoverHit) ?? hoverHit;
+      setHoveredCountry(countries.findCountry(hoverPoint));
+    },
+    [countries, pointerActiveRef, setHoveredCountry],
+  );
+
+  const clearHover = useCallback(
+    () => setHoveredCountry(null),
+    [setHoveredCountry],
+  );
 
   return (
     <>
@@ -1181,7 +1205,7 @@ export function GlobeScene({
           onPointerEnter={onHitSpherePick}
           onClick={handleSelect}
           onPointerMove={handleHover}
-          onPointerOut={() => setHoveredCountry(null)}
+          onPointerOut={clearHover}
         >
           <sphereGeometry args={[1, ...profile.sphereSegments]} />
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
