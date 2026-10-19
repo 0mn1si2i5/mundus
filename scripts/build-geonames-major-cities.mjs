@@ -30,6 +30,7 @@ const LANGUAGE_RANK = new Map([
   ['zh', 2],
 ]);
 const traditionalToSimplified = OpenCC.Converter({ from: 't', to: 'cn' });
+const HAN = /\p{Script=Han}/u;
 const SOURCE_DEFINITIONS = [
   ['GeoNames cities15000', 'cities15000.zip'],
   ['GeoNames alternate names V2', 'alternateNamesV2.zip'],
@@ -178,8 +179,10 @@ export function chooseLocalizedNames(canonicalName, names) {
       a.name.localeCompare(b.name, 'und'),
   );
   const en = current.find((name) => name.language === 'en')?.name;
+  // Some Chinese-language records are romanizations ("Duīlóngdéqìng Qū");
+  // only a value with Han characters can be the Chinese display name.
   const zh = current
-    .filter((name) => LANGUAGE_RANK.has(name.language))
+    .filter((name) => LANGUAGE_RANK.has(name.language) && HAN.test(name.name))
     .sort(
       (a, b) =>
         Number(b.preferred) - Number(a.preferred) ||
@@ -194,14 +197,26 @@ export function chooseLocalizedNames(canonicalName, names) {
   };
 }
 
+// A few GeoNames records join two variants in one value ("臺灣省 or 台灣省");
+// only the first variant is a name.
+const COMBINED_VARIANTS = /\s+or\s+/i;
+
 export function simplifyExistingChineseNames(names) {
   return names.map((name) => {
     if (!LANGUAGE_RANK.has(name.language)) return name;
-    const simplified = traditionalToSimplified(name.name);
+    const original = name.name.split(COMBINED_VARIANTS)[0].trim();
+    const simplified = traditionalToSimplified(original);
     return simplified === name.name
       ? name
-      : { ...name, name: simplified, originalName: name.name };
+      : { ...name, name: simplified, originalName: original };
   });
+}
+
+function assertChineseName(names, kind, id) {
+  if (!names.zhFallback && /[A-Za-z]/.test(names.zh))
+    throw new Error(
+      `GeoNames Chinese ${kind} name contains Latin letters: ${names.zh} (${id})`,
+    );
 }
 
 function hasRealChineseName(names) {
@@ -314,6 +329,9 @@ export function buildFeasibilityIndex({
             ),
           )
         : null;
+      assertChineseName(cityNames, 'city', city.id);
+      assertChineseName(countryNames, 'country', country.code);
+      if (adminNames) assertChineseName(adminNames, 'admin-1', admin.key);
       return {
         city,
         cityNames,
