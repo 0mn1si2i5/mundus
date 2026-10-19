@@ -1,10 +1,9 @@
 # Urban Proximity — design contract
 
-Status: the geometric city view is deployed. On 2026-10-11 the owner approved
-the replacement global-field contract below; it becomes active only after the
-data and frontend pull requests are reviewed and released. This document
-records the product question, data, metric, interaction and acceptance
-decisions. The step-by-step execution packet is handed to the executor
+Status: deployed. The geometric city view shipped on 2026-10-08. The
+travel-time global field below replaced the geometric `d/R` field in v1.2.0
+(2026-10-12). This document records the product question, data, metric,
+interaction and acceptance decisions. The step-by-step execution packet is handed to the executor
 separately and is not stored in the repository (see `AGENTS.md` §8).
 
 ## 1. Question
@@ -100,7 +99,7 @@ ranked cities at that α.
 
 ### Global field view
 
-The approved replacement **global field** (`view=field`) asks which city wins
+The **global field** (`view=field`) asks which city wins
 at each place after its population advantage offsets estimated travel cost:
 
 ```text
@@ -165,9 +164,8 @@ rather than compressed download size alone, determines the memory budget. A fail
 level visible with an explicit notice and a retry action. Exiting releases field
 resources. The static view disables idle rotation but preserves manual rotation.
 
-The existing geometric `d/R` worker field remains shipped until this
-replacement's reviewed assets and frontend are released; it is then removed,
-not retained as another user-facing algorithm.
+The earlier geometric `d/R` worker field was removed in v1.2.0 and is not
+kept as another user-facing algorithm.
 
 ## 4. Asset
 
@@ -269,8 +267,8 @@ download URL, SHA-256, licence, citation/DOI, epoch and both thresholds.
 - Lazy loading: no isolation chunk or data request in the lobby or other
   modes. Field cities and ownership tiles load only upon entering field. A
   failed field request shows a local retry action and leaves city view usable.
-- About: method notes and GHSL credit (CC BY 4.0 + citation); the replacement
-  field adds MAP, GHS-POP and OpenStreetMap attribution before release.
+- About: method notes and GHSL credit (CC BY 4.0 + citation); the global
+  field adds MAP, GHS-POP and OpenStreetMap attribution.
 
 ## 7. Acceptance
 
@@ -282,7 +280,7 @@ Mathematics (unit tests):
   step lookup on random fixtures for α on a 0.01 grid.
 - Ties follow §3; the no-competitor state appears exactly when expected.
 - The completeness invariant holds.
-- The replacement field solver agrees with independent shortest paths and
+- The field solver agrees with independent shortest paths and
   exhaustive score comparisons, including deterministic ties.
 - Population monotonicity, source-connected territory components and centre
   thresholds pass small-graph tests.
@@ -352,3 +350,8 @@ the pinned dataset; no city is to be presented as an absolute champion,
 because every ranking is conditional on the dataset and on α. Cities below the
 focal threshold (for example Reykjavík) are outside this first version by
 design and can only become competitors.
+
+Releases: the city view and the geometric field shipped on 2026-10-08 and were
+tagged in v1.1.0; the travel-time global field replaced the geometric field in
+v1.2.0 (2026-10-12); reviewed names for 99 territory-owning cities and
+punctuation-insensitive centre sorting followed on 2026-10-12 (PR #41).

@@ -45,10 +45,18 @@ Observation contracts:
   approximate sunrise/sunset computed in the browser (NOAA/Meeus-style
   approximations, educational only; never legal, navigational or aviation
   time).
-- **Urban Proximity** — hierarchical great-circle distance from a GHSL urban
-  centre of at least one million people to the nearest centre meeting the
-  visible α population threshold; it describes geometry and size, not travel
-  accessibility.
+- **Urban Proximity** — two views over GHSL 2025 urban centres. The city view
+  gives the hierarchical great-circle distance from a centre of at least one
+  million people to the nearest centre meeting the visible α population
+  threshold; it describes geometry and size, not travel. The global field is a
+  travel-time thought experiment: each reachable, undisputed land cell between
+  60°S and 85°N goes to the centre of at least 100,000 people with the lowest
+  MAP 2019 travel time − k·log₁₀(population), precomputed for seven k levels,
+  with closed borders outside a reviewed open-border table and no ferries.
+  Disputed areas are hatched and land that no centre reaches stays neutral grey,
+  both without an owner. It does not show commuting, healthcare or
+  administrative reach. Contracts:
+  `docs/URBAN_ISOLATION.md` and `docs/data/city-reach.md`.
 
 Experience requirements: the first screen is the globe; Chinese and English
 agree in meaning; desktop and mobile complete the same loop; keyboard, focus
@@ -117,6 +125,10 @@ URL contract:
 Coordinates serialise to at most four decimals. Continuous time or camera
 updates replace history entries. Opening a dialog never mutates the URL.
 Locale and first-use state are local preferences.
+Mode parameters are written only when they differ from the default: Sunline
+`time` (fixed clock), Surname Atlas `surname`, Urban Proximity `alpha`,
+`view=field` and, in the field view, `reach` (one of the seven approved levels;
+invalid values fall back to 4).
 
 ## 4. Data
 

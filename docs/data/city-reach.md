@@ -1,11 +1,10 @@
 # City reach: traffic-weighted city competition
 
-Status: owner-approved replacement for Urban Proximity's `view=field`,
-2026-10-11. The data pipeline is being implemented separately from the
-frontend. The global assets were generated from captured fixed inputs and the owner
-accepted the coarse-waterway connections on 2026-10-12. This contract does
-not claim deployment: until both pull requests are reviewed and released, the
-existing geometric field remains the shipped observation.
+Status: deployed. The owner approved this replacement for Urban Proximity's
+`view=field` on 2026-10-11 and accepted the coarse-waterway connections on
+2026-10-12. The data assets (PR #37) and the field view (PR #38) shipped in
+v1.2.0 on 2026-10-12 and replaced the geometric `d/R` field. The global assets
+were generated from captured fixed inputs.
 
 ## Question and model
 
