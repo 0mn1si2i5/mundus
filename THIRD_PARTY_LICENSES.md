@@ -7,7 +7,7 @@ their own copyright and license terms.
 ## Runtime software inventory
 
 This is the complete production dependency graph resolved by `pnpm-lock.yaml`
-on 2026-07-16. It is intentionally conservative: optional dependencies in the
+on 2026-10-20. It is intentionally conservative: optional dependencies in the
 installed production graph are listed even when a particular build may remove
 them. Regenerate the inventory with `pnpm licenses list --prod --json` and
 review any diff whenever the lockfile changes.
@@ -46,12 +46,12 @@ license.
 - `topojson-client@3.1.0`
 - `which@2.0.2`
 
-### MIT (58 resolved package versions)
+### MIT (59 resolved package versions)
 
 - `@babel/runtime@7.29.7`
 - `@monogrid/gainmap-js@3.4.0`
 - `@react-three/drei@10.7.7`
-- `@react-three/fiber@9.6.1`
+- `@react-three/fiber@9.8.1`
 - `@tweenjs/tween.js@23.1.3`
 - `@types/draco3d@1.4.10`
 - `@types/offscreencanvas@2019.7.3`
@@ -76,7 +76,7 @@ license.
 - `glsl-noise@0.0.0`
 - `immediate@3.0.6`
 - `is-promise@2.2.2`
-- `its-fine@2.0.0`
+- `its-fine@2.1.1`
 - `lie@3.3.0`
 - `maath@0.10.8`
 - `meshline@3.3.1`
@@ -87,6 +87,7 @@ license.
 - `react@19.2.7`
 - `require-from-string@2.0.2`
 - `scheduler@0.27.0`
+- `scheduler@0.28.0`
 - `shebang-command@2.0.0`
 - `shebang-regex@3.0.0`
 - `stats-gl@2.4.2`
