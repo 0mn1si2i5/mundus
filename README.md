@@ -27,11 +27,13 @@ More observations:
 - **Urban Proximity** has two views. The city view shows the distance to the
   nearest GHSL urban centre that meets a visible population threshold α, with
   a ranked list and step chart; distances are great-circle distances between
-  urban-centre points. The global field view assigns each land cell between
-  60°S and 85°N to the city with the best size advantage minus estimated
-  travel time (MAP 2019 motorised friction surface), at seven reach levels k. It is a thought
-  experiment, not commuting, healthcare or administrative reach: borders are
-  closed outside a reviewed open-border table and ferries are not modelled.
+  urban-centre points. The global field view assigns each reachable,
+  undisputed land cell between 60°S and 85°N to the city with the best size
+  advantage minus estimated travel time (MAP 2019 motorised friction surface),
+  at seven reach levels k; disputed areas and land that no city reaches have no
+  owner. It is a thought experiment, not commuting, healthcare or
+  administrative reach: borders are closed outside a reviewed open-border table
+  and ferries are not modelled.
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
 

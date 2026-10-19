@@ -49,11 +49,13 @@ Observation contracts:
   gives the hierarchical great-circle distance from a centre of at least one
   million people to the nearest centre meeting the visible α population
   threshold; it describes geometry and size, not travel. The global field is a
-  travel-time thought experiment: each land cell between 60°S and 85°N goes to
-  the centre of at least 100,000 people with the lowest MAP 2019 travel time −
-  k·log₁₀(population), precomputed for seven k levels, with closed borders
-  outside a reviewed open-border table, no ferries and hatched disputed areas. It does not show
-  commuting, healthcare or administrative reach. Contracts:
+  travel-time thought experiment: each reachable, undisputed land cell between
+  60°S and 85°N goes to the centre of at least 100,000 people with the lowest
+  MAP 2019 travel time − k·log₁₀(population), precomputed for seven k levels,
+  with closed borders outside a reviewed open-border table and no ferries.
+  Disputed areas are hatched and land that no centre reaches stays neutral grey,
+  both without an owner. It does not show commuting, healthcare or
+  administrative reach. Contracts:
   `docs/URBAN_ISOLATION.md` and `docs/data/city-reach.md`.
 
 Experience requirements: the first screen is the globe; Chinese and English
