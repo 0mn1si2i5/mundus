@@ -18,6 +18,11 @@ OpenCC traditional Chinese to Simplified Chinese with `opencc-js` 1.4.1 using
 every distinct simplified derivative remains searchable. Only additional
 non-display English aliases are capped at two. No non-Chinese name is
 translated. Missing Chinese names remain explicit canonical fallbacks.
+A Chinese-language value is a display candidate only if it contains Han
+characters; romanized values in Chinese-language records (for example
+`Duīlóngdéqìng Qū`) remain searchable aliases. A value that joins two variants
+with `or` (`臺灣省 or 台灣省`) keeps its first variant. The build fails if a
+selected Chinese city, country or admin-1 label still contains Latin letters.
 Runtime format 2 stores that provenance explicitly in row flag bit 0; reserved
 bits are rejected. Chinese search results mark canonical fallbacks as
 `GeoNames 原名（暂无中文名）`, while real Chinese labels and English results do not.
@@ -25,13 +30,13 @@ bits are rejected. Chinese search results mark canonical fallbacks as
 The compact index has 6,953 ID-sorted rows, E5 coordinates, a lexical string
 table, complete accepted Chinese aliases, bounded additional English aliases,
 and one integer flag bitset per row. Of those rows, 3,862 have real Chinese
-labels and 3,091 use canonical fallbacks. The committed asset is 793,910 raw
-bytes and 277,460 gzip bytes. Its static decoded estimate is 3,175,640 bytes.
+labels and 3,091 use canonical fallbacks. The committed asset is 793,897 raw
+bytes and 277,446 gzip bytes. Its static decoded estimate is 3,175,588 bytes.
 Including decoder-precomputed,
 deduplicated normalized display/country/admin/alias fields, per-city search
-objects, and alias references, the conservative runtime total is 4,819,938
+objects, and alias references, the conservative runtime total is 4,819,872
 bytes, below the 8 MiB gate. Its SHA-256 is
-`68d971df7d66f16eb23a1921623f4608176ed36ec8bb4ac00d1ba57d7493dfab`.
+`44fa1d6c1d2226b0fc1381318710f19833f4fb2ef970902c9dde89f41cd5ca28`.
 
 The redistributed CC BY 4.0 immutable build input uses schema 2 and is 2,814,375
 bytes with SHA-256

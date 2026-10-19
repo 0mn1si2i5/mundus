@@ -19,10 +19,10 @@
   "missingValuePolicy": "Records without valid coordinates, a non-empty admin1 code, an exact ISO2 country join, or an exact country.admin1 join are excluded. Missing Chinese labels use and count the canonical source label; non-Chinese values are never translated or imputed.",
   "boundaryPolicy": "This is a filtered major-city search index, not a complete gazetteer or territorial authority.",
   "recordCount": 6953,
-  "rawBytes": 793910,
-  "gzipBytes": 277460,
-  "staticDecodedBytesEstimate": 3175640,
-  "runtimeDecodedBytesEstimate": 4819938,
+  "rawBytes": 793897,
+  "gzipBytes": 277446,
+  "staticDecodedBytesEstimate": 3175588,
+  "runtimeDecodedBytesEstimate": 4819872,
   "upstreamCapture": {
     "retrievedAt": "2026-08-01T09:39:05.688Z",
     "sources": [
@@ -81,8 +81,8 @@
   },
   "derivedAsset": {
     "path": "src/data/generated/geonames-major-cities.json",
-    "sha256": "68d971df7d66f16eb23a1921623f4608176ed36ec8bb4ac00d1ba57d7493dfab",
-    "rawBytes": 793910,
+    "sha256": "44fa1d6c1d2226b0fc1381318710f19833f4fb2ef970902c9dde89f41cd5ca28",
+    "rawBytes": 793897,
     "formatVersion": 2
   }
 }
