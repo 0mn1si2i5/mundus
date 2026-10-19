@@ -272,13 +272,17 @@ vec4 shadeAt(vec2 uv, vec3 p, vec2 dx, vec2 dy, vec2 derivativeWidth, float stri
   float footprint=max(length(dx*baseSize),length(dy*baseSize));
   vec2 patchUv; float patchWeight;
   int index=patchAt(uv,patchUv,patchWeight);
-  if(index<0 || patchWeight<=0.0) return shadeLabel(classify(uv),p,footprint,length(derivativeWidth*baseSize),stripeAa);
+  bool usePatch=index>=0 && patchWeight>0.0;
+  // Shade the base raster at one call site for the same compile-size reason.
+  vec4 baseColor=vec4(0.0);
+  if(!usePatch || patchWeight<1.0) baseColor=shadeLabel(classify(uv),p,footprint,length(derivativeWidth*baseSize),stripeAa);
+  if(!usePatch) return baseColor;
   vec4 box=uPatchBboxes[index];
   vec2 patchSize=(uPatchRects[index].zw-2.0)*vec2(360.0/(box.z-box.x),180.0/(box.w-box.y));
   float patchFootprint=max(length(dx*patchSize),length(dy*patchSize));
   vec4 patchColor=shadeLabel(classifyPatch(patchUv,uPatchRects[index]),p,patchFootprint,length(derivativeWidth*patchSize),stripeAa);
   if(patchWeight>=1.0) return patchColor;
-  return mix(shadeLabel(classify(uv),p,footprint,length(derivativeWidth*baseSize),stripeAa),patchColor,patchWeight);
+  return mix(baseColor,patchColor,patchWeight);
 }
 void main() {
   vec3 p=normalize(vGeo); float longitude=degrees(atan(p.x,p.z)); float s=p.y; float latitude=degrees(atan(p.y,length(p.xz)));
@@ -296,17 +300,21 @@ void main() {
     vec2 patchSize=(uPatchRects[patchIndex].zw-2.0)*vec2(360.0/(box.z-box.x),180.0/(box.w-box.y));
     footprint=max(footprint,max(length(dx*patchSize),length(dy*patchSize)));
   }
-  vec3 color;
-  if(footprint>1.0) {
-    vec2 offsets[8]=vec2[8](vec2(-0.375,-0.125),vec2(0.125,-0.375),vec2(0.375,0.125),vec2(-0.125,0.375),vec2(-0.125,-0.375),vec2(0.375,-0.125),vec2(0.125,0.375),vec2(-0.375,0.125));
-    vec4 samples=vec4(0.0); for(int i=0;i<4;i++) samples+=shadeAt(uv+dx*offsets[i].x+dy*offsets[i].y,p,dx,dy,derivativeWidth,stripeAa);
+  vec2 offsets[8]=vec2[8](vec2(-0.375,-0.125),vec2(0.125,-0.375),vec2(0.375,0.125),vec2(-0.125,0.375),vec2(-0.125,-0.375),vec2(0.375,-0.125),vec2(0.125,0.375),vec2(-0.375,0.125));
+  bool supersample=footprint>1.0;
+  int sampleCount=supersample?4:1;
+  vec4 samples=vec4(0.0);
+  // One shadeAt call site: compilers inline every call, and the former nine
+  // unrolled copies made SwiftShader spend about 2 s compiling this shader.
+  for(int i=0;i<8;i++) {
+    if(i>=sampleCount) break;
+    vec2 offset=supersample?offsets[i]:vec2(0.0);
+    samples+=shadeAt(uv+dx*offset.x+dy*offset.y,p,dx,dy,derivativeWidth,stripeAa);
     // Four more samples near rendered boundaries reduce aliasing from the
     // casing. All derivatives above precede this per-fragment decision.
-    if(samples.a>0.0) {
-      for(int i=4;i<8;i++) samples+=shadeAt(uv+dx*offsets[i].x+dy*offsets[i].y,p,dx,dy,derivativeWidth,stripeAa);
-      color=samples.rgb*0.125;
-    } else color=samples.rgb*0.25;
-  } else color=shadeAt(uv,p,dx,dy,derivativeWidth,stripeAa).rgb;
+    if(i==3 && samples.a>0.0) sampleCount=8;
+  }
+  vec3 color=samples.rgb/float(sampleCount);
   float light=uAmbient+uDirectional*max(dot(normalize(vNormal),normalize(vec3(-0.4,0.7,1.0))),0.0);
   gl_FragColor=vec4(color*light,1.0);
   #include <colorspace_fragment>
