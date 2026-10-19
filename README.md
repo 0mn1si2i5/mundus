@@ -24,11 +24,14 @@ More observations:
   community snapshots, not a unified official global ranking; missing fields
   remain explicit; each country links its source, and dataset licenses are in
   the About dialog.
-- **Urban Proximity** shows the distance to the nearest GHSL urban centre that
-  meets a visible population threshold α, with a ranked list and step chart.
-  Distances are great-circle distances between urban-centre points, not travel
-  accessibility. Its global field view partitions land by distance divided
-  by each centre's current proximity distance, with a centre for each region.
+- **Urban Proximity** has two views. The city view shows the distance to the
+  nearest GHSL urban centre that meets a visible population threshold α, with
+  a ranked list and step chart; distances are great-circle distances between
+  urban-centre points. The global field view assigns each land cell to the
+  city with the best size advantage minus estimated travel time (MAP 2019
+  motorised friction surface), at seven reach levels k. It is a thought
+  experiment, not commuting, healthcare or administrative reach: borders are
+  closed outside a reviewed open-border table and ferries are not modelled.
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
 
