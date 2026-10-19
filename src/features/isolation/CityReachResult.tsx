@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import { messages, type Locale } from '../../i18n/messages';
-import { displayCityReachCountry, displayCityReachName } from './cityReachData';
+import {
+  displayCityReachCountry,
+  displayCityReachName,
+  sortCityReachCities,
+} from './cityReachData';
 import type {
   CityReachCity,
   CityReachMetadata,
@@ -23,14 +27,7 @@ export function CityReachResult({
   const t = messages[locale];
   const [inspectedId, setInspectedId] = useState<number | null>(null);
   const choices = useMemo(
-    () =>
-      [...(field.metadata?.inspectableCities ?? [])].sort(
-        (a, b) =>
-          displayCityReachName(a, locale).localeCompare(
-            displayCityReachName(b, locale),
-            locale === 'zh' ? 'zh-CN' : 'en',
-          ) || a.id - b.id,
-      ),
+    () => sortCityReachCities(field.metadata?.inspectableCities ?? [], locale),
     [field.metadata, locale],
   );
   const owner = selection?.status === 'owned' ? selection.city : null;

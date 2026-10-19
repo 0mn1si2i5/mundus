@@ -880,6 +880,81 @@ test('converts only existing Chinese source names and retains traditional origin
   assert.equal(aliases.includes('New York'), true);
 });
 
+test('keeps the first variant of a combined Chinese alternate name', () => {
+  assert.deepEqual(
+    simplifyExistingChineseNames([
+      { id: 1, language: 'zh', name: '臺灣省 or 台灣省', preferred: false },
+      {
+        id: 2,
+        language: 'en',
+        name: 'Rhode Island or Providence',
+        preferred: false,
+      },
+    ]),
+    [
+      {
+        id: 1,
+        language: 'zh',
+        name: '台湾省',
+        preferred: false,
+        originalName: '臺灣省',
+      },
+      {
+        id: 2,
+        language: 'en',
+        name: 'Rhode Island or Providence',
+        preferred: false,
+      },
+    ],
+  );
+});
+
+test('ignores romanized values in Chinese-language records', () => {
+  const names = chooseLocalizedNames('Doilungdêqên', [
+    { id: 1, language: 'zh', name: 'Duīlóngdéqìng Qū', preferred: true },
+    { id: 2, language: 'zh', name: '东嘎', preferred: false },
+  ]);
+  assert.equal(names.zh, '东嘎');
+  assert.equal(names.zhFallback, false);
+  assert.equal(
+    chooseLocalizedNames('Doilungdêqên', [
+      { id: 1, language: 'zh', name: 'Duīlóngdéqìng Qū', preferred: true },
+    ]).zhFallback,
+    true,
+  );
+});
+
+test('rejects selected Chinese names that still contain Latin letters', () => {
+  const input = {
+    cities: [parseCityRow(cityRow({ id: '1' }))],
+    countries: new Map([['CN', { code: 'CN', name: 'China', geoNameId: 10 }]]),
+    admin1: new Map([
+      ['CN.22', { key: 'CN.22', name: 'Beijing', geoNameId: 11 }],
+    ]),
+    alternateNames: new Map([
+      [1, [{ id: 1, language: 'zh', name: '北京', preferred: true }]],
+      [10, [{ id: 3, language: 'zh', name: '中国', preferred: true }]],
+      [
+        11,
+        [{ id: 4, language: 'zh', name: '北京市 (Beijing)', preferred: true }],
+      ],
+    ]),
+  };
+  assert.throws(
+    () => buildFeasibilityIndex(input),
+    /Chinese admin-1 name contains Latin letters: 北京市 \(Beijing\)/,
+  );
+  input.alternateNames.set(11, []);
+  assert.equal(buildFeasibilityIndex(input).rows.length, 1);
+  input.alternateNames.set(1, [
+    { id: 1, language: 'zh', name: '北京 Ō', preferred: true },
+  ]);
+  assert.throws(
+    () => buildFeasibilityIndex(input),
+    /Chinese city name contains Latin letters: 北京 Ō/,
+  );
+});
+
 test('retains all original and derived Chinese aliases without counting them against English aliases', () => {
   const converted = simplifyExistingChineseNames([
     { id: 1, language: 'zh', name: '紐約市', preferred: true },

@@ -579,3 +579,24 @@ export function displayCityReachCountry(
     ? (city.country.zh ?? city.country.en)
     : city.country.en;
 }
+
+const leadingNamePunctuation = /^(?:[\p{P}\p{S}]|[ʻʿ])+/u;
+
+/** Remove catalog punctuation used by some GHSL labels only for comparison. */
+export function cityReachNameSortKey(name: string): string {
+  return name.trimStart().replace(leadingNamePunctuation, '').trimStart();
+}
+
+export function sortCityReachCities(
+  cities: readonly CityReachCity[],
+  locale: Locale,
+): CityReachCity[] {
+  const collator = new Intl.Collator(locale === 'zh' ? 'zh-CN' : 'en');
+  return [...cities].sort(
+    (a, b) =>
+      collator.compare(
+        cityReachNameSortKey(displayCityReachName(a, locale)),
+        cityReachNameSortKey(displayCityReachName(b, locale)),
+      ) || a.id - b.id,
+  );
+}

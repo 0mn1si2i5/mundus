@@ -46,10 +46,18 @@ Observation contracts:
   approximate sunrise/sunset computed in the browser (NOAA/Meeus-style
   approximations, educational only; never legal, navigational or aviation
   time).
-- **Urban Proximity** — hierarchical great-circle distance from a GHSL urban
-  centre of at least one million people to the nearest centre meeting the
-  visible α population threshold; it describes geometry and size, not travel
-  accessibility.
+- **Urban Proximity** — two views over GHSL 2025 urban centres. The city view
+  gives the hierarchical great-circle distance from a centre of at least one
+  million people to the nearest centre meeting the visible α population
+  threshold; it describes geometry and size, not travel. The global field is a
+  travel-time thought experiment: each reachable, undisputed land cell between
+  60°S and 85°N goes to the centre of at least 100,000 people with the lowest
+  MAP 2019 travel time − k·log₁₀(population), precomputed for seven k levels,
+  with closed borders outside a reviewed open-border table and no ferries.
+  Disputed areas are hatched and land that no centre reaches stays neutral grey,
+  both without an owner. It does not show commuting, healthcare or
+  administrative reach. Contracts:
+  `docs/URBAN_ISOLATION.md` and `docs/data/city-reach.md`.
 - **Reshaped Earth** — offline country-level cartograms for 2020 population,
   PPP GDP (2021 international dollars), fossil CO₂ and relative nightlight DN.
   Excess area that continuous reshaping cannot remove is hatched as padding;
@@ -124,8 +132,11 @@ URL contract:
 Coordinates serialise to at most four decimals. Continuous time or camera
 updates replace history entries. Opening a dialog never mutates the URL.
 Locale and first-use state are local preferences.
-Reshaped Earth serialises only the nondefault `metric` parameter; legacy
-`level` parameters are ignored. Shape and animation progress stay local.
+Mode parameters are written only when they differ from the default: Sunline
+`time` (fixed clock), Surname Atlas `surname`, Urban Proximity `alpha`,
+`view=field` and, in the field view, `reach` (one of the seven approved levels;
+invalid values fall back to 4), and Reshaped Earth `metric`. Reshaped Earth
+ignores legacy `level` parameters; shape and animation progress stay local.
 
 ## 4. Data
 
@@ -180,6 +191,14 @@ or non-primary issues with a safe fallback: record, don't inflate scope.
 - Vite uses `base: './'`, targets ES2022 and ships no source maps.
   `scripts/verify-pages-artifact.mjs` rejects missing notices, symlinks, source
   maps and root-relative assets. `dist/` is never committed or uploaded by hand.
+- The `portfolio-previews` job screenshots every primary observation in
+  Chinese and English from the built artifact and adds them, with
+  `previews/manifest.json` (schema version 1), to the deployed site. The
+  author's portfolio reads that manifest at runtime, so its Mundus preview
+  follows the tier in `modeRegistry.ts`: promoting or demoting a mode changes
+  the portfolio without a portfolio commit. Keep the manifest backward
+  compatible; a breaking change needs a new `schemaVersion` and a portfolio
+  update first.
 - Only the deploy job has `pages: write` and `id-token: write`. Roll back by
   redeploying a previously verified run, then fix `main` with a reviewed
   revert. Procedure: `docs/RELEASE_RUNBOOK.md`.

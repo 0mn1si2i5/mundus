@@ -1,11 +1,10 @@
 # City reach: traffic-weighted city competition
 
-Status: owner-approved replacement for Urban Proximity's `view=field`,
-2026-10-11. The data pipeline is being implemented separately from the
-frontend. The global assets were generated from captured fixed inputs and the owner
-accepted the coarse-waterway connections on 2026-10-12. This contract does
-not claim deployment: until both pull requests are reviewed and released, the
-existing geometric field remains the shipped observation.
+Status: deployed. The owner approved this replacement for Urban Proximity's
+`view=field` on 2026-10-11 and accepted the coarse-waterway connections on
+2026-10-12. The data assets (PR #37) and the field view (PR #38) shipped in
+v1.2.0 on 2026-10-12 and replaced the geometric `d/R` field. The global assets
+were generated from captured fixed inputs.
 
 ## Question and model
 
@@ -189,11 +188,15 @@ is a parent, or is a component root must have a nonempty English display name.
 Missing approved Chinese city names remain null and the Chinese interface
 falls back to English. The manifest and build name report record both the total
 and required-city missing counts, with override, exact and none provenance.
+After the 99-row correction, those counts are 270 override, 2,125 exact and
+3,549 none; 2,946 required cities still have no reviewed Chinese name and
+fall back to English.
 All asset countries require reviewed Chinese labels. Chinese duplicates fail
 unless both assignments are reviewed overrides. The owner-approved labels
 for Kosovo and Northern Cyprus are 塞尔维亚（科索沃） and 塞浦路斯（北部）,
-respectively, consistent with the drawing-country view. Agents must not invent
-or approve city translations; the 99-city draft list remains unapproved.
+respectively, consistent with the drawing-country view. The complete 99-row
+owner-reviewed city-name table was applied in the names correction following
+v1.2.0; no additional translations are inferred by the build.
 The owner separately approved the explanatory English label
 **Unnamed urban centre (GHSL 4893)** for the unnamed Sudanese centre at
 11.5391°N, 34.3126°E. Its Chinese name stays null. This label records the
