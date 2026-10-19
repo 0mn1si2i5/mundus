@@ -22,6 +22,23 @@ export function modeHref(id) {
   return `../?v=2&mode=${encodeURIComponent(id)}`;
 }
 
+/**
+ * What marks a mode's globe as drawn. Reshaped Earth replaces the vector
+ * surface with its own raster and never reports vector readiness; it requests
+ * its local ID atlas only after the cartogram's first actual draw.
+ */
+export function globeReadiness(id) {
+  return id === 'reshaped'
+    ? {
+        attributes: {
+          'data-reshaped-renderer-active': 'true',
+          'data-morph-state': 'settled',
+        },
+        resource: '/ids-patches-[^/]*\\.png$',
+      }
+    : { attributes: { 'data-vector-state': 'ready' }, resource: null };
+}
+
 export function imageName(id, locale) {
   return `${id}-${locale}.webp`;
 }
@@ -165,8 +182,15 @@ async function capture({ distDir, commit }) {
           name: /三维地球|three-dimensional globe/,
         });
         await page.waitForFunction(
-          (element) => element?.getAttribute('data-vector-state') === 'ready',
-          await globe.elementHandle(),
+          ({ element, attributes, resource }) =>
+            Object.entries(attributes).every(
+              ([name, value]) => element?.getAttribute(name) === value,
+            ) &&
+            (resource === null ||
+              performance
+                .getEntriesByType('resource')
+                .some((entry) => new RegExp(resource).test(entry.name))),
+          { element: await globe.elementHandle(), ...globeReadiness(mode.id) },
           { timeout: 20_000 },
         );
         await page.waitForLoadState('networkidle');

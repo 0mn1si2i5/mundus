@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildManifest, modeHref } from './capture-portfolio-previews.mjs';
+import {
+  buildManifest,
+  globeReadiness,
+  modeHref,
+} from './capture-portfolio-previews.mjs';
 
 const lobby = (titles) =>
   Object.entries(titles).map(([id, title]) => ({
@@ -69,5 +73,26 @@ test('links resolve from previews/ back to the app root', () => {
       'https://example.test/mundus/previews/manifest.json',
     ).href,
     'https://example.test/mundus/?v=2&mode=isolation',
+  );
+});
+
+test('Reshaped Earth waits for its own raster instead of the vector surface', () => {
+  assert.deepEqual(globeReadiness('isolation'), {
+    attributes: { 'data-vector-state': 'ready' },
+    resource: null,
+  });
+  const reshaped = globeReadiness('reshaped');
+  assert.equal(reshaped.attributes['data-vector-state'], undefined);
+  assert.equal(reshaped.attributes['data-reshaped-renderer-active'], 'true');
+  assert.equal(reshaped.attributes['data-morph-state'], 'settled');
+  const atlas = new RegExp(reshaped.resource);
+  assert.ok(
+    atlas.test('https://example.test/mundus/assets/ids-patches-DPuG-Xww.png'),
+  );
+  assert.ok(
+    !atlas.test('https://example.test/mundus/assets/ids-patches-BC6pWg7Q.json'),
+  );
+  assert.ok(
+    !atlas.test('https://example.test/mundus/assets/ids-country-CY5AXMxY.png'),
   );
 });
