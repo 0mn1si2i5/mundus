@@ -946,6 +946,13 @@ test('rejects selected Chinese names that still contain Latin letters', () => {
   );
   input.alternateNames.set(11, []);
   assert.equal(buildFeasibilityIndex(input).rows.length, 1);
+  input.alternateNames.set(1, [
+    { id: 1, language: 'zh', name: '北京 Ō', preferred: true },
+  ]);
+  assert.throws(
+    () => buildFeasibilityIndex(input),
+    /Chinese city name contains Latin letters: 北京 Ō/,
+  );
 });
 
 test('retains all original and derived Chinese aliases without counting them against English aliases', () => {

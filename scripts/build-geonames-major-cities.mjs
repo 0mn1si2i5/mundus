@@ -31,6 +31,7 @@ const LANGUAGE_RANK = new Map([
 ]);
 const traditionalToSimplified = OpenCC.Converter({ from: 't', to: 'cn' });
 const HAN = /\p{Script=Han}/u;
+const LATIN = /\p{Script=Latin}/u;
 const SOURCE_DEFINITIONS = [
   ['GeoNames cities15000', 'cities15000.zip'],
   ['GeoNames alternate names V2', 'alternateNamesV2.zip'],
@@ -213,7 +214,7 @@ export function simplifyExistingChineseNames(names) {
 }
 
 function assertChineseName(names, kind, id) {
-  if (!names.zhFallback && /[A-Za-z]/.test(names.zh))
+  if (!names.zhFallback && LATIN.test(names.zh))
     throw new Error(
       `GeoNames Chinese ${kind} name contains Latin letters: ${names.zh} (${id})`,
     );
