@@ -9,7 +9,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   // The 20-cycle resource regression takes minutes per project; it runs in
-  // the resources workflow (pnpm test:e2e:resources), not in routine suites.
+  // the resources workflow (pnpm test:e2e:resources). Routine suites run a
+  // separate three-cycle copy without the tag.
   grepInvert: process.env.MUNDUS_E2E_RESOURCES ? undefined : /@resources/u,
   reporter: 'html',
   use: {
