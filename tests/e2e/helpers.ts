@@ -299,11 +299,30 @@ export async function openCoordinateEntry(
   await expect(page.getByLabel('纬度')).toBeVisible();
 }
 
+/** Resolve once every finite CSS or Web Animation on the page has finished. */
+export async function waitForFiniteAnimations(page: Page) {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation.effect?.getComputedTiming().iterations !== Infinity,
+        )
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
+}
+
 export async function expectMinimumHeight(
   locator: import('@playwright/test').Locator,
   minimum: number,
 ) {
   await expect(locator).toBeVisible();
+  // A viewport change can restart an entry animation. Chromium reports
+  // element boxes in single precision, so a target moving through a
+  // fractional offset measures 44 - 2^-16 px although its layout is 44 px.
+  await waitForFiniteAnimations(locator.page());
   expect((await locator.boundingBox())?.height).toBeGreaterThanOrEqual(minimum);
 }
 
