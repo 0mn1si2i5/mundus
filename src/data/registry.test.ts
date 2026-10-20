@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
-import { DATA_MANIFESTS, dataManifestSchema } from './registry';
+import acceptedReshapedManifest from './manifests/reshaped-earth.json';
+import {
+  DATA_MANIFESTS,
+  dataManifestSchema,
+  reshapedEarthManifestSchema,
+} from './registry';
+
+// Mutate a clone of the real contract to exercise independent rejection paths.
+function reshapedManifestFixture() {
+  const manifest = structuredClone(acceptedReshapedManifest);
+  for (const asset of Object.values(manifest.derivedAssets)) {
+    asset.rawBytes = 1024;
+    asset.gzipBytes = 512;
+  }
+  return reshapedEarthManifestSchema.parse(manifest);
+}
 
 describe('data registry', () => {
   it('contains valid manifests with unique ids', () => {
@@ -15,6 +30,7 @@ describe('data registry', () => {
       'surname-label-slots',
       'surname-coverage',
       'urban-isolation',
+      'reshaped-earth',
     ]);
     expect(
       DATA_MANIFESTS.every(
@@ -67,24 +83,200 @@ describe('data registry', () => {
           'b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4',
       },
     });
-    expect(manifest?.derivedAssets?.['110m']?.gpuBytes).toBeLessThanOrEqual(
-      8 * 1024 * 1024,
+    const low = manifest?.derivedAssets?.['110m'];
+    const high = manifest?.derivedAssets?.['50m'];
+    if (
+      !low ||
+      !high ||
+      !('runtimeGpuBytes' in low) ||
+      !('runtimeGpuBytes' in high)
+    )
+      throw new Error('Natural Earth assets must use their vector schema');
+    expect(low.gpuBytes).toBeLessThanOrEqual(8 * 1024 * 1024);
+    expect(high.gpuBytes).toBeLessThanOrEqual(24 * 1024 * 1024);
+    expect(high.gzipBytes).toBeLessThanOrEqual(1.5 * 1024 * 1024);
+    expect(low.droppedOutsideAreaFraction).toBeLessThan(0.0001);
+    expect(high.droppedOutsideAreaFraction).toBeLessThan(0.0001);
+    expect(high.runtimeGpuBytes).toBe(high.gpuBytes);
+  });
+
+  it('registers accepted country-only v4 cartograms under their dedicated contract', () => {
+    const manifest = reshapedManifestFixture();
+    const published = DATA_MANIFESTS.find(
+      (candidate) => candidate.id === 'reshaped-earth',
     );
-    expect(manifest?.derivedAssets?.['50m']?.gpuBytes).toBeLessThanOrEqual(
-      24 * 1024 * 1024,
+    expect(published).toBeDefined();
+    expect(published).toEqual(reshapedEarthManifestSchema.parse(published));
+    expect(manifest.formatVersion).toBe(5);
+    expect(Object.keys(manifest.derivedAssets)).toHaveLength(9);
+    expect(Object.keys(manifest.acceptance)).toEqual([
+      'population',
+      'gdp',
+      'co2',
+      'lights',
+    ]);
+    expect(manifest.nameCoverage).toEqual({
+      countries: 239,
+      chinese: 239,
+      fraction: 1,
+    });
+    expect(manifest.sourceAssets.admin1).toBeDefined();
+    expect(manifest).not.toHaveProperty('boundaryAdjustments');
+    for (const field of Object.values(manifest.acceptance)) {
+      expect(field.displaySamples).toBeGreaterThanOrEqual(400_000);
+      expect(field.displayP99Degrees).toBeLessThanOrEqual(0.1);
+      expect(field.displayP999Degrees).toBeLessThanOrEqual(0.5);
+    }
+  });
+
+  it('rejects missing assets, stale formats and removed admin/adaptive data', () => {
+    const manifest = reshapedManifestFixture();
+    const missing = structuredClone(manifest);
+    delete missing.derivedAssets['inverse-co2.bin'];
+    const old = structuredClone(manifest);
+    Object.assign(old, { formatVersion: 1 });
+    const wrongDimensions = structuredClone(manifest);
+    Object.assign(wrongDimensions.derivedAssets['inverse-gdp.bin']!, {
+      width: 512,
+    });
+    const legacy = structuredClone(manifest);
+    Object.assign(legacy, { boundaryAdjustments: [], materialMeshes: {} });
+    const adaptive = structuredClone(manifest);
+    Object.assign(adaptive.derivedAssets['inverse-population.bin']!, {
+      encoding: 'adaptive-quadtree-int16',
+      treeNodes: 1,
+    });
+    const admin = structuredClone(manifest);
+    admin.derivedAssets['ids-admin1.png'] = structuredClone(
+      admin.derivedAssets['ids-country.png']!,
     );
-    expect(manifest?.derivedAssets?.['50m']?.gzipBytes).toBeLessThanOrEqual(
-      1.5 * 1024 * 1024,
+    for (const invalid of [
+      missing,
+      old,
+      wrongDimensions,
+      legacy,
+      adaptive,
+      admin,
+    ])
+      expect(dataManifestSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('rejects failed numerical or deterministic acceptance and accepts the inclusive display limits', () => {
+    const manifest = reshapedManifestFixture();
+    for (const [field, value] of Object.entries({
+      medianAreaError: 0.05,
+      p90AreaError: 0.15,
+      displayP99Degrees: 0.100001,
+      displayP999Degrees: 0.500001,
+      quantizationMaxDegrees: 0.01,
+      totalAreaRelativeError: 1e-6,
+      minimumTriangleArea: 0,
+      unitsChecked: 0,
+      displaySamples: 399_999,
+    })) {
+      const invalid = structuredClone(manifest);
+      Object.assign(invalid.acceptance.population!, { [field]: value });
+      expect(dataManifestSchema.safeParse(invalid).success, field).toBe(false);
+    }
+    const boundary = structuredClone(manifest);
+    Object.assign(boundary.acceptance.population!, {
+      displayP99Degrees: 0.1,
+      displayP999Degrees: 0.5,
+      displayMaxDegrees: 1,
+    });
+    expect(dataManifestSchema.safeParse(boundary).success).toBe(true);
+    const nondeterministic = structuredClone(manifest);
+    Object.assign(nondeterministic.determinism.gdp!, { byteIdentical: false });
+    const wrongHash = structuredClone(manifest);
+    wrongHash.determinism.gdp!.inverseSha256 = 'd'.repeat(64);
+    const schedule = structuredClone(manifest);
+    schedule.parameters.gdp!.blurSchedule.pop();
+    const wrongSteps = structuredClone(manifest);
+    wrongSteps.parameters.gdp!.quantization.stepS = 0.0001;
+    const wrongChoice = structuredClone(manifest);
+    wrongChoice.parameters.gdp!.quantization.stepLongitudeFactor = 3;
+    const wrongRule = structuredClone(manifest);
+    Object.assign(wrongRule.parameters.gdp!.quantization, { rule: 'manual' });
+    for (const invalid of [
+      nondeterministic,
+      wrongHash,
+      schedule,
+      wrongSteps,
+      wrongChoice,
+      wrongRule,
+    ])
+      expect(dataManifestSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('accepts three published metrics while retaining GDP provenance and its stable empty bit', () => {
+    const manifest = reshapedManifestFixture();
+    manifest.publishedMetrics = ['population', 'co2', 'lights'];
+    manifest.unpublishedMetrics = ['gdp'];
+    manifest.sources = manifest.sources.filter(
+      (source) => source.id !== 'kummu-gdp-v4',
     );
-    expect(
-      manifest?.derivedAssets?.['110m']?.droppedOutsideAreaFraction,
-    ).toBeLessThan(0.0001);
-    expect(
-      manifest?.derivedAssets?.['50m']?.droppedOutsideAreaFraction,
-    ).toBeLessThan(0.0001);
-    expect(manifest?.derivedAssets?.['50m']?.runtimeGpuBytes).toBe(
-      manifest?.derivedAssets?.['50m']?.gpuBytes,
-    );
+    manifest.sourceAssets.gdp!.published = false;
+    manifest.aggregation.gdp.published = false;
+    delete manifest.derivedAssets['inverse-gdp.bin'];
+    delete manifest.acceptance.gdp;
+    delete manifest.parameters.gdp;
+    delete manifest.determinism.gdp;
+    delete manifest.padding.gdp;
+    expect(dataManifestSchema.safeParse(manifest).success).toBe(true);
+    const phantom = structuredClone(manifest);
+    phantom.padding.gdp = {
+      countryCount: 0,
+      skippedCountryCount: 0,
+      maxOnePixelRelativeError: 0,
+      maxCoreTargetRelativeError: 0,
+      detailSha256: 'a'.repeat(64),
+      maxFraction: 0,
+      algorithm: 'spherical-chamfer-8',
+      triggerRatio: 1.1,
+      minimumPixels: 64,
+    };
+    expect(dataManifestSchema.safeParse(phantom).success).toBe(false);
+    const wrongBits = structuredClone(manifest);
+    Object.assign(wrongBits.metricBits, { co2: 1 });
+    expect(dataManifestSchema.safeParse(wrongBits).success).toBe(false);
+  });
+
+  it('checks gzip-6 and raw limits separately and counts both transition inverse textures', () => {
+    const atIdBudget = reshapedManifestFixture();
+    atIdBudget.derivedAssets['ids-country.png']!.gzipBytes = 1_200_000;
+    expect(dataManifestSchema.safeParse(atIdBudget).success).toBe(true);
+    const manifest = reshapedManifestFixture();
+    const inverse = manifest.derivedAssets['inverse-population.bin']!;
+    if (inverse.kind !== 'inverse-field')
+      throw new Error('Wrong inverse asset type');
+    inverse.rawBytes = 1_200_000;
+    inverse.gzipBytes = 700_000;
+    expect(dataManifestSchema.safeParse(manifest).success).toBe(true);
+    const raw = structuredClone(manifest);
+    raw.derivedAssets['inverse-population.bin']!.rawBytes += 1;
+    const gzip = structuredClone(manifest);
+    gzip.derivedAssets['inverse-population.bin']!.gzipBytes += 1;
+    const metadata = structuredClone(manifest);
+    metadata.derivedAssets['units.json']!.gzipBytes = 60_000;
+    const png = structuredClone(manifest);
+    png.derivedAssets['ids-country.png']!.gzipBytes = 1_200_001;
+    const gpu = structuredClone(manifest);
+    gpu.derivedAssets['inverse-population.bin']!.gpuBytes -= 1;
+    const patches = structuredClone(manifest);
+    patches.derivedAssets['ids-patches.png']!.gzipBytes = 150_001;
+    const patchGpu = structuredClone(manifest);
+    patchGpu.derivedAssets['ids-patches.png']!.gpuBytes += 1;
+    for (const invalid of [raw, gzip, metadata, png, gpu, patches, patchGpu])
+      expect(dataManifestSchema.safeParse(invalid).success).toBe(false);
+    const oversizedTransition = structuredClone(manifest);
+    oversizedTransition.derivedAssets['inverse-population.bin']!.gpuBytes =
+      15 * 1024 ** 2;
+    const parsed = dataManifestSchema.safeParse(oversizedTransition);
+    expect(parsed.success).toBe(false);
+    if (!parsed.success)
+      expect(parsed.error.issues.map((issue) => issue.message)).toContain(
+        'Current and preceding inverses, ID rasters, patch atlas and palette exceed 40 MiB',
+      );
   });
 
   it('contains no retired populated-place pipeline', () => {

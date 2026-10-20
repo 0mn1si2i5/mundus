@@ -24,7 +24,7 @@ SOFTWARE.`;
 // from the npm archive. Keep their upstream attribution here so the deployed
 // Vite notice is complete and deterministic.
 export const licenseNoticeOverrides = {
-  '@react-three/fiber - 9.6.1 (MIT)': mit('Copyright (c) 2019-2025 Poimandres'),
+  '@react-three/fiber - 9.8.1 (MIT)': mit('Copyright (c) 2019-2025 Poimandres'),
   'maath - 0.10.8 (MIT)': mit('Copyright (c) Poimandres contributors'),
   'stats-gl - 2.4.2 (MIT)': mit('Copyright (c) Renaud ROHLINGER'),
 };

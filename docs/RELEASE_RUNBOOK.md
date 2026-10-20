@@ -22,9 +22,12 @@ product-owner approval.
   jobs upload their Playwright report for seven days.
 - A newer push to a pull request cancels its superseded CI and Pages runs; runs
   on `main` always complete.
-- The separate CI `browser-smoke` job runs three `@smoke` Chromium cases for a
+- The separate CI `browser-smoke` job runs four `@smoke` Chromium cases for a
   fast signal. It does not replace the complete desktop/mobile suite in the
   Pages artifact job.
+- The Resources workflow runs the `@resources` 20-cycle Reshaped Earth
+  resource regression on both projects nightly and on demand. It is not a
+  required check.
 - A push to protected `main` must pass all required checks, then uploads the
   exact Pages artifact and deploys it through the `github-pages` environment.
 - The deployment job alone receives `pages: write` and `id-token: write`.

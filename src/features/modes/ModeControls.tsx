@@ -17,6 +17,11 @@ const IsolationControls = lazy(() =>
     default: module.IsolationControls,
   })),
 );
+const ReshapedControls = lazy(() =>
+  import('../reshaped/ReshapedControls').then((module) => ({
+    default: module.ReshapedControls,
+  })),
+);
 export function ModeControls({
   locale,
   presentation,
@@ -40,6 +45,11 @@ export function ModeControls({
     case 'isolation':
       controls = (
         <IsolationControls locale={locale} presentation={presentation} />
+      );
+      break;
+    case 'reshaped':
+      controls = (
+        <ReshapedControls locale={locale} presentation={presentation} />
       );
       break;
     default:
