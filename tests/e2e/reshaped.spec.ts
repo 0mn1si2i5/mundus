@@ -791,26 +791,31 @@ test('a measure switch keeps the old map during loading and disposes its inverse
   await expect.poll(async () => (await probe()).fields).toBe(0);
 });
 
-test('reduced motion jumps to the final shape for selection, replay and measure changes', async ({
+test('reduced motion jumps to the final shape on entry and for selection, replay and measure changes', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('./?v=2&mode=reshaped');
-  await ready(page);
-  const states: string[] = [];
-  await globeRegion(page).evaluate((element) => {
+  // Observe from the first document so the entry morph is covered too.
+  await page.addInitScript(() => {
     const captured: string[] = [];
     (
       window as typeof window & { reshapedMorphStates?: string[] }
     ).reshapedMorphStates = captured;
     new MutationObserver(() => {
-      const state = element.getAttribute('data-morph-state');
-      if (state) captured.push(state);
-    }).observe(element, {
+      const state = document
+        .querySelector('[data-morph-state]')
+        ?.getAttribute('data-morph-state');
+      if (state && captured.at(-1) !== state) captured.push(state);
+    }).observe(document, {
+      subtree: true,
+      childList: true,
       attributes: true,
       attributeFilter: ['data-morph-state'],
     });
   });
+  await page.goto('./?v=2&mode=reshaped');
+  await ready(page);
+  const states: string[] = [];
   const trueShape = controls(page).getByRole('button', { name: '真实形状' });
   await trueShape.focus();
   await trueShape.press('Space');
