@@ -207,7 +207,7 @@ or non-primary issues with a safe fallback: record, don't inflate scope.
   redeploying a previously verified run, then fix `main` with a reviewed
   revert. Procedure: `docs/RELEASE_RUNBOOK.md`.
 - Release identity: tags and GitHub Releases are the authority; the latest is
-  `v1.2.0` at `84f0ddb453caff1f38afd7daf33a4eae220a1d77`. Creating a tag
+  `v1.3.0` at `ea301dcf51de3729ebe1dfa4f1dd9e92c0aa995c`. Creating a tag
   needs owner approval and must point at a deployed, live-verified `main` SHA.
   `package.json`'s version is build metadata, not a release identity.
 
