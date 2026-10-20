@@ -567,6 +567,7 @@ export function ReshapedLayer({
     data.patchAtlas ?? null,
   );
   const patchLoadStarted = useRef(false);
+  const reportSettled = useRef(false);
   const patchLoadController = useRef<AbortController | null>(null);
   const marker = useRef<Mesh>(null);
   const shader = useRef<ShaderMaterial>(null);
@@ -670,7 +671,13 @@ export function ReshapedLayer({
     );
     theme.sync(data.metric, reducedMotion, performance.now());
     syncTransitionUniforms(transition, material, theme);
-    setMorphState(transition.active || theme.active ? 'animating' : 'settled');
+    // While another measure loads, the old map stays on screen but the
+    // requested one has not been drawn.
+    const loading = data.metric !== requestedMetric;
+    const animating = transition.active || theme.active;
+    reportSettled.current = !loading && !animating;
+    if (loading) setMorphState('pending');
+    else if (animating) setMorphState('animating');
     invalidate();
   }, [
     data.inverse,
@@ -712,6 +719,8 @@ export function ReshapedLayer({
   useEffect(() => () => material.dispose(), [material]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => transition.dispose(), [transition]);
+  // A layer that mounts again has drawn nothing yet.
+  useEffect(() => () => setMorphState('pending'), [setMorphState]);
   useFrame(({ gl }) => {
     const currentShader = shader.current;
     if (!currentShader) return;
@@ -722,7 +731,13 @@ export function ReshapedLayer({
       if (theme.active) theme.tick(now);
       syncTransitionUniforms(transition, currentShader, theme);
       if (transition.active || theme.active) invalidate();
-      else setMorphState('settled');
+      else reportSettled.current = true;
+    }
+    // useFrame runs just before this frame's draw, so the result never
+    // announces a shape the canvas has not drawn yet.
+    if (reportSettled.current) {
+      reportSettled.current = false;
+      setMorphState('settled');
     }
     const selected =
       selectedOverride !== undefined

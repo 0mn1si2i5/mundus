@@ -372,6 +372,15 @@ describe('ReshapedResult', () => {
     },
   );
 
+  it('announces nothing before the first cartogram is drawn', () => {
+    expect(initialState.reshapedMorphState).toBe('pending');
+    useAppStore.setState({ reshapedMorphState: 'pending' });
+    render(<ReshapedResult locale="en" presentation={presentation()} />);
+    expect(
+      screen.queryByText('Cartogram displayed for Population.'),
+    ).not.toBeInTheDocument();
+  });
+
   it('announces completion only after the morph settles', () => {
     useAppStore.setState({ reshapedMorphState: 'animating' });
     render(<ReshapedResult locale="en" presentation={presentation()} />);

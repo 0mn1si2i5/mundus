@@ -581,10 +581,30 @@ test('a measure switch keeps the old map during loading and disposes its inverse
   page,
 }, testInfo) => {
   await page.addInitScript(() => {
-    const state = { fields: 0, peakFields: 0, peakBytes: 0, blended: false };
+    const state = {
+      fields: 0,
+      peakFields: 0,
+      peakBytes: 0,
+      blendedDrawFields: [] as number[],
+      morphStates: [] as string[],
+    };
     (
       window as typeof window & { reshapedTextureProbe?: typeof state }
     ).reshapedTextureProbe = state;
+    // The transition lasts 1.6 s, which a slow renderer can spend in one or
+    // two frames. Record what each blended draw saw instead of polling for it.
+    new MutationObserver(() => {
+      const value = document
+        .querySelector('[data-morph-state]')
+        ?.getAttribute('data-morph-state');
+      if (value && state.morphStates.at(-1) !== value)
+        state.morphStates.push(value);
+    }).observe(document, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['data-morph-state'],
+    });
     const textures = new Map<WebGLTexture, { bytes: number; field: boolean }>();
     const bindings = new WeakMap<
       WebGL2RenderingContext,
@@ -595,6 +615,8 @@ test('a measure switch keeps the old map during loading and disposes its inverse
       { format: number; width: number; height: number }
     >();
     const names = new WeakMap<WebGLUniformLocation, string>();
+    const hasFrom = new WeakMap<WebGLProgram, number>();
+    let program: WebGLProgram | null = null;
     const update = () => {
       state.fields = [...textures.values()].filter(
         (value) => value.field,
@@ -715,11 +737,22 @@ test('a measure switch keeps the old map during loading and disposes its inverse
       if (location) names.set(location, name);
       return location;
     };
+    const useProgram = proto.useProgram;
+    proto.useProgram = function (value) {
+      program = value;
+      useProgram.call(this, value);
+    };
     const uniform1i = proto.uniform1i;
     proto.uniform1i = function (location, value) {
-      if (location && names.get(location) === 'uHasFrom' && value === 1)
-        state.blended = true;
+      if (location && program && names.get(location) === 'uHasFrom')
+        hasFrom.set(program, value);
       uniform1i.call(this, location, value);
+    };
+    const drawElements = proto.drawElements;
+    proto.drawElements = function (...args) {
+      if (program && hasFrom.get(program) === 1)
+        state.blendedDrawFields.push(state.fields);
+      drawElements.apply(this, args);
     };
   });
   const probe = () =>
@@ -731,7 +764,8 @@ test('a measure switch keeps the old map during loading and disposes its inverse
               fields: number;
               peakFields: number;
               peakBytes: number;
-              blended: boolean;
+              blendedDrawFields: number[];
+              morphStates: string[];
             };
           }
         ).reshapedTextureProbe!,
@@ -752,18 +786,25 @@ test('a measure switch keeps the old map during loading and disposes its inverse
     await gate;
     await route.continue();
   });
+  const statesBeforeSwitch = (await probe()).morphStates.length;
   await controls(page).getByRole('radio', { name: 'GDP', exact: true }).check();
   await requested;
   await expect(result(page)).toHaveCount(0);
   expect((await probe()).fields).toBe(1);
-  release();
+  expect((await probe()).blendedDrawFields).toEqual([]);
   await expect(globeRegion(page)).toHaveAttribute(
     'data-morph-state',
-    'animating',
+    'pending',
   );
-  await expect.poll(async () => (await probe()).blended).toBe(true);
-  await expect.poll(async () => (await probe()).fields).toBe(2);
+  release();
+  await expect
+    .poll(async () => (await probe()).morphStates.slice(statesBeforeSwitch))
+    .toEqual(['pending', 'animating', 'settled']);
   await ready(page);
+  // Every blended draw sampled the old and the new inverse field.
+  const blendedDrawFields = (await probe()).blendedDrawFields;
+  expect(blendedDrawFields.length).toBeGreaterThan(0);
+  expect(new Set(blendedDrawFields)).toEqual(new Set([2]));
   await expect.poll(async () => (await probe()).fields).toBe(1);
   expect((await probe()).peakFields).toBe(2);
   const rasterWidth =

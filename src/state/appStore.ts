@@ -22,6 +22,8 @@ import {
   type CityReachLevel,
 } from '../features/isolation/cityReachLevel';
 
+export type ReshapedMorphState = 'pending' | 'animating' | 'settled';
+
 export interface CameraFocusIntent {
   side: 'origin' | 'antipode' | 'free' | 'major-city';
   target: GeoPoint | null;
@@ -42,11 +44,12 @@ interface AppState {
   reshapedShape: 'true' | 'reshaped';
   reshapedReplayKey: number;
   reshapedSelectedUnitId: string | null | undefined;
-  reshapedMorphState: 'animating' | 'settled';
+  /** pending: the requested cartogram has not been drawn yet. */
+  reshapedMorphState: ReshapedMorphState;
   reshapedGraphicsUnavailable: boolean;
   replayReshaped: () => void;
   setReshapedSelectedUnitId: (id: string | null | undefined) => void;
-  setReshapedMorphState: (state: 'animating' | 'settled') => void;
+  setReshapedMorphState: (state: ReshapedMorphState) => void;
   setReshapedGraphicsUnavailable: (unavailable: boolean) => void;
   isolationReach: CityReachLevel;
   selectedCountry: CountryRef | null;
@@ -168,7 +171,7 @@ export const useAppStore = create<AppState>((set) => ({
   reshapedShape: 'reshaped',
   reshapedReplayKey: 0,
   reshapedSelectedUnitId: undefined,
-  reshapedMorphState: 'settled',
+  reshapedMorphState: 'pending',
   reshapedGraphicsUnavailable: false,
   replayReshaped: () =>
     set((state) => ({
