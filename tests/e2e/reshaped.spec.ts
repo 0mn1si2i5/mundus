@@ -947,7 +947,11 @@ test('exiting an active morph stops its GPU draws and keeps the selected place o
   page,
 }) => {
   await page.addInitScript(() => {
-    const state = { draws: 0 };
+    const state = {
+      draws: 0,
+      exitArmed: false,
+      stateAtExit: null as string | null,
+    };
     (window as typeof window & { reshapedGpu?: typeof state }).reshapedGpu =
       state;
     const proto = WebGL2RenderingContext.prototype;
@@ -976,7 +980,26 @@ test('exiting an active morph stops its GPU draws and keeps the selected place o
     const drawElements = proto.drawElements;
     proto.drawElements = function (mode, count, type, offset) {
       const program = currentPrograms.get(this);
-      if (program && programs.has(program)) state.draws += 1;
+      if (program && programs.has(program)) {
+        state.draws += 1;
+        const morph = () =>
+          document
+            .querySelector('[data-morph-state]')
+            ?.getAttribute('data-morph-state') ?? null;
+        // The 1.6 s morph can end within two software-rendered frames, so
+        // leave from the page right after its first animated frame.
+        if (state.exitArmed && morph() === 'animating') {
+          state.exitArmed = false;
+          queueMicrotask(() => {
+            state.stateAtExit = morph();
+            document
+              .querySelector<HTMLButtonElement>(
+                'button[data-mode-tab="antipodes"]',
+              )
+              ?.click();
+          });
+        }
+      }
       drawElements.call(this, mode, count, type, offset);
     };
   });
@@ -991,16 +1014,29 @@ test('exiting an active morph stops its GPU draws and keeps the selected place o
       ),
     )
     .toBeGreaterThan(0);
+  await page.evaluate(() => {
+    (
+      window as typeof window & { reshapedGpu?: { exitArmed: boolean } }
+    ).reshapedGpu!.exitArmed = true;
+  });
   await controls(page).getByRole('button', { name: '重播变形' }).click();
-  await expect(globeRegion(page)).toHaveAttribute(
-    'data-morph-state',
-    'animating',
-  );
-  await switchMode(page, '地球另一端');
+  await expect(
+    page.getByRole('heading', { level: 1, name: '地球另一端' }),
+  ).toBeVisible();
   await expect(globeRegion(page)).not.toHaveAttribute(
     'data-reshaped-mode',
     /.+/,
   );
+  expect(
+    await page.evaluate(
+      () =>
+        (
+          window as typeof window & {
+            reshapedGpu?: { stateAtExit: string | null };
+          }
+        ).reshapedGpu?.stateAtExit,
+    ),
+  ).toBe('animating');
   const afterExit = await page.evaluate(
     () =>
       (window as typeof window & { reshapedGpu?: { draws: number } })
