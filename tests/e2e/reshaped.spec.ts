@@ -200,6 +200,9 @@ test('optional local atlas failure retains usable GDP results and base graphics'
   await page.route(/\/ids-patches[^/]*\.png(?:\?|$)/u, (route) =>
     route.abort(),
   );
+  // This test covers the atlas failure, not the morph. On CI's software
+  // renderer the 1.6 s morph can take most of ready()'s budget.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./?v=2&mode=reshaped&metric=gdp&point=22.2686,114.1506');
   await ready(page);
   await expect(result(page)).toContainText('香港');
