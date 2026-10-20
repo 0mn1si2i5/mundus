@@ -29,12 +29,13 @@ GHSL 原定义与人口估计局限见 [数据方法](data/ghsl-ucdb-r2024a.md)�
 
 ## 已核实的部署基线
 
-固定提交：`67fdcf8f69fd34bf06f314b3b6d6f3f92f99b77d`（PR #43，合并时间 2026-10-16 UTC）。
+固定提交：`ea301dcf51de3729ebe1dfa4f1dd9e92c0aa995c`（PR #36，合并时间 2026-10-20 UTC）。
 以下结果只证明该提交，不自动证明后续提交：
 
-- [CI](https://github.com/0mn1si2i5/mundus/actions/runs/38848958550)：源码质量、固定数据、单元测试、完整矢量资产检查和浏览器冒烟通过。
-- [Pages](https://github.com/0mn1si2i5/mundus/actions/runs/38848958587)：同一构建产物的桌面 Chromium 与 Pixel 7 浏览器套件、作品集截图、产物校验、部署和线上冒烟通过。
-- 最近的正式版本是 [v1.2.0](https://github.com/0mn1si2i5/mundus/releases/tag/v1.2.0)（`84f0ddb`），之后的 PR #41、#43 已部署但未单独打 tag。
+- [CI](https://github.com/0mn1si2i5/mundus/actions/runs/39369626589)：源码质量、固定数据、单元测试、完整矢量资产检查和浏览器冒烟通过。
+- [Pages](https://github.com/0mn1si2i5/mundus/actions/runs/39369626614)：同一构建产物的桌面 Chromium 与 Pixel 7 浏览器套件、作品集截图、产物校验、部署和线上冒烟通过。
+- 部署后在线上用桌面和 Pixel 7 检查了变形地球：进入、识别巴林、切换到夜光、切换英文、切换到地球另一端并保留地点，没有页面错误。
+- 最近的正式版本是 [v1.3.0](https://github.com/0mn1si2i5/mundus/releases/tag/v1.3.0)（`ea301dc`）。之后只改测试的 PR #46 已部署，未单独打 tag。
 
 线上冒烟确认托管和展厅渲染；完整浏览器套件验证交互。它们均不代表新版本的人工验收、
 实体设备性能或完整 WCAG 审计。历史实体设备采样保留在 `docs/performance/`，各报告已注明适用版本；
@@ -56,6 +57,8 @@ GHSL 原定义与人口估计局限见 [数据方法](data/ghsl-ucdb-r2024a.md)�
 - 2026-10-12：[v1.2.0](https://github.com/0mn1si2i5/mundus/releases/tag/v1.2.0)。全球分区改为交通时间加权模型，旧 d/R 分区退役（PR #37、#38）；
   同日补充 99 座城市的审定译名和不受标点影响的中心排序（PR #41）。
 - 2026-10-16：每次部署发布作品集截图和 manifest（PR #43）。
+- 2026-10-20：[v1.3.0](https://github.com/0mn1si2i5/mundus/releases/tag/v1.3.0)（`ea301dc`）。新增变形地球（PR #36）；
+  20 轮资源回归改到每晚运行的 Resources 工作流。同日修复 44px 目标在进场动画中测量的浏览器测试（PR #46）。
 
 旧 Mode Atlas、精选轨道、Development 实现切片和阶段测试数字不再作为当前状态。
 完整旧实施记录保留在
