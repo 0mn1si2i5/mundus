@@ -8,6 +8,9 @@ export default defineConfig({
   // capability-fallback coverage does not mask context lifecycle coverage.
   fullyParallel: false,
   workers: 1,
+  // The 20-cycle resource regression takes minutes per project; it runs in
+  // the resources workflow (pnpm test:e2e:resources), not in routine suites.
+  grepInvert: process.env.MUNDUS_E2E_RESOURCES ? undefined : /@resources/u,
   reporter: 'html',
   use: {
     baseURL,

@@ -172,7 +172,10 @@ artifact and renders the lobby; it does not replace the browser suites.
 
 Browser tests live in `tests/e2e/`, one file per area (`shell`, `layout`,
 `globe`, `other-side`, `surnames`, `sunline`, `reshaped`) with shared
-helpers in `helpers.ts`; `@smoke` tags the CI smoke subset.
+helpers in `helpers.ts`; `@smoke` tags the CI smoke subset. `@resources`
+tags the 20-cycle Reshaped Earth resource regression, which routine runs
+exclude; it runs nightly and on demand in the Resources workflow
+(`pnpm test:e2e:resources`).
 
 Test discipline: never loosen an assertion, add retries, raise timeouts or skip
 a test to get green. Reproduce a failure, find the root cause, fix it, then
