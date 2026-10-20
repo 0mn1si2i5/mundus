@@ -1,7 +1,9 @@
 import type { Locale } from '../../i18n/messages';
+import { messages } from '../../i18n/messages';
 import urbanIsolationManifest from '../../data/manifests/urban-isolation.json';
 import { Dialog } from '../controls/Dialog';
 import styles from './AboutDialog.module.css';
+import { isReshapedMetric } from '../reshaped/metrics';
 
 interface Credit {
   name: string;
@@ -11,6 +13,7 @@ interface Credit {
 }
 
 const CC_BY_4 = 'https://creativecommons.org/licenses/by/4.0/';
+const HAS_GDP = isReshapedMetric('gdp');
 
 const COPY = {
   zh: {
@@ -40,6 +43,10 @@ const COPY = {
       [
         '城市邻近性',
         '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级邻近距离是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，距离呈阶梯式增长。单城观察只反映几何与人口规模。全球分区采用交通时间 − k × log₁₀(人口) 的加法得分，在人口 ≥10 万的中心之间比较；人口每大十倍，得分减去 k 小时。使用 MAP 2019 估计摩擦面与约 4 km 网格，结果按档位离线计算；颜色区分归属，明度反映 GHS-POP 2020 人口密度。仅按约 15 km 显示网格采样，计算仍在 1/30° 网格上进行，中心切换阈值和父城市不变。这是负责人于 2026-10-12 作出的决定，替代提案 D5 原来的“按 1/30° 显示”；以后提高显示精度需另行审批。路径按 Natural Earth 实控边界及公开开放表计算，绘制使用 Mundus 中国视角；争议区画斜纹隐藏归属，模型不计渡轮，粗网格可能将约 7 km 内的水道视为相通。中心归属切换阈值仅描述中心单元，不代表整座城区消失。相邻城市可能合并为一个 GHSL 中心。这是透明思想实验，不测量通勤、就医、实际统辖或经济联系。',
+      ],
+      [
+        '变形地球',
+        `方法采用 2020 年人口、${HAS_GDP ? 'PPP GDP、' : ''}化石燃料与水泥 CO₂ 排放和夜光快照，在等积圆柱网格上离线计算 Gastner–Seguy–More（2018）连续面积变形图。国家值由 Mundus 国家栅格聚合，边界沿用 Mundus 国家视角。海洋、南极和缺失单元用平均密度填充；真实零值使用平均密度 1% 的显示下限。连续变形无法压到应得大小的多余面积画成斜线，实色核心面积表达指标份额。${HAS_GDP ? 'GDP 是以 2021 年国际元计的模型下采样估计；' : ''}夜光是有饱和上限的相对亮度指数。`,
       ],
     ] as const,
     credits: [
@@ -131,6 +138,52 @@ const COPY = {
           { label: 'CC BY 4.0', href: CC_BY_4 },
         ],
       },
+      {
+        name: 'GHS-POP R2023A',
+        use: '变形地球 · 2020 年人口',
+        notice:
+          'European Commission, Joint Research Centre（JRC），GHS-POP R2023A V1-0 · CC BY 4.0。人口为模型估计。',
+        links: [
+          {
+            label: '数据集',
+            href: 'https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'Kummu et al. GDP v4',
+        use: '变形地球 · 2020 年 PPP GDP',
+        notice:
+          'Kummu et al.，全球下采样 GDP 网格 v4 · CC BY 4.0。以 2021 年国际元计的购买力平价估计，不是当地货币或名义 GDP。',
+        links: [
+          { label: '数据集', href: 'https://zenodo.org/records/18429133' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'GCP-GridFED v2025.1',
+        use: '变形地球 · 2020 年 CO₂ 排放',
+        notice:
+          'Jones et al.，GCP-GridFED v2025.1 · CC BY 4.0。石油、煤、天然气与水泥煅烧的月度排放加总；不含国际航运/航空燃料与水泥碳化吸收，部分海上排放未归属陆地单元。',
+        links: [
+          { label: '数据集', href: 'https://zenodo.org/records/17467681' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'Harmonized DMSP–VIIRS NTL v10',
+        use: '变形地球 · 2020 年夜光',
+        notice:
+          'Li, Zhou, Zhao & Zhao，协调化 DMSP–VIIRS 夜光 v10 · CC BY 4.0。DN 0–63 为相对亮度指数，存在传感器饱和，不是物理辐亮度。',
+        links: [
+          {
+            label: '数据集',
+            href: 'https://figshare.com/articles/dataset/9828827/10',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
     ] satisfies readonly Credit[],
   },
   en: {
@@ -161,11 +214,15 @@ const COPY = {
         'Urban Proximity',
         'Uses 2025 populations from the GHSL Urban Centre Database (R2024A). The hierarchical proximity distance is the great-circle distance from a city of at least one million people to the nearest urban centre with at least α times its population; a higher α raises the bar, and the distance grows in steps. One city reflects geometry and population only. Global regions compare centres with at least 100,000 people using travel time − k × log₁₀(population): each tenfold population increase subtracts k hours. MAP 2019 estimated friction and a roughly 4 km grid produce offline results by level; colour distinguishes owners and brightness reflects GHS-POP 2020 population density. The sole display resolution samples at roughly 15 km; computation remains at 1/30°, with unchanged centre thresholds and parents. This owner decision of 2026-10-12 replaces proposal D5’s 1/30° display; higher display resolution requires separate approval. Paths follow Natural Earth control boundaries and public open-border rules; drawing follows Mundus’s China view. Hatching hides disputed ownership, ferries are excluded and the coarse grid can join waterways of roughly 7 km. Centre switch thresholds describe the centre cell, not the disappearance of an entire urban area. Neighbouring cities can merge into one GHSL centre. This is a transparent thought experiment, not a measurement of commuting, healthcare, actual jurisdiction or economic ties.',
       ],
+      [
+        'Reshaped Earth',
+        `The method uses 2020 population, ${HAS_GDP ? 'PPP GDP, ' : ''}fossil-fuel and cement CO₂ emissions, and night-light snapshots for an offline Gastner–Seguy–More (2018) contiguous area cartogram on a cylindrical equal-area grid. Country values are aggregated against the Mundus country raster, following Mundus country boundaries. Oceans, Antarctica and missing units receive mean density; real zero values use a display floor of 1% of mean density. Hatching marks excess area the continuous reshaping could not remove; the solid core represents the country's share of the measure. ${HAS_GDP ? 'GDP is a modelled downscaled estimate in 2021 international dollars; ' : ''}night lights are a relative brightness index with sensor saturation.`,
+      ],
     ] as const,
     credits: [
       {
         name: 'Natural Earth',
-        use: 'Country borders and the vector globe. Boundaries follow the Natural Earth China point-of-view layer, with Taiwan shown separately; map boundaries are not a legal statement on territorial status.',
+        use: 'Country borders and the vector globe. Boundaries follow the Natural Earth China point-of-view layer, with Taiwan shown separately. Map boundaries are not a legal statement on territorial status.',
         notice: 'Made with Natural Earth · public domain data',
         links: [
           { label: 'Source', href: 'https://www.naturalearthdata.com/' },
@@ -252,6 +309,52 @@ const COPY = {
           { label: 'CC BY 4.0', href: CC_BY_4 },
         ],
       },
+      {
+        name: 'GHS-POP R2023A',
+        use: 'Reshaped Earth · 2020 population',
+        notice:
+          'European Commission, Joint Research Centre (JRC), GHS-POP R2023A V1-0 · CC BY 4.0. Population is modelled.',
+        links: [
+          {
+            label: 'Dataset',
+            href: 'https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'Kummu et al. GDP v4',
+        use: 'Reshaped Earth · 2020 PPP GDP',
+        notice:
+          'Kummu et al., global downscaled GDP grids v4 · CC BY 4.0. PPP estimates in 2021 international dollars, not local currency or nominal GDP.',
+        links: [
+          { label: 'Dataset', href: 'https://zenodo.org/records/18429133' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'GCP-GridFED v2025.1',
+        use: 'Reshaped Earth · 2020 CO₂ emissions',
+        notice:
+          'Jones et al., GCP-GridFED v2025.1 · CC BY 4.0. Annual sum of monthly oil, coal, gas and cement-calcination emissions; international aviation/shipping bunkers and cement-carbonation uptake are excluded. Some offshore emissions are not assigned to land units.',
+        links: [
+          { label: 'Dataset', href: 'https://zenodo.org/records/17467681' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'Harmonized DMSP–VIIRS NTL v10',
+        use: 'Reshaped Earth · 2020 night lights',
+        notice:
+          'Li, Zhou, Zhao & Zhao, harmonized DMSP–VIIRS night lights v10 · CC BY 4.0. DN 0–63 is a relative brightness index with sensor saturation, not physical radiance.',
+        links: [
+          {
+            label: 'Dataset',
+            href: 'https://figshare.com/articles/dataset/9828827/10',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
     ] satisfies readonly Credit[],
   },
 } as const;
@@ -280,7 +383,12 @@ export function AboutDialog({
           {copy.methodItems.map(([name, text]) => (
             <div key={name}>
               <dt>{name}</dt>
-              <dd>{text}</dd>
+              <dd>
+                {text}
+                {name === '变形地球' || name === 'Reshaped Earth'
+                  ? ` ${messages[locale].reshapedColorAbout}`
+                  : ''}
+              </dd>
             </div>
           ))}
         </dl>
@@ -288,27 +396,31 @@ export function AboutDialog({
       <section className={styles.section} aria-labelledby="about-sources">
         <h3 id="about-sources">{copy.sources}</h3>
         <ul className={styles.credits}>
-          {copy.credits.map((credit) => (
-            <li key={credit.name}>
-              <div className={styles.creditHeading}>
-                <strong>{credit.name}</strong>
-                <span>{credit.use}</span>
-              </div>
-              <p>{credit.notice}</p>
-              <p className={styles.links}>
-                {credit.links.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {link.label} ↗
-                  </a>
-                ))}
-              </p>
-            </li>
-          ))}
+          {copy.credits
+            .filter(
+              (credit) => HAS_GDP || credit.name !== 'Kummu et al. GDP v4',
+            )
+            .map((credit) => (
+              <li key={credit.name}>
+                <div className={styles.creditHeading}>
+                  <strong>{credit.name}</strong>
+                  <span>{credit.use}</span>
+                </div>
+                <p>{credit.notice}</p>
+                <p className={styles.links}>
+                  {credit.links.map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {link.label} ↗
+                    </a>
+                  ))}
+                </p>
+              </li>
+            ))}
         </ul>
       </section>
       <section className={styles.section} aria-labelledby="about-software">

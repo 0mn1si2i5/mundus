@@ -14,11 +14,15 @@ import {
 import type { SunlineClockMode } from './urlState';
 import { clampSunlineTime } from '../features/sunline/solar';
 import { clampAlpha } from '../features/isolation/isolationMetric';
+import type { ReshapedMetricId } from '../features/reshaped/metrics';
+import { RESHAPED_DEFAULT_METRIC } from '../features/reshaped/metrics';
 import {
   CITY_REACH_DEFAULT,
   isCityReachLevel,
   type CityReachLevel,
 } from '../features/isolation/cityReachLevel';
+
+export type ReshapedMorphState = 'pending' | 'animating' | 'settled';
 
 export interface CameraFocusIntent {
   side: 'origin' | 'antipode' | 'free' | 'major-city';
@@ -36,6 +40,17 @@ interface AppState {
   surnameDisplayMode: SurnameDisplayMode;
   isolationAlpha: number;
   isolationView: IsolationView;
+  reshapedMetric: ReshapedMetricId;
+  reshapedShape: 'true' | 'reshaped';
+  reshapedReplayKey: number;
+  reshapedSelectedUnitId: string | null | undefined;
+  /** pending: the requested cartogram has not been drawn yet. */
+  reshapedMorphState: ReshapedMorphState;
+  reshapedGraphicsUnavailable: boolean;
+  replayReshaped: () => void;
+  setReshapedSelectedUnitId: (id: string | null | undefined) => void;
+  setReshapedMorphState: (state: ReshapedMorphState) => void;
+  setReshapedGraphicsUnavailable: (unavailable: boolean) => void;
   isolationReach: CityReachLevel;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
@@ -57,6 +72,8 @@ interface AppState {
   ) => void;
   setIsolationAlpha: (value: number) => void;
   setIsolationView: (view: IsolationView) => void;
+  setReshapedMetric: (metric: ReshapedMetricId) => void;
+  setReshapedShape: (shape: 'true' | 'reshaped') => void;
   setIsolationReach: (value: number) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
@@ -82,6 +99,7 @@ const initialUrlState = parseUrlState(initialSearch);
 export const useAppStore = create<AppState>((set) => ({
   locale: preferredLocale(),
   ...initialUrlState,
+  reshapedMetric: initialUrlState.reshapedMetric ?? RESHAPED_DEFAULT_METRIC,
   surnameDisplayMode:
     initialUrlState.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
   isolationAlpha: initialUrlState.isolationAlpha,
@@ -112,6 +130,7 @@ export const useAppStore = create<AppState>((set) => ({
   selectPoint: (point) =>
     set({
       point,
+      reshapedSelectedUnitId: undefined,
       cameraFocusIntent: { side: 'origin', target: point },
       hasInteracted: true,
       hasMeaningfulInteraction: true,
@@ -149,6 +168,23 @@ export const useAppStore = create<AppState>((set) => ({
   setSurnameDisplayMode: (surnameDisplayMode) => set({ surnameDisplayMode }),
   setIsolationAlpha: (value) => set({ isolationAlpha: clampAlpha(value) }),
   setIsolationView: (isolationView) => set({ isolationView }),
+  reshapedShape: 'reshaped',
+  reshapedReplayKey: 0,
+  reshapedSelectedUnitId: undefined,
+  reshapedMorphState: 'pending',
+  reshapedGraphicsUnavailable: false,
+  replayReshaped: () =>
+    set((state) => ({
+      reshapedShape: 'reshaped',
+      reshapedReplayKey: state.reshapedReplayKey + 1,
+    })),
+  setReshapedSelectedUnitId: (reshapedSelectedUnitId) =>
+    set({ reshapedSelectedUnitId }),
+  setReshapedMorphState: (reshapedMorphState) => set({ reshapedMorphState }),
+  setReshapedGraphicsUnavailable: (reshapedGraphicsUnavailable) =>
+    set({ reshapedGraphicsUnavailable }),
+  setReshapedMetric: (reshapedMetric) => set({ reshapedMetric }),
+  setReshapedShape: (reshapedShape) => set({ reshapedShape }),
   setIsolationReach: (value) =>
     set({
       isolationReach: isCityReachLevel(value) ? value : CITY_REACH_DEFAULT,

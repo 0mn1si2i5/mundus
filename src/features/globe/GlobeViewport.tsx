@@ -17,7 +17,7 @@ import {
   CLICK_DRAG_THRESHOLD_PX,
   TOUCH_CLICK_DRAG_THRESHOLD_PX,
 } from './interaction';
-import { detectQualityProfile } from './quality';
+import { getRuntimeQualityProfile } from './quality';
 import { SUNLINE_RENDERING } from './rendering';
 import { supportsWebGL2 } from './webgl';
 import styles from './GlobeViewport.module.css';
@@ -29,6 +29,7 @@ import type { SurnameMapLabel } from '../surnames/surnameData';
 import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
 import type { SurnameDisplayMode } from '../../state/urlState';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
+import type { GlobePresentation } from '../modes/useModePresentation';
 import { messages } from '../../i18n/messages';
 import {
   clearCameraDiagnostic,
@@ -40,6 +41,7 @@ import {
 import {
   GlobeScene,
   type GlobeKeyboardController,
+  type RasterLayerVisibility,
   type SunlineRenderState,
 } from './GlobeScene';
 
@@ -66,6 +68,7 @@ interface GlobeViewportProps {
   surnameMapLabels: readonly SurnameMapLabel[];
   surnameDisplayMode: SurnameDisplayMode;
   isolation: IsolationGlobePresentation | null;
+  reshaped: GlobePresentation['reshaped'];
 }
 
 interface PointerStart {
@@ -90,9 +93,11 @@ export function GlobeViewport({
   surnameMapLabels,
   surnameDisplayMode,
   isolation,
+  reshaped,
 }: GlobeViewportProps) {
+  const reshapedMorphState = useAppStore((state) => state.reshapedMorphState);
   const [supported] = useState(supportsWebGL2);
-  const [profile] = useState(detectQualityProfile);
+  const [profile] = useState(getRuntimeQualityProfile);
   const [dragDiagnosticsEnabled] = useState(() =>
     new URLSearchParams(window.location.search).has('dragDiagnostics'),
   );
@@ -102,6 +107,12 @@ export function GlobeViewport({
   const [vectorState, setVectorState] = useState<VectorGlobeState>('loading');
   const [fieldRenderedFrame, setFieldRenderedFrame] =
     useState<CityReachFrame | null>(null);
+  const [rasterLayers, setRasterLayers] = useState<RasterLayerVisibility>({
+    reshaped: false,
+    baseSurface: true,
+    outerShell: false,
+    highlight: true,
+  });
   const [vectorPaletteVersion, setVectorPaletteVersion] = useState(0);
   const [vectorGeometryId, setVectorGeometryId] = useState('');
   const [vectorDragTransparent, setVectorDragTransparent] = useState(false);
@@ -366,7 +377,18 @@ export function GlobeViewport({
       data-vector-palette-version={
         vectorState === 'ready' ? vectorPaletteVersion : undefined
       }
-      data-vector-raster-fallback-visible={String(vectorState !== 'ready')}
+      data-vector-raster-fallback-visible={String(
+        rasterLayers.baseSurface || rasterLayers.outerShell,
+      )}
+      data-raster-base-surface-visible={String(rasterLayers.baseSurface)}
+      data-raster-drag-shell-visible={String(rasterLayers.outerShell)}
+      data-raster-highlight-visible={String(rasterLayers.highlight)}
+      data-reshaped-renderer-active={
+        reshaped ? String(rasterLayers.reshaped) : undefined
+      }
+      data-reshaped-mode={reshaped ? 'active' : undefined}
+      data-reshaped-theme={reshaped ? reshaped.metric : undefined}
+      data-morph-state={reshaped ? reshapedMorphState : undefined}
       data-vector-render-draws={vectorRenderEvidence?.vectorDraws}
       data-vector-renderer-calls={vectorRenderEvidence?.rendererCalls}
       data-vector-render-revision={vectorRenderEvidence?.revision}
@@ -582,12 +604,14 @@ export function GlobeViewport({
           surnameMapLabels={surnameMapLabels}
           surnameDisplayMode={surnameDisplayMode}
           isolation={isolation}
+          reshaped={reshaped}
           onIsolationFieldRendered={setFieldRenderedFrame}
           cameraGestureCancelRef={cancelCameraGesture}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}
           onSurnameLabelLayoutChange={setSurnameLabelLayout}
           diagnostics={diagnostics}
           onVectorStateChange={handleVectorStateChange}
+          onRasterLayerVisibilityChange={setRasterLayers}
           onVectorPaletteUpdate={setVectorPaletteVersion}
           onVectorDragMaterialChange={setVectorDragTransparent}
           onVectorSunlineHighlightChange={setVectorSunlineHighlight}

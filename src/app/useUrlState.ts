@@ -19,7 +19,8 @@ export function useUrlState() {
           state.surnameDisplayMode === previous.surnameDisplayMode &&
           state.isolationAlpha === previous.isolationAlpha &&
           state.isolationView === previous.isolationView &&
-          state.isolationReach === previous.isolationReach)
+          state.isolationReach === previous.isolationReach &&
+          state.reshapedMetric === previous.reshapedMetric)
       ) {
         return;
       }
@@ -67,6 +68,7 @@ export function useUrlState() {
         ...parseUrlState(window.location.search),
         navigationNotice: parseNavigationNotice(window.location.search),
         hoveredCountry: null,
+        reshapedSelectedUnitId: undefined,
         cameraFocusIntent: { side: 'origin', target: null },
         sunlinePlaying: false,
       });

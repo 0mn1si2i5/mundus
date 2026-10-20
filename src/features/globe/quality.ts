@@ -67,3 +67,10 @@ export function detectQualityProfile(): QualityProfile {
     hardwareConcurrency: navigator.hardwareConcurrency || 4,
   });
 }
+
+let runtimeQualityProfile: QualityProfile | undefined;
+
+/** Keep decoded mode assets and the Canvas on the same initial quality. */
+export function getRuntimeQualityProfile(): QualityProfile {
+  return (runtimeQualityProfile ??= detectQualityProfile());
+}
