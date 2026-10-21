@@ -64,7 +64,6 @@ export function TrueSizeResult({
   return (
     <aside
       className={styles.result}
-      aria-live="polite"
       aria-label={copy.result}
       data-testid="truesize-result"
     >
@@ -77,7 +76,11 @@ export function TrueSizeResult({
       </div>
       {placement ? (
         <>
-          <p className={styles.note} data-testid="truesize-finding">
+          <p
+            className={styles.note}
+            aria-live="polite"
+            data-testid="truesize-finding"
+          >
             {findingSentence(
               locale,
               name,

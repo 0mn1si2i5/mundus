@@ -27,17 +27,22 @@ export function findingSentence(
   const parts: string[] = [];
   if (hostAreaKm2 !== null && hostAreaKm2 > 0) {
     const ratio = areaKm2 / hostAreaKm2;
+    const tiny = Math.round(ratio * 100) < 1;
     if (locale === 'zh') {
       parts.push(
         ratio >= 1
           ? `${name}的面积约是${hostName}的 ${decimal.format(ratio)} 倍。`
-          : `${name}的面积约为${hostName}的 ${integer.format(Math.max(1, ratio * 100))}%。`,
+          : tiny
+            ? `${name}的面积不到${hostName}的 1%。`
+            : `${name}的面积约为${hostName}的 ${integer.format(ratio * 100)}%。`,
       );
     } else {
       parts.push(
         ratio >= 1
           ? `${name} is about ${decimal.format(ratio)} times the area of ${hostName}.`
-          : `${name} is about ${integer.format(Math.max(1, ratio * 100))}% of the area of ${hostName}.`,
+          : tiny
+            ? `${name} is less than 1% of the area of ${hostName}.`
+            : `${name} is about ${integer.format(ratio * 100)}% of the area of ${hostName}.`,
       );
     }
   }

@@ -80,4 +80,24 @@ describe('True Size copy', () => {
       ),
     ).toBe('在常见网络地图上，它在这里和在原处看起来差不多大。');
   });
+
+  it('says less than 1% instead of rounding a tiny share up', () => {
+    for (const [locale, tag, expected] of [
+      ['zh', 'zh-CN', '斐济的面积不到俄罗斯的 1%。'],
+      ['en', 'en-US', 'Fiji is less than 1% of the area of Russia.'],
+    ] as const)
+      expect(
+        findingSentence(
+          locale,
+          locale === 'zh' ? '斐济' : 'Fiji',
+          locale === 'zh' ? '俄罗斯' : 'Russia',
+          1.6e4,
+          1.68e7,
+          null,
+          null,
+          decimal(tag),
+          integer(tag),
+        ),
+      ).toBe(expected);
+  });
 });
