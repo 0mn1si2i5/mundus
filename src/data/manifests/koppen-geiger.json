@@ -1,0 +1,55 @@
+{
+  "id": "koppen-geiger",
+  "formatVersion": 1,
+  "sourceName": "Köppen-Geiger climate classification maps (Beck et al. 2023)",
+  "sourceUrl": "https://doi.org/10.6084/m9.figshare.21789074",
+  "paperUrl": "https://doi.org/10.1038/s41597-023-02549-6",
+  "licenseName": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "version": "V2, 1991–2020, 0.1°",
+  "period": "1991-2020",
+  "retrievedAt": "2026-10-21",
+  "attribution": "Beck, H.E., McVicar, T.R., Vergopolan, N., Berg, A., Lutsko, N.J., Dufour, A., Zeng, Z., Jiang, X., van Dijk, A.I.J.M. & Miralles, D.G. (2023). High-resolution (1 km) Köppen-Geiger maps for 1901–2099 based on constrained CMIP6 projections. Scientific Data 10, 724.",
+  "redistribution": "allowed",
+  "transformations": [
+    "Use the published 0.1° 1991–2020 GeoTIFF unchanged; no resampling or reclassification",
+    "Check the archive legend against the 30 reviewed Mundus class codes and colours",
+    "Store class values 0–30 in the blue channel of an RGB PNG (R = G = 0)",
+    "Land share per class weights each cell by its true spherical area"
+  ],
+  "missingValuePolicy": "0 is water or no data and is never shown as a class. A selected point or city on a water cell takes the nearest classified cell within two cells; otherwise it has no class.",
+  "boundaryPolicy": "Classes are drawn only on the Natural Earth land surface; unclassified land cells are neutral grey.",
+  "sourceAsset": {
+    "fileName": "koppen_geiger_tif.zip",
+    "distributionUrl": "https://ndownloader.figshare.com/files/61012822",
+    "sha256": "bb84453d4541f1a0bc5a804ead83f483c19ce70f16a5197f6d3a7b6a63e65562",
+    "rawBytes": 130618411,
+    "member": "1991_2020/koppen_geiger_0p1.tif",
+    "memberSha256": "59b749fe6711e72c720ff903044eb0efb4373524ee434740ed7384a0284c155b",
+    "legendSha256": "2ede2ad270a036cc11c31705a2c1dbf0314a8cf011fc972cd4a9665e3339e5e5",
+    "noDataCells": 4268934
+  },
+  "grid": {
+    "width": 3600,
+    "height": 1800,
+    "west": -180,
+    "north": 90,
+    "step": 0.1
+  },
+  "landShare": [
+    0.050251, 0.034287, 0.122095, 0.144434, 0.034464, 0.057269, 0.049135,
+    0.012277, 0.007098, 0.000011, 0.027155, 0.010368, 0.000016, 0.043376,
+    0.022162, 0.000872, 0.002342, 0.005524, 0.010476, 0.000067, 0.007234,
+    0.011295, 0.017875, 0.001623, 0.015505, 0.068211, 0.100058, 0.000806,
+    0.050149, 0.093565
+  ],
+  "derivedAsset": {
+    "path": "src/data/generated/koppen-geiger/classes.png",
+    "sha256": "0b4d231aedac02e249dc76015179b97eefdea8cf33d8624e1167d6ef72f610bb",
+    "rawBytes": 254082,
+    "gzipBytes": 247360,
+    "width": 3600,
+    "height": 1800,
+    "encoding": "RGB8: B = class value 0–30; R = G = 0"
+  }
+}
