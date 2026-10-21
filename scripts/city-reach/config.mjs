@@ -11,7 +11,8 @@ export const GLOBAL_GRID = Object.freeze({
   wrapLongitude: true,
 });
 export const QUALITY_TIERS = Object.freeze({
-  low: { stride: 4, tileColumns: 1, tileRows: 1 },
+  // Density only sets brightness, so it is sampled at twice the owner stride.
+  low: { stride: 4, densityStride: 8, tileColumns: 1, tileRows: 1 },
 });
 export const MAX_TEXTURE_BYTES = 3_000_000;
 export const NO_OWNER = 0;
@@ -95,14 +96,17 @@ export function estimateResources(grid = GLOBAL_GRID, cityCount = 5_944) {
         const pixels =
           Math.ceil(grid.width / tier.stride) *
           Math.ceil(grid.height / tier.stride);
+        const densityPixels =
+          Math.ceil(grid.width / tier.densityStride) *
+          Math.ceil(grid.height / tier.densityStride);
         return [
           name,
           {
             pixels,
             gpuBytes: pixels * 4,
-            densityGpuBytes: pixels * 4,
+            densityGpuBytes: densityPixels * 4,
             cpuOwnerBytes: pixels * 2,
-            peakTransitionGpuBytes: pixels * 12,
+            peakTransitionGpuBytes: pixels * 8 + densityPixels * 4,
           },
         ];
       }),

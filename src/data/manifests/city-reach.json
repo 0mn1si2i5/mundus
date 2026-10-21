@@ -48,13 +48,13 @@
   },
   "densityAsset": {
     "path": "public/data/city-reach/density-low.png",
-    "sha256": "cdfeebcd1e0c2d54c85cb8b97a49e993af8cf97c75c5bf62d85f396ac2211081",
-    "rawBytes": 530915,
-    "gzipBytes": 525543,
+    "sha256": "617d64601a671f5c3e3c5bd78437a2972b178524299efca2b6b27a31a4c8b7ce",
+    "rawBytes": 137657,
+    "gzipBytes": 136946,
     "x": 0,
     "y": 0,
-    "width": 2700,
-    "height": 1088
+    "width": 1350,
+    "height": 544
   },
   "cityAsset": {
     "path": "src/data/generated/city-reach.json",
@@ -219,14 +219,15 @@
   "qualityTiers": {
     "low": {
       "stride": 4,
+      "densityStride": 8,
       "tileColumns": 1,
       "tileRows": 1,
       "width": 2700,
       "height": 1088,
       "gpuBytes": 11750400,
-      "densityGpuBytes": 11750400,
+      "densityGpuBytes": 2937600,
       "cpuOwnerBytes": 5875200,
-      "transitionGpuBytes": 35251200
+      "transitionGpuBytes": 26438400
     }
   },
   "ownershipAssets": {

@@ -422,10 +422,12 @@ test('low-detail encoding keeps four-row blocks when 4350 rows leave a partial f
   assert.equal(top.owners[543], 2175);
   assert.equal(bottom.owners[0], 2179);
   assert.deepEqual([...bottom.owners.slice(-2)], [4347, 4350]);
-  const shared = densityTexture({ grid, density }, { stride: 4 });
+  // Density uses eight-row blocks: 544 rows, the last clipped to row 4,349.
+  const shared = densityTexture({ grid, density }, { densityStride: 8 });
   const brightness = decodeDensityPng(shared.bytes);
-  assert.deepEqual([...brightness.density.slice(-2)], [4347 % 255, 4350 % 255]);
-  assert.equal(brightness.density[0], 3);
+  assert.deepEqual([brightness.width, brightness.height], [1, 544]);
+  assert.equal(brightness.density[0], 5);
+  assert.equal(brightness.density[543], 4349 % 255);
 });
 
 test('rasterizer respects polygon holes and all_touched urban footprints', () => {

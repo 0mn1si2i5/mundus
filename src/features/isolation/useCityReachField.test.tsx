@@ -33,6 +33,7 @@ function frame(level: CityReachLevel): CityReachFrame {
       wrapLongitude: false,
     },
     stride: 4,
+    densityStride: 8,
     width: 1,
     height: 1,
     tiles: [

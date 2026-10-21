@@ -153,7 +153,8 @@ uses a separate GHS-POP 2020 density raster, not owner population. Neither
 channel changes the underlying score.
 
 RGB8 ownership images are prepared offline and loaded only for the selected
-level, with one shared population-density image. Owner ids use R + 256·G and
+level, with one shared population-density image at half the owner
+resolution (brightness only). Owner ids use R + 256·G and
 B is zero; neither image carries data in alpha. All devices use the sole
 stride-4 display resolution, about 15 km at the equator; CPU lookup and the
 globe use the same samples. Computation stays on the original 1/30° grid,

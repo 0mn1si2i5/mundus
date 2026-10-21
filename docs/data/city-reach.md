@@ -234,6 +234,13 @@ including zero; 255 marks a coarse cell with no valid population source pixel.
 Density controls brightness only, never ownership or competition strength.
 All seven k levels reference the same single density asset.
 
+The owner decided on **2026-10-22** to publish density at half the owner
+display resolution: `densityStride` 8, 1,350 by 544 pixels, each pixel
+sampling the central source cell of its eight-cell block (the last partial
+block clips to the last row or column). One density pixel covers exactly two
+by two owner pixels; the shader and CPU lookup both map a source cell to
+density by integer division by 8. Owner codes and borders are unaffected.
+
 The owner decided on **2026-10-12** to publish only the roughly **15 km**
 display precision. This supersedes proposal **D5**'s original 1/30° display
 requirement. Increasing display precision requires a separate owner approval.
@@ -252,9 +259,9 @@ categorical code is allowed. Each PNG is below the 4,096 texture-edge limit.
 | Allocation                                               | Bytes      |
 | -------------------------------------------------------- | ---------- |
 | One owner RGBA texture                                   | 11,750,400 |
-| Shared density RGBA texture                              | 11,750,400 |
+| Shared density RGBA texture                              | 2,937,600  |
 | One Uint16 CPU owner array                               | 5,875,200  |
-| Two owner textures plus shared density during transition | 35,251,200 |
+| Two owner textures plus shared density during transition | 26,438,400 |
 
 Decoder buffers, the colour palette, CPU density bytes and other renderer
 resources are additional to these allocations. Only the active owner level
@@ -263,21 +270,22 @@ owner texture. Exiting releases decoded and GPU resources. Both phones and
 desktops use this same display precision.
 
 Re-encoding the completed 5,944-city computational result on 2026-10-12
-measured:
+measured the owner PNGs below; the shared density PNG is the half-resolution
+re-encoding of 2026-10-22 (530,915 bytes at full resolution):
 
-| PNG                | Bytes         |
-| ------------------ | ------------- |
-| Ownership k=0.25   | 130,199       |
-| Ownership k=0.5    | 124,272       |
-| Ownership k=1      | 114,119       |
-| Ownership k=2      | 100,034       |
-| Ownership k=4      | 83,504        |
-| Ownership k=8      | 70,160        |
-| Ownership k=16     | 59,429        |
-| Shared density     | 530,915       |
-| **All eight PNGs** | **1,212,632** |
+| PNG                | Bytes       |
+| ------------------ | ----------- |
+| Ownership k=0.25   | 130,199     |
+| Ownership k=0.5    | 124,272     |
+| Ownership k=1      | 114,119     |
+| Ownership k=2      | 100,034     |
+| Ownership k=4      | 83,504      |
+| Ownership k=8      | 70,160      |
+| Ownership k=16     | 59,429      |
+| Shared density     | 137,657     |
+| **All eight PNGs** | **819,374** |
 
-The default k=4 owner plus shared density is 614,419 PNG bytes. The schema and
+The default k=4 owner plus shared density is 221,161 PNG bytes. The schema and
 published-data verifier enforce **3,000,000 bytes maximum for all eight PNGs**;
 this is a total raw compressed-file budget, not a per-level or gzip-only limit.
 These measurements exclude the city table (618,468 bytes, 236,832 gzip, in

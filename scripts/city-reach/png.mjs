@@ -209,18 +209,19 @@ export function ownershipTiles({ grid, owners, disputed }, tier) {
 export function densityTexture({ grid, density }, tier) {
   if (density.length !== grid.width * grid.height)
     throw new Error('Invalid computational density dimensions');
-  const width = Math.ceil(grid.width / tier.stride);
-  const height = Math.ceil(grid.height / tier.stride);
+  const stride = tier.densityStride;
+  const width = Math.ceil(grid.width / stride);
+  const height = Math.ceil(grid.height / stride);
   const values = new Uint8Array(width * height);
   for (let row = 0; row < height; row += 1) {
     const sourceRow = Math.min(
       grid.height - 1,
-      row * tier.stride + Math.floor(tier.stride / 2),
+      row * stride + Math.floor(stride / 2),
     );
     for (let column = 0; column < width; column += 1) {
       const sourceColumn = Math.min(
         grid.width - 1,
-        column * tier.stride + Math.floor(tier.stride / 2),
+        column * stride + Math.floor(stride / 2),
       );
       values[row * width + column] =
         density[sourceRow * grid.width + sourceColumn];

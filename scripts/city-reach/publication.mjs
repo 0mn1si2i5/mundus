@@ -133,9 +133,11 @@ export async function publishCityReach({
         width: output.width,
         height: output.height,
         gpuBytes: output.width * output.height * 4,
-        densityGpuBytes: output.width * output.height * 4,
+        densityGpuBytes: densityOutput.width * densityOutput.height * 4,
         cpuOwnerBytes: output.width * output.height * 2,
-        transitionGpuBytes: output.width * output.height * 12,
+        transitionGpuBytes:
+          output.width * output.height * 8 +
+          densityOutput.width * densityOutput.height * 4,
       };
       ownershipAssets[level][quality] = output.tiles.map((tile) => {
         const path = `public/data/city-reach/population-${level}-${quality}-${tile.tileRow}-${tile.tileColumn}.png`;

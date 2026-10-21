@@ -83,16 +83,22 @@ function sourceFixture() {
       const stride = Number(rawStride);
       const width = Math.ceil(grid.width / stride);
       const height = Math.ceil(grid.height / stride);
+      const densityStride = stride * 2;
+      const densityGpuBytes =
+        Math.ceil(grid.width / densityStride) *
+        Math.ceil(grid.height / densityStride) *
+        4;
       return [
         quality,
         {
           stride,
+          densityStride,
           width,
           height,
           gpuBytes: width * height * 4,
-          densityGpuBytes: width * height * 4,
+          densityGpuBytes,
           cpuOwnerBytes: width * height * 2,
-          transitionGpuBytes: width * height * 12,
+          transitionGpuBytes: width * height * 8 + densityGpuBytes,
         },
       ];
     }),
@@ -140,7 +146,7 @@ function sourceFixture() {
       path: 'public/data/city-reach/density-low.png',
       x: 0,
       y: 0,
-      width: 2,
+      width: 1,
       height: 1,
       sha256: '0'.repeat(64),
       rawBytes: 1,
@@ -377,9 +383,9 @@ describe('city reach metadata and owner images', () => {
     );
     const encoder = await import(/* @vite-ignore */ encoderUrl.href);
     const densityBytes = encoder.encodeDensityPng(
-      2,
       1,
-      new Uint8Array([0, 255]),
+      1,
+      new Uint8Array([255]),
     ) as Uint8Array;
     for (const level of [4, 8] as const)
       Object.assign(
@@ -403,10 +409,14 @@ describe('city reach metadata and owner images', () => {
     const close = vi.fn();
     vi.stubGlobal(
       'createImageBitmap',
-      vi.fn(async () => ({ width: 2, height: 1, close })),
+      vi
+        .fn()
+        .mockResolvedValueOnce({ width: 2, height: 1, close })
+        .mockResolvedValueOnce({ width: 1, height: 1, close })
+        .mockResolvedValue({ width: 2, height: 1, close }),
     );
     const ownerRgba = new Uint8ClampedArray([1, 0, 0, 255, 2, 0, 0, 255]);
-    const densityRgba = new Uint8ClampedArray([0, 0, 0, 255, 255, 0, 0, 255]);
+    const densityRgba = new Uint8ClampedArray([255, 0, 0, 255]);
     const getImageData = vi
       .fn()
       .mockReturnValueOnce({ data: ownerRgba })
@@ -511,6 +521,7 @@ describe('city reach point lookup', () => {
         wrapLongitude: false,
       },
       stride: 1,
+      densityStride: 1,
       width: 4,
       height: 2,
       ownerIds: new Set([1, 2]),
@@ -616,10 +627,14 @@ describe('city reach point lookup', () => {
     owners[500 * 2] = 2;
     owners[1087 * 2 + 1] = 2;
     frame.tiles = [{ x: 0, y: 0, width: 2, height: 1088, owners, rgba }];
-    frame.density = { width: 2, height: 1088, rgba: new Uint8Array(2176 * 4) };
+    // Density uses eight-cell blocks: source row 2000 reads density row 250.
+    frame.densityStride = 8;
+    frame.density = { width: 1, height: 544, rgba: new Uint8Array(544 * 4) };
+    frame.density.rgba[250 * 4] = 77;
     const point = { latitude: 85 - 2000.1 / 30, longitude: 0.01 };
     expect(cityReachPointSelection(point, metadata, frame)).toMatchObject({
       row: 500,
+      density: 77,
       status: 'owned',
       city: { id: 9001 },
     });
@@ -663,7 +678,8 @@ describe('city reach point lookup', () => {
         rgba: new Uint8Array(8),
       },
     ];
-    frame.density = { width: 2, height: 1, rgba: new Uint8Array(8) };
+    frame.densityStride = 8;
+    frame.density = { width: 1, height: 1, rgba: new Uint8Array(4) };
     for (const longitude of [-180, 180])
       expect(
         cityReachPointSelection({ latitude: 60, longitude }, metadata, frame),

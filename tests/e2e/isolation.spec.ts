@@ -64,9 +64,20 @@ function readReachAssets(level: ReachLevel = 4): ReachAssets {
     const density = decodeDensityPng(
       readFileSync(new URL(`../../${densityAsset.path}`, import.meta.url)),
     );
-    expect(density.width).toBe(asset.width);
-    expect(density.height).toBe(asset.height);
-    return { ...asset, owners: decoded.owners, density: density.density };
+    expect(density.width).toBe(densityAsset.width);
+    expect(density.height).toBe(densityAsset.height);
+    // Density blocks cover a whole number of owner pixels.
+    const { stride, densityStride } = manifest.qualityTiers.low;
+    const ratio = densityStride / stride;
+    expect(Number.isInteger(ratio)).toBe(true);
+    const ownerDensity = Uint8Array.from(decoded.owners, (_, index) => {
+      const row = asset.y + Math.floor(index / asset.width);
+      const column = asset.x + (index % asset.width);
+      return density.density[
+        Math.floor(row / ratio) * density.width + Math.floor(column / ratio)
+      ]!;
+    });
+    return { ...asset, owners: decoded.owners, density: ownerDensity };
   });
   expect(cities).toHaveLength(manifest.recordCount);
   return { manifest, cities, level, tiles };

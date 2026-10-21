@@ -217,19 +217,23 @@ export function validateCityReachManifest(manifest) {
     if (
       !tier ||
       tier.stride !== expectedTier.stride ||
+      tier.densityStride !== expectedTier.densityStride ||
       tier.width !== Math.ceil(manifest.grid.width / expectedTier.stride) ||
       tier.height !== Math.ceil(manifest.grid.height / expectedTier.stride) ||
       tier.gpuBytes !== tier.width * tier.height * 4 ||
-      tier.densityGpuBytes !== tier.width * tier.height * 4 ||
+      tier.densityGpuBytes !==
+        manifest.densityAsset.width * manifest.densityAsset.height * 4 ||
       tier.cpuOwnerBytes !== tier.width * tier.height * 2 ||
-      tier.transitionGpuBytes !== tier.width * tier.height * 12
+      tier.transitionGpuBytes !== tier.gpuBytes * 2 + tier.densityGpuBytes
     )
       throw new Error(`Invalid city-reach quality budget ${quality}`);
     if (
       manifest.densityAsset.x !== 0 ||
       manifest.densityAsset.y !== 0 ||
-      manifest.densityAsset.width !== tier.width ||
-      manifest.densityAsset.height !== tier.height ||
+      manifest.densityAsset.width !==
+        Math.ceil(manifest.grid.width / tier.densityStride) ||
+      manifest.densityAsset.height !==
+        Math.ceil(manifest.grid.height / tier.densityStride) ||
       tier.width > 4096 ||
       tier.height > 4096
     )
