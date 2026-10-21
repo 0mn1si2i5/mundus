@@ -2,6 +2,7 @@ import type { Locale } from '../../i18n/messages';
 import { messages } from '../../i18n/messages';
 import { useAppStore } from '../../state/appStore';
 import type { ModePresentation } from '../modes/useModePresentation';
+import { countryNameZh } from '../globe/countryNames';
 import {
   areaRatioBand,
   formatReshapedAreaRatio,
@@ -45,7 +46,8 @@ export function ReshapedResult({
       </aside>
     );
   const definition = RESHAPED_METRICS.find((m) => m.id === metric)!;
-  const unitName = (unit: ReshapedUnit) => unit.name[locale] ?? unit.name.en;
+  const unitName = (unit: ReshapedUnit) =>
+    locale === 'zh' ? (countryNameZh(unit.id) ?? unit.name.en) : unit.name.en;
   const selectionUnavailable = !selectedUnit && !data.data?.ids;
   const selectedName = selectedUnit
     ? unitName(selectedUnit)

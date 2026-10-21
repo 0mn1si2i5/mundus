@@ -240,12 +240,14 @@ for (const observation of [
     point: '6%2C-1',
     target: '6,-1',
     country: 'Ghana',
+    countryZh: '加纳',
   },
   {
     side: 'night',
     point: '35.6762%2C139.6503',
     target: '35.6762,139.6503',
     country: 'Japan',
+    countryZh: '日本',
   },
 ] as const) {
   test(`keeps Sunline selection legible on the ${observation.side} hemisphere`, async ({
@@ -257,7 +259,7 @@ for (const observation of [
     const globe = page.getByRole('region', { name: '交互式三维地球' });
 
     await expect(
-      page.getByText(observation.country, { exact: true }),
+      page.getByText(observation.countryZh, { exact: true }),
     ).toBeVisible();
     await expect(globe).toHaveAttribute(
       'data-selected-country',
@@ -363,7 +365,7 @@ test('selects reviewed night-side land through the Sunline mask with a real poin
   expect(Math.abs(longitude - pickedLongitude)).toBeLessThan(0.0001);
 
   const result = page.getByRole('complementary', { name: '太阳位置结果' });
-  await expect(result.getByText('Japan', { exact: true })).toBeVisible();
+  await expect(result.getByText('日本', { exact: true })).toBeVisible();
   await expect(result.getByText('夜晚', { exact: true })).toBeVisible();
   await expect(globe).toHaveAttribute('data-selected-country', 'Japan');
   await expect(globe).toHaveAttribute(

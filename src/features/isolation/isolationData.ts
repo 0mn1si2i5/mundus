@@ -5,6 +5,7 @@ import {
   type RecordHolder,
 } from './isolationMetric';
 import type { GeoPoint } from '../globe/geo';
+import { ghslCountryNameZh } from '../globe/countryNames';
 
 export interface IsolationCity {
   id: string;
@@ -240,6 +241,6 @@ export function displayIsolationCountry(
   locale: 'zh' | 'en',
 ): string {
   return locale === 'zh'
-    ? (city.country.zh ?? city.country.en)
+    ? (ghslCountryNameZh(city.country.en) ?? city.country.en)
     : city.country.en;
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Locale } from '../../i18n/messages';
 import type { GeoPoint } from '../globe/geo';
+import { ghslCountryNameZh } from '../globe/countryNames';
 import {
   CITY_REACH_DEFAULT,
   CITY_REACH_LEVELS,
@@ -576,7 +577,7 @@ export function displayCityReachCountry(
   locale: Locale,
 ): string {
   return locale === 'zh'
-    ? (city.country.zh ?? city.country.en)
+    ? (ghslCountryNameZh(city.country.en) ?? city.country.en)
     : city.country.en;
 }
 

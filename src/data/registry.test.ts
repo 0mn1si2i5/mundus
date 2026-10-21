@@ -333,15 +333,15 @@ describe('data registry', () => {
         path: 'src/data/generated/geonames-major-cities.json',
         formatVersion: 2,
         sha256:
-          '44fa1d6c1d2226b0fc1381318710f19833f4fb2ef970902c9dde89f41cd5ca28',
-        rawBytes: 793897,
+          '7de1d5231b82c040ab159f79c73a9617068d4bf5704daca811340ab004df0c1d',
+        rawBytes: 793875,
       },
       attribution: 'Contains GeoNames data, licensed under CC BY 4.0',
       recordCount: 6953,
-      rawBytes: 793897,
-      gzipBytes: 277446,
-      staticDecodedBytesEstimate: 3175588,
-      runtimeDecodedBytesEstimate: 4819872,
+      rawBytes: 793875,
+      gzipBytes: 277530,
+      staticDecodedBytesEstimate: 3175500,
+      runtimeDecodedBytesEstimate: 4819728,
     });
     expect(manifest).not.toHaveProperty('distributionUrl');
     expect(manifest).not.toHaveProperty('sha256');

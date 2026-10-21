@@ -15,7 +15,11 @@ import { execFileSync } from 'node:child_process';
 import { format, resolveConfig } from 'prettier';
 import { SOURCES } from './sources.mjs';
 import { writeRgbPng } from './png.mjs';
-import { encodeUnits, encodeValues, loadCountryNames } from './metadata.mjs';
+import {
+  encodeUnits,
+  encodeValues,
+  reviewedCountryNames,
+} from './metadata.mjs';
 import { inverseTextureBytes } from '../../src/features/reshaped/inverseSampling.mjs';
 import { reshapedEarthManifestSchema } from '../../src/data/manifestSchemas.ts';
 import { loadCountryRaster } from './padding.mjs';
@@ -247,7 +251,7 @@ export async function publishProductionAssets({
   const stage = await mkdtemp(
     join(cacheDir, `publication-${fingerprint.slice(0, 16)}-`),
   );
-  const countryNames = await loadCountryNames(cacheDir, c.countries);
+  const countryNames = reviewedCountryNames(c.countries);
   const unitAsset = encodeUnits(c, countryNames),
     valueAsset = encodeValues(
       c,

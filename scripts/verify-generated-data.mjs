@@ -13,6 +13,7 @@ import {
   decodeValues,
 } from '../src/features/reshaped/metadata.mjs';
 import { verifyCityReach } from './city-reach/verify.mjs';
+import { verifyCountryNames } from './verify-country-names.mjs';
 
 const reshapedMetrics = ['population', 'gdp', 'co2', 'lights'];
 
@@ -246,6 +247,14 @@ try {
 } catch (error) {
   failed = true;
   console.error(error.message);
+}
+
+try {
+  const names = await verifyCountryNames();
+  console.log(`Country names: ${names} reviewed names cover every source`);
+} catch (error) {
+  failed = true;
+  console.error(`Country names: ${error.message}`);
 }
 
 if (failed) process.exitCode = 1;

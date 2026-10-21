@@ -3,9 +3,8 @@ import test from 'node:test';
 import {
   encodeUnits,
   encodeValues,
-  __test as metadataTest,
+  reviewedCountryNames,
 } from './metadata.mjs';
-const { countryNamesFromSource } = metadataTest;
 import {
   decodeUnits,
   decodeValues,
@@ -71,35 +70,29 @@ test('country JSON preserves full precision, zero, missing, excluded and localiz
   assert.deepEqual(encodeValues(classification, metrics, fields, names), asset);
 });
 
-test('country names use exact IDs, established wording and omit merged territory overrides', () => {
+test('country names come from the reviewed table by exact ID', () => {
   const c = [
     { id: 'ne-156', name: { en: 'China' } },
     { id: 'ne-158', name: { en: 'Taiwan' } },
-    { id: 'ne-036', name: { en: 'Australia' } },
-    { id: 'ne-702', name: { en: 'Singapore' } },
+    { id: 'ne-398', name: { en: 'Kazakhstan' } },
+    { id: 'ne-408', name: { en: 'North Korea' } },
   ];
-  const features = [
-    ['CHN', 156, '中华人民共和国'],
-    ['TWN', 158, '中华民国'],
-    ['AUS', 36, '澳大利亚'],
-    ['IOA', 36, '澳属印度洋领地'],
-    ['SGP', 702, '新加坡'],
-  ].map(([ADM0_A3, ISO_N3_EH, NAME_ZH]) => ({
-    properties: { ADM0_A3, ISO_N3_EH, NAME_ZH },
-  }));
-  const localized = countryNamesFromSource(c, { features });
   assert.deepEqual(
-    [...localized.values()],
+    [...reviewedCountryNames(c).values()],
     [
       { en: 'China', zh: '中国' },
       { en: 'Taiwan', zh: '台湾' },
-      { en: 'Australia', zh: '澳大利亚' },
-      { en: 'Singapore', zh: '新加坡' },
+      { en: 'Kazakhstan', zh: '哈萨克斯坦' },
+      { en: 'North Korea', zh: '朝鲜' },
     ],
   );
   assert.throws(
-    () => countryNamesFromSource(c, { features: features.slice(0, 4) }),
-    /Missing country display name: ne-702/,
+    () => reviewedCountryNames([{ id: 'ne-999', name: { en: 'Nowhere' } }]),
+    /Missing reviewed country name: ne-999/,
+  );
+  assert.throws(
+    () => reviewedCountryNames([{ id: 'ne-156', name: { en: 'PRC' } }]),
+    /Missing reviewed country name: ne-156/,
   );
 });
 

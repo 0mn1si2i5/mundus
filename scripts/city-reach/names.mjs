@@ -6,13 +6,13 @@ export async function resolveCityNames(cities, root) {
   const [
     { matchNames },
     { ISOLATION_NAME_OVERRIDES },
-    { ISOLATION_COUNTRY_NAMES },
+    { ghslCountryNameZh },
     { decodeGeoNamesCityIndex },
     { haversineKm },
   ] = await Promise.all([
     import('../build-urban-isolation.mjs'),
     import('../../src/features/isolation/isolationNameOverrides.ts'),
-    import('../../src/features/isolation/isolationCountryNames.ts'),
+    import('../../src/features/globe/countryNames.ts'),
     import('../../src/features/antipodes/geonamesCities.ts'),
     import('../../src/features/isolation/isolationMetric.ts'),
   ]);
@@ -50,7 +50,7 @@ export async function resolveCityNames(cities, root) {
       name: { en: nameEn, zh: match.nameZh },
       country: {
         en: city.countryName,
-        zh: ISOLATION_COUNTRY_NAMES[city.countryName] ?? null,
+        zh: ghslCountryNameZh(city.countryName),
       },
       ghslName: city.sourceName,
       matchType: match.nameZh ? match.matchType : 'none',

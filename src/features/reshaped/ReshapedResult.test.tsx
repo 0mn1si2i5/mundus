@@ -171,7 +171,9 @@ describe('ReshapedResult', () => {
       expect(result).toHaveTextContent('GHS-POP R2023A');
       expect(result).toHaveTextContent(locale === 'zh' ? '中国' : 'China');
       expect(
-        within(result).getByRole('button', { name: /Australia/ }),
+        within(result).getByRole('button', {
+          name: locale === 'zh' ? /澳大利亚/ : /Australia/,
+        }),
       ).toBeDisabled();
     },
   );

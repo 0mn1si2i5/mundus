@@ -14,6 +14,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import OpenCC from 'opencc-js';
 import { publishAssetSet } from './publish-asset-set.mjs';
+import { geonamesCountryNameZh } from '../src/features/globe/countryNames.ts';
 
 const ACTIVE_CODES = new Set([
   'PPL',
@@ -220,6 +221,36 @@ function assertChineseName(names, kind, id) {
     );
 }
 
+// Owner-reviewed English names for admin-1 records whose GeoNames English name
+// is a historical romanization.
+const ADMIN1_ENGLISH_NAMES = new Map([
+  ['TW.01', 'Fujian'],
+  ['TW.02', 'Kaohsiung'],
+]);
+
+/**
+ * Country names come from the reviewed Mundus country table. An admin-1 label
+ * that repeats the country ("台湾省, 台湾") is not shown.
+ */
+export function applyReviewedPlaceNames(
+  countryCode,
+  adminKey,
+  countryNames,
+  adminNames,
+) {
+  const zh = geonamesCountryNameZh(countryCode);
+  if (!zh)
+    throw new Error(`Missing reviewed Chinese country name: ${countryCode}`);
+  const country = { ...countryNames, zh, zhFallback: false };
+  if (!adminNames || adminNames.en === countryNames.en)
+    return { countryNames: country, adminNames: null };
+  const en = ADMIN1_ENGLISH_NAMES.get(adminKey);
+  return {
+    countryNames: country,
+    adminNames: en ? { ...adminNames, en, enFallback: false } : adminNames,
+  };
+}
+
 function hasRealChineseName(names) {
   return names.some((name) => LANGUAGE_RANK.has(name.language));
 }
@@ -331,13 +362,19 @@ export function buildFeasibilityIndex({
           )
         : null;
       assertChineseName(cityNames, 'city', city.id);
-      assertChineseName(countryNames, 'country', country.code);
       if (adminNames) assertChineseName(adminNames, 'admin-1', admin.key);
+      const reviewed = applyReviewedPlaceNames(
+        city.countryCode,
+        admin.key,
+        countryNames,
+        adminNames,
+      );
+      assertChineseName(reviewed.countryNames, 'country', country.code);
       return {
         city,
         cityNames,
-        countryNames,
-        adminNames,
+        countryNames: reviewed.countryNames,
+        adminNames: reviewed.adminNames,
         realZh: hasRealChineseName(cityAlternates),
         aliases: selectAliasesForMode(
           city,

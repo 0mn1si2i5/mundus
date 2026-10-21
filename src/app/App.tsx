@@ -24,6 +24,7 @@ import { useUrlState } from './useUrlState';
 import { messages } from '../i18n/messages';
 import styles from './App.module.css';
 import { useCountrySelection } from '../features/globe/useCountrySelection';
+import { displayCountryName } from '../features/globe/countryNames';
 
 const GlobeViewport = lazy(() =>
   import('../features/globe/GlobeViewport').then((module) => ({
@@ -272,7 +273,9 @@ export function App() {
       ) : null}
 
       {hoveredCountry ? (
-        <p className={styles.hoverLabel}>{hoveredCountry.name}</p>
+        <p className={styles.hoverLabel}>
+          {displayCountryName(hoveredCountry, locale)}
+        </p>
       ) : null}
 
       <p className={styles.credit}>
