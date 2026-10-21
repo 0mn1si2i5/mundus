@@ -37,7 +37,7 @@ describe('mode registry', () => {
     }
   });
 
-  it('offers Reshaped Earth as a primary observation and Sunline, True Size and Border Hop under More', () => {
+  it('offers Reshaped Earth as a primary observation and Sunline, True Size, Border Hop and People in a Circle under More', () => {
     expect(modesInTier('primary').map((mode) => mode.id)).toEqual([
       'antipodes',
       'surnames',
@@ -48,6 +48,7 @@ describe('mode registry', () => {
       'sunline',
       'truesize',
       'borders',
+      'circle',
     ]);
   });
 

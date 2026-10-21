@@ -57,6 +57,7 @@ export function ShareDialog({
       isolationReach: state.isolationReach,
       trueSizeCountry: state.trueSizeCountry,
       bordersDestination: state.bordersDestination,
+      circleRadiusKm: state.circleRadiusKm,
     };
     return {
       activeMode: state.activeMode,

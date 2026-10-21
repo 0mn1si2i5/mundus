@@ -21,6 +21,7 @@ import {
   readSourceTopology,
   serializeLandBorders,
 } from './build-land-borders.mjs';
+import { verifyPopulationCircle } from './population-circle/verify.mjs';
 
 const reshapedMetrics = ['population', 'gdp', 'co2', 'lights'];
 
@@ -293,6 +294,16 @@ try {
 } catch (error) {
   failed = true;
   console.error(`Country names: ${error.message}`);
+}
+
+try {
+  const circle = await verifyPopulationCircle();
+  console.log(
+    `People in a Circle: ${circle.cells} populated cells, ${circle.bytes} bytes, smallest half circle reproduced`,
+  );
+} catch (error) {
+  failed = true;
+  console.error(`People in a Circle: ${error.message}`);
 }
 
 if (failed) process.exitCode = 1;

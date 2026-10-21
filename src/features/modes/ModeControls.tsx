@@ -32,6 +32,11 @@ const BordersControls = lazy(() =>
     default: module.BordersControls,
   })),
 );
+const CircleControls = lazy(() =>
+  import('../circle/CircleControls').then((module) => ({
+    default: module.CircleControls,
+  })),
+);
 export function ModeControls({
   locale,
   presentation,
@@ -69,6 +74,9 @@ export function ModeControls({
       break;
     case 'borders':
       controls = <BordersControls locale={locale} />;
+      break;
+    case 'circle':
+      controls = <CircleControls locale={locale} presentation={presentation} />;
       break;
     default:
       return assertNever(presentation);

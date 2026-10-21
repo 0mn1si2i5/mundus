@@ -29,6 +29,12 @@ const BordersResult = lazy(() =>
   })),
 );
 
+const CircleResult = lazy(() =>
+  import('../circle/CircleResult').then((module) => ({
+    default: module.CircleResult,
+  })),
+);
+
 export function ModeResult({
   locale,
   presentation,
@@ -302,6 +308,12 @@ export function ModeResult({
       return (
         <Suspense fallback={null}>
           <BordersResult locale={locale} presentation={presentation} />
+        </Suspense>
+      );
+    case 'circle':
+      return (
+        <Suspense fallback={null}>
+          <CircleResult locale={locale} presentation={presentation} />
         </Suspense>
       );
     default:

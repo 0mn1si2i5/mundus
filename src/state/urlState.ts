@@ -28,6 +28,7 @@ import {
   parseTrueSizeCountryParam,
 } from '../features/truesize/trueSize';
 import { COUNTRY_NAMES } from '../features/globe/countryNames';
+import { parseCircleRadiusParam } from '../features/circle/circleRadius';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
@@ -60,6 +61,8 @@ export interface ShareableState {
   trueSizeCountry?: string;
   /** Border Hop destination unit id; `null` shows reach from the start. */
   bordersDestination?: string | null;
+  /** People in a Circle: a chosen radius in km; `null` is the half circle. */
+  circleRadiusKm?: number | null;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
@@ -72,6 +75,7 @@ const modeSchema = z.enum([
   'reshaped',
   'truesize',
   'borders',
+  'circle',
 ]);
 /** Observations that once shipped; their links open the lobby with a notice. */
 const RETIRED_MODES: ReadonlySet<string> = new Set(['development']);
@@ -169,6 +173,9 @@ export function parseUrlState(
       ? { trueSizeCountry: parseTrueSizeCountryParam(params.get('country')) }
       : {}),
     ...(activeMode === 'borders' ? { bordersDestination } : {}),
+    ...(activeMode === 'circle'
+      ? { circleRadiusKm: parseCircleRadiusParam(params.get('radius')) }
+      : {}),
   };
 }
 
@@ -245,6 +252,13 @@ export function serializeUrlState(state: ShareableState): string {
     }
     if (state.activeMode === 'borders' && state.bordersDestination) {
       params.set('to', state.bordersDestination);
+    }
+    if (
+      state.activeMode === 'circle' &&
+      state.circleRadiusKm !== null &&
+      state.circleRadiusKm !== undefined
+    ) {
+      params.set('radius', String(state.circleRadiusKm));
     }
     params.set('v', '2');
   }

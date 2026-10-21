@@ -66,6 +66,13 @@ import {
   type RouteResult,
 } from '../borders/landBorders';
 import { bordersCountryColors } from '../borders/bordersPalette';
+  useCircleDataset,
+  type CircleLoadState,
+} from '../circle/useCircleDataset';
+import {
+  computeCircleSelection,
+  type CircleSelection,
+} from '../circle/circleSelection';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -82,6 +89,15 @@ export interface GlobePresentation {
   } | null;
   /** Per-unit land colours; `null` keeps the base land colour. */
   countryColors: ReadonlyMap<string, string> | null;
+  circle: CircleGlobePresentation | null;
+}
+
+export interface CircleGlobePresentation {
+  centre: GeoPoint;
+  radiusKm: number | null;
+  displayDensity: Uint8Array | null;
+  gridWidth: number;
+  gridHeight: number;
 }
 
 export interface IsolationGlobePresentation {
@@ -174,6 +190,14 @@ export type ModePresentation =
       data: LandBordersLoadState;
       reach: ReachSummary | null;
       route: RouteResult | null;
+    }
+  | {
+      id: 'circle';
+      point: GeoPoint;
+      selectedCountry: CountryRef | null;
+      radiusKm: number | null;
+      data: CircleLoadState;
+      selection: CircleSelection | null;
     };
 
 /**
@@ -220,6 +244,15 @@ export function useModePresentation(
     landBorders,
     selectedCountry?.countryId ?? null,
     bordersDestination,
+  );
+  const circleRadiusKm = useAppStore((state) => state.circleRadiusKm);
+  const circleData = useCircleDataset(activeMode === 'circle');
+  const circleSelection = useMemo(
+    () =>
+      activeMode === 'circle' && circleData.status === 'ready'
+        ? computeCircleSelection(circleData.data, point, circleRadiusKm)
+        : null,
+    [activeMode, circleData, circleRadiusKm, point],
   );
 
   const relation = useMemo(
@@ -376,6 +409,15 @@ export function useModePresentation(
         reach: borders.reach,
         route: borders.route,
       };
+    case 'circle':
+      return {
+        id: activeMode,
+        point,
+        selectedCountry,
+        radiusKm: circleRadiusKm,
+        data: circleData,
+        selection: circleSelection,
+      };
     default:
       return assertNever(activeMode);
   }
@@ -448,6 +490,21 @@ export function useGlobePresentation(
         : null,
     [activeMode, borders],
   );
+  const circleRadiusKm = useAppStore((state) => state.circleRadiusKm);
+  const circleData = useCircleDataset(activeMode === 'circle');
+  const circle = useMemo<CircleGlobePresentation | null>(() => {
+    if (activeMode !== 'circle') return null;
+    const dataset = circleData.status === 'ready' ? circleData.data : null;
+    return {
+      centre: point,
+      radiusKm: dataset
+        ? computeCircleSelection(dataset, point, circleRadiusKm).radiusKm
+        : null,
+      displayDensity: dataset?.displayDensity ?? null,
+      gridWidth: dataset?.width ?? 0,
+      gridHeight: dataset?.height ?? 0,
+    };
+  }, [activeMode, circleData, circleRadiusKm, point]);
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
@@ -568,6 +625,7 @@ export function useGlobePresentation(
           }
         : null,
     countryColors,
+    circle,
   };
 }
 

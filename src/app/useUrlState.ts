@@ -22,7 +22,8 @@ export function useUrlState() {
           state.isolationReach === previous.isolationReach &&
           state.reshapedMetric === previous.reshapedMetric &&
           state.trueSizeCountry === previous.trueSizeCountry &&
-          state.bordersDestination === previous.bordersDestination)
+          state.bordersDestination === previous.bordersDestination &&
+          state.circleRadiusKm === previous.circleRadiusKm)
       ) {
         return;
       }
@@ -50,10 +51,19 @@ export function useUrlState() {
         state.isolationView === previous.isolationView &&
         state.isolationAlpha === previous.isolationAlpha &&
         state.isolationReach !== previous.isolationReach;
+      // Dragging the radius slider replaces the entry, like α; returning
+      // to the half circle (null) is a deliberate step and is pushed.
+      const onlyCircleRadiusChanged =
+        state.activeMode === previous.activeMode &&
+        state.point === previous.point &&
+        state.circleRadiusKm !== null &&
+        previous.circleRadiusKm !== null &&
+        state.circleRadiusKm !== previous.circleRadiusKm;
       const updateHistory =
         onlySunlineTimeChanged ||
         onlyIsolationAlphaChanged ||
-        onlyIsolationReachChanged
+        onlyIsolationReachChanged ||
+        onlyCircleRadiusChanged
           ? window.history.replaceState
           : window.history.pushState;
       updateHistory.call(
