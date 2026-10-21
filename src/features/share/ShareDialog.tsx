@@ -55,6 +55,7 @@ export function ShareDialog({
       isolationView: state.isolationView,
       reshapedMetric: state.reshapedMetric,
       isolationReach: state.isolationReach,
+      trueSizeCountry: state.trueSizeCountry,
     };
     return {
       activeMode: state.activeMode,

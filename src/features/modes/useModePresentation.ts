@@ -50,6 +50,11 @@ import {
 import { cityReachPointSelection } from '../isolation/cityReachData';
 import type { CityReachPointSelection } from '../isolation/cityReachTypes';
 import type { CityReachLevel } from '../isolation/cityReachLevel';
+import {
+  TRUE_SIZE_DEFAULT_COUNTRY,
+  placeTrueSizeCountry,
+  type TrueSizePlacement,
+} from '../truesize/trueSize';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -142,6 +147,12 @@ export type ModePresentation =
       selectedUnit: import('../reshaped/reshapedData').ReshapedUnit | null;
       selectedValue: import('../reshaped/reshapedData').ReshapedValueRow | null;
       ranking: readonly import('../reshaped/reshapedData').ReshapedValueRow[];
+    }
+  | {
+      id: 'truesize';
+      point: GeoPoint;
+      selectedCountry: CountryRef | null;
+      placement: TrueSizePlacement | null;
     };
 
 /**
@@ -206,6 +217,16 @@ export function useModePresentation(
       return null;
     return computeIsolationSelection(point, isolationAlpha, isolationData.data);
   }, [activeMode, isolationAlpha, isolationData, point]);
+  const trueSizeCountry = useAppStore(
+    (state) => state.trueSizeCountry ?? TRUE_SIZE_DEFAULT_COUNTRY,
+  );
+  const trueSizePlacement = useMemo(
+    () =>
+      activeMode === 'truesize'
+        ? placeTrueSizeCountry(trueSizeCountry, point)
+        : null,
+    [activeMode, point, trueSizeCountry],
+  );
   const fieldSelection = useMemo(
     () =>
       field.metadata && field.frame
@@ -310,6 +331,13 @@ export function useModePresentation(
         ranking,
       };
     }
+    case 'truesize':
+      return {
+        id: activeMode,
+        point,
+        selectedCountry,
+        placement: trueSizePlacement,
+      };
     default:
       return assertNever(activeMode);
   }

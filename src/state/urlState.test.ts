@@ -452,5 +452,50 @@ describe('URL state codec', () => {
       };
       expect(serializeUrlState(state)).toBe('?mode=isolation&v=2');
     });
+
+    it('keeps a carried True Size country, defaulting to Greenland', () => {
+      expect(
+        parseUrlState('?v=2&mode=truesize&point=-3,25&country=ne-156', nowMs),
+      ).toMatchObject({
+        activeMode: 'truesize',
+        point: { latitude: -3, longitude: 25 },
+        trueSizeCountry: 'ne-156',
+      });
+      for (const country of ['', 'ne-999', 'CHN', 'ne-016']) {
+        expect(
+          parseUrlState(`?v=2&mode=truesize&country=${country}`, nowMs)
+            .trueSizeCountry,
+        ).toBe('ne-304');
+      }
+      expect(
+        parseUrlState('?v=2&mode=sunline&country=ne-156', nowMs),
+      ).not.toHaveProperty('trueSizeCountry');
+    });
+
+    it('serializes the True Size country only when it is not the default', () => {
+      const base = { ...lobby, activeMode: 'truesize' as const };
+      expect(serializeUrlState({ ...base, trueSizeCountry: 'ne-304' })).toBe(
+        '?mode=truesize&v=2',
+      );
+      const query = serializeUrlState({
+        ...base,
+        point: { latitude: 48.8566, longitude: 2.3522 },
+        trueSizeCountry: 'ne-076',
+      });
+      expect(query).toBe(
+        '?mode=truesize&point=48.8566%2C2.3522&country=ne-076&v=2',
+      );
+      expect(parseUrlState(query, nowMs)).toMatchObject({
+        activeMode: 'truesize',
+        trueSizeCountry: 'ne-076',
+      });
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'sunline',
+          trueSizeCountry: 'ne-076',
+        }),
+      ).not.toContain('country');
+    });
   });
 });
