@@ -69,6 +69,7 @@ interface GlobeViewportProps {
   surnameDisplayMode: SurnameDisplayMode;
   isolation: IsolationGlobePresentation | null;
   reshaped: GlobePresentation['reshaped'];
+  climate: GlobePresentation['climate'];
 }
 
 interface PointerStart {
@@ -94,6 +95,7 @@ export function GlobeViewport({
   surnameDisplayMode,
   isolation,
   reshaped,
+  climate,
 }: GlobeViewportProps) {
   const reshapedMorphState = useAppStore((state) => state.reshapedMorphState);
   const [supported] = useState(supportsWebGL2);
@@ -605,6 +607,7 @@ export function GlobeViewport({
           surnameDisplayMode={surnameDisplayMode}
           isolation={isolation}
           reshaped={reshaped}
+          climate={climate}
           onIsolationFieldRendered={setFieldRenderedFrame}
           cameraGestureCancelRef={cancelCameraGesture}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}

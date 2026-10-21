@@ -61,6 +61,7 @@ const modeSchema = z.enum([
   'surnames',
   'isolation',
   'reshaped',
+  'climate',
 ]);
 /** Observations that once shipped; their links open the lobby with a notice. */
 const RETIRED_MODES: ReadonlySet<string> = new Set(['development']);

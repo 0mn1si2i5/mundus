@@ -92,6 +92,7 @@ import {
 import { SurnameMapLabelLayer } from './SurnameMapLabelLayer';
 import { IsolationLayer } from './IsolationLayer';
 import { CityReachFieldLayer } from './CityReachFieldLayer';
+import { ClimateLayer } from './ClimateLayer';
 import type { CityReachFrame } from '../isolation/cityReachTypes';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
 import type { ReshapedMappingHandle } from './ReshapedLayer';
@@ -142,6 +143,7 @@ interface GlobeSceneProps {
   surnameDisplayMode: SurnameDisplayMode;
   isolation: IsolationGlobePresentation | null;
   reshaped: GlobePresentation['reshaped'];
+  climate: GlobePresentation['climate'];
   onIsolationFieldRendered: (frame: CityReachFrame) => void;
   cameraGestureCancelRef: MutableRefObject<(() => void) | null>;
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
@@ -183,6 +185,7 @@ export function GlobeScene({
   surnameDisplayMode,
   isolation,
   reshaped,
+  climate,
   onIsolationFieldRendered,
   cameraGestureCancelRef,
   onSurnameLabelVisibilityChange,
@@ -1400,6 +1403,15 @@ export function GlobeScene({
           </>
         ) : null}
         {isolation ? <IsolationLayer isolation={isolation} /> : null}
+        {climate?.dataset && vectorResources ? (
+          <ClimateLayer
+            key={`climate:${vectorRenderSampleKey}`}
+            surface={vectorResources.surface}
+            dataset={climate.dataset}
+            selectedValue={climate.selectedValue}
+            latitude={climate.latitude}
+          />
+        ) : null}
         {isolation?.view === 'field' &&
         isolation.field.metadata &&
         vectorResources ? (

@@ -42,6 +42,9 @@ export function ModeControls({
     case 'surnames':
       // The script toggle lives in the surname result card.
       return null;
+    case 'climate':
+      // Climate Twins has no parameters; the point is the only input.
+      return null;
     case 'isolation':
       controls = (
         <IsolationControls locale={locale} presentation={presentation} />

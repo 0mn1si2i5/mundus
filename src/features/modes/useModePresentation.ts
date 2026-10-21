@@ -50,6 +50,16 @@ import {
 import { cityReachPointSelection } from '../isolation/cityReachData';
 import type { CityReachPointSelection } from '../isolation/cityReachTypes';
 import type { CityReachLevel } from '../isolation/cityReachLevel';
+import {
+  useClimateDataset,
+  type ClimateLoadState,
+} from '../climate/useClimateDataset';
+import {
+  findClimateTwins,
+  sampleClimate,
+  type ClimateDataset,
+  type ClimateTwins,
+} from '../climate/climateMetrics';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -64,6 +74,13 @@ export interface GlobePresentation {
     data: ReshapedLoadState;
     replayKey: number;
   } | null;
+  climate: ClimateGlobePresentation | null;
+}
+
+export interface ClimateGlobePresentation {
+  dataset: ClimateDataset | null;
+  selectedValue: number | null;
+  latitude: number;
 }
 
 export interface IsolationGlobePresentation {
@@ -142,6 +159,14 @@ export type ModePresentation =
       selectedUnit: import('../reshaped/reshapedData').ReshapedUnit | null;
       selectedValue: import('../reshaped/reshapedData').ReshapedValueRow | null;
       ranking: readonly import('../reshaped/reshapedData').ReshapedValueRow[];
+    }
+  | {
+      id: 'climate';
+      point: GeoPoint;
+      selectedCountry: CountryRef | null;
+      data: ClimateLoadState;
+      cities: GeoNamesCityLoadState;
+      twins: ClimateTwins | null;
     };
 
 /**
@@ -181,6 +206,19 @@ export function useModePresentation(
   );
   const reshapedLoad = sharedReshapedData ?? localReshapedLoad;
   const selectedUnitId = useAppStore((state) => state.reshapedSelectedUnitId);
+  const climateData = useClimateDataset(activeMode === 'climate');
+  const climateCities = useGeoNamesCityIndex(activeMode === 'climate');
+  const climateTwins = useMemo(
+    () =>
+      activeMode === 'climate' && climateData.status === 'ready'
+        ? findClimateTwins(
+            climateData.data,
+            climateCities.status === 'ready' ? climateCities.data : [],
+            point,
+          )
+        : null,
+    [activeMode, climateCities, climateData, point],
+  );
 
   const relation = useMemo(
     () =>
@@ -310,6 +348,15 @@ export function useModePresentation(
         ranking,
       };
     }
+    case 'climate':
+      return {
+        id: activeMode,
+        point,
+        selectedCountry,
+        data: climateData,
+        cities: climateCities,
+        twins: climateTwins,
+      };
     default:
       return assertNever(activeMode);
   }
@@ -349,6 +396,7 @@ export function useGlobePresentation(
     reshapedMetric,
   );
   const reshapedData = sharedReshapedData ?? localReshapedData;
+  const climateData = useClimateDataset(activeMode === 'climate');
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
@@ -452,6 +500,18 @@ export function useGlobePresentation(
     point,
   ]);
 
+  const climate = useMemo<ClimateGlobePresentation | null>(() => {
+    if (activeMode !== 'climate') return null;
+    const dataset = climateData.status === 'ready' ? climateData.data : null;
+    return {
+      dataset,
+      selectedValue: dataset
+        ? (sampleClimate(dataset, point)?.value ?? null)
+        : null,
+      latitude: point.latitude,
+    };
+  }, [activeMode, climateData, point]);
+
   return {
     showAntipodes: activeMode === 'antipodes',
     sunline,
@@ -468,6 +528,7 @@ export function useGlobePresentation(
             replayKey: reshapedReplayKey,
           }
         : null,
+    climate,
   };
 }
 

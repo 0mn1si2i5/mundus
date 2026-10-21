@@ -13,6 +13,11 @@ import type { SurnameRecord } from '../surnames/surnameData';
 import { IsolationResult } from '../isolation/IsolationResult';
 import { displayCountryName } from '../globe/countryNames';
 import { lazy, Suspense } from 'react';
+const ClimateResult = lazy(() =>
+  import('../climate/ClimateResult').then((module) => ({
+    default: module.ClimateResult,
+  })),
+);
 const ReshapedResult = lazy(() =>
   import('../reshaped/ReshapedResult').then((module) => ({
     default: module.ReshapedResult,
@@ -280,6 +285,12 @@ export function ModeResult({
       return (
         <Suspense fallback={null}>
           <ReshapedResult locale={locale} presentation={presentation} />
+        </Suspense>
+      );
+    case 'climate':
+      return (
+        <Suspense fallback={null}>
+          <ClimateResult locale={locale} presentation={presentation} />
         </Suspense>
       );
     default:

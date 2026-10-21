@@ -250,6 +250,7 @@ export function App() {
               surnameDisplayMode={globe.surnameDisplayMode}
               isolation={globe.isolation}
               reshaped={globe.reshaped}
+              climate={globe.climate}
             />
           </Suspense>
         </ErrorBoundary>
