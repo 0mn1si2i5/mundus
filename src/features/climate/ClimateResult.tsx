@@ -3,7 +3,7 @@ import { useAppStore } from '../../state/appStore';
 import type { ModePresentation } from '../modes/useModePresentation';
 import { displayCountryName } from '../globe/countryNames';
 import { CLIMATE_COPY } from './climateCopy';
-import type { ClimateCityMatch } from './climateMetrics';
+import { formatLandShare, type ClimateCityMatch } from './climateMetrics';
 import {
   KOPPEN_CLASSES,
   KOPPEN_GROUP_NAMES,

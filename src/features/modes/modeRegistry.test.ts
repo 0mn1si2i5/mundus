@@ -17,7 +17,7 @@ describe('mode registry', () => {
   });
 
   it('provides one explicit product order with unique identifiers', () => {
-    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3, 4]);
+    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3, 4, 5]);
     expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
@@ -44,7 +44,10 @@ describe('mode registry', () => {
       'isolation',
       'reshaped',
     ]);
-    expect(modesInTier('more').map((mode) => mode.id)).toEqual(['sunline']);
+    expect(modesInTier('more').map((mode) => mode.id)).toEqual([
+      'sunline',
+      'climate',
+    ]);
   });
 
   it('keeps Reshaped Earth state country-only while ignoring a legacy level', () => {

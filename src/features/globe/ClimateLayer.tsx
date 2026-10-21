@@ -1,6 +1,6 @@
 import { Line } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   DataTexture,
   NearestFilter,
@@ -61,7 +61,7 @@ function nearestTexture(texture: DataTexture) {
   return texture;
 }
 
-export function createClimatePalette(): Uint8Array {
+function createClimatePalette(): Uint8Array {
   const bytes = new Uint8Array(32 * 4);
   for (const type of KOPPEN_CLASSES)
     bytes.set([...type.rgb, 255], (type.value - 1) * 4);
@@ -80,6 +80,7 @@ export function ClimateLayer({
   latitude: number;
 }) {
   const invalidate = useThree((state) => state.invalidate);
+  const materialRef = useRef<ShaderMaterial | null>(null);
   const material = useMemo(() => {
     const { grid } = dataset;
     const classes = nearestTexture(
@@ -117,16 +118,19 @@ export function ClimateLayer({
       depthWrite: false,
     });
   }, [dataset]);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    materialRef.current = material;
+    return () => {
+      materialRef.current = null;
       (material.uniforms.uClasses!.value as DataTexture).dispose();
       (material.uniforms.uPalette!.value as DataTexture).dispose();
       material.dispose();
-    },
-    [material],
-  );
+    };
+  }, [material]);
   useEffect(() => {
-    material.uniforms.uSelected!.value = selectedValue ?? 0;
+    const current = materialRef.current;
+    if (!current) return;
+    current.uniforms.uSelected!.value = selectedValue ?? 0;
     invalidate();
   }, [invalidate, material, selectedValue]);
   const circle = useMemo(() => {

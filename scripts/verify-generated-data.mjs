@@ -14,6 +14,7 @@ import {
 } from '../src/features/reshaped/metadata.mjs';
 import { verifyCityReach } from './city-reach/verify.mjs';
 import { verifyCountryNames } from './verify-country-names.mjs';
+import { verifyKoppenGeiger } from './koppen-geiger/verify.mjs';
 
 const reshapedMetrics = ['population', 'gdp', 'co2', 'lights'];
 
@@ -247,6 +248,14 @@ try {
 } catch (error) {
   failed = true;
   console.error(error.message);
+}
+
+try {
+  const koppen = await verifyKoppenGeiger();
+  console.log(`Köppen-Geiger: verified ${koppen.sha256}`);
+} catch (error) {
+  failed = true;
+  console.error(`Köppen-Geiger: ${error.message}`);
 }
 
 try {

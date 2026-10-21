@@ -1,6 +1,7 @@
 import type { GeoPoint } from '../globe/geo';
 import { surfaceDistanceKm } from '../antipodes/distance';
 import type { GeoNamesCity } from '../antipodes/geonamesCities';
+import type { Locale } from '../../i18n/messages';
 
 export interface ClimateGrid {
   width: number;
@@ -175,4 +176,10 @@ function distinctBy<T>(items: readonly T[], key: (item: T) => unknown) {
     if (result.length === TWIN_LIMIT) break;
   }
   return result;
+}
+
+export function formatLandShare(share: number, locale: Locale): string {
+  if (share > 0 && share < 0.001)
+    return locale === 'zh' ? '不到 0.1%' : '<0.1%';
+  return `${(share * 100).toFixed(1)}%`;
 }
