@@ -927,7 +927,7 @@ export const LITERAL_NAMES: readonly LiteralNameRecord[] = [
     local: 'Guinea Ecuatorial',
     lang: 'es',
     confidence: 'likely',
-    literal: { zh: '赤道上的几内亚', en: 'Equatorial Guinea' },
+    literal: { zh: '赤道上的几内亚', en: 'Guinea on the Equator' },
     from: {
       zh: '西非几内亚地区加“赤道的”；Guinea 可能来自柏柏尔语 aginaw（黑人）',
       en: 'The Guinea region of West Africa plus “equatorial”; Guinea may come from Berber aginaw, “black people”',
