@@ -102,7 +102,8 @@ territorial status.
   new download. Public domain; redistribution allowed.
 - Use: Border Hop land-route graph (`pnpm data:land-borders`)
 - Transformation: split each unit into land parts, join parts of different
-  units that share a boundary arc, add two reviewed borders the simplified
+  units that share a boundary arc, drop one reviewed water-only boundary
+  (DR Congo–Tanzania, Lake Tanganyika), add two reviewed borders the simplified
   geometry loses (China–Macao, Botswana–Zambia) and seven reviewed bridges and
   tunnels; ferries are excluded. `pnpm data:verify` rebuilds the asset and
   rejects any difference.

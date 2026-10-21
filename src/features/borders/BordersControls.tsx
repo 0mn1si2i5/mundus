@@ -6,14 +6,18 @@ import { getCountryLabelAnchorForId } from '../globe/countryLabel';
 import { getCountryDataset } from '../globe/countryData';
 import { COUNTRY_NAMES } from '../globe/countryNames';
 import { BORDERS_COPY } from './bordersCopy';
-import { useChooseDestination } from './useChooseDestination';
+import {
+  greatCircleMidpoint,
+  useChooseDestination,
+} from './useChooseDestination';
 import styles from './BordersControls.module.css';
 
 export function BordersControls({ locale }: { locale: Locale }) {
   const copy = BORDERS_COPY[locale];
   const destination = useAppStore((state) => state.bordersDestination);
   const start = useAppStore((state) => state.selectedCountry);
-  const selectPoint = useAppStore((state) => state.selectPoint);
+  const selectBordersTrip = useAppStore((state) => state.selectBordersTrip);
+  const requestCameraFocus = useAppStore((state) => state.requestCameraFocus);
   const chooseDestination = useChooseDestination();
   const fieldId = useId();
   const options = useMemo(() => {
@@ -33,8 +37,15 @@ export function BordersControls({ locale }: { locale: Locale }) {
   function swap() {
     if (!destination || !destinationAnchor) return;
     const previousStart = start?.countryId ?? null;
-    selectPoint(destinationAnchor.point);
-    chooseDestination(previousStart);
+    const previousAnchor = previousStart
+      ? getCountryLabelAnchorForId(previousStart)
+      : null;
+    selectBordersTrip(destinationAnchor.point, previousStart);
+    if (previousAnchor) {
+      requestCameraFocus(
+        greatCircleMidpoint(destinationAnchor.point, previousAnchor.point),
+      );
+    }
   }
 
   return (

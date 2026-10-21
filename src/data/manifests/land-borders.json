@@ -7,12 +7,13 @@
   "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
   "version": "Natural Earth 5.1.2, Mundus boundary view, high detail",
   "retrievedAt": "2026-10-21",
-  "derivedAssetSha256": "73865b33deea749792aaffc965523135d54b8fbae3a055f51e5f8381d443f364",
+  "derivedAssetSha256": "f5905fab5f8972f5c729410c0a05ad4febc1f976aa78f12dfbc425df8f931a45",
   "attribution": "Made with Natural Earth",
   "redistribution": "allowed",
   "transformations": [
     "Split every high-detail Mundus country unit into its separate land parts and number them by spherical area, largest first",
     "Join parts of different units that share a TopoJSON boundary arc; a shared point alone is not a border",
+    "Drop one reviewed water-only boundary: DR Congo–Tanzania, which runs only through Lake Tanganyika",
     "Add two reviewed land borders the simplified geometry loses: China–Macao (Barrier Gate) and Botswana–Zambia (Kazungula, about 150 m)",
     "List seven reviewed bridges and tunnels that join separate landmasses (Channel Tunnel, Øresund, Great Belt, Little Belt, Bosphorus, Johor–Singapore Causeway, King Fahd Causeway); no ferries",
     "Keep only parts with at least one border or fixed link; units without one have no land route"
@@ -26,6 +27,6 @@
     }
   },
   "recordCount": 202,
-  "rawBytes": 11526,
+  "rawBytes": 11504,
   "gzipBytes": 2665
 }

@@ -80,6 +80,13 @@ test('restores a shared route through a fixed link and swaps its ends', async ({
     '从西班牙到英国，不坐船、不乘飞机，最少要跨越 2 条边界。',
   );
   await expect(page).toHaveURL(/[?&]to=ne-826(?:&|$)/u);
+
+  // One swap is one history entry.
+  await page.goBack();
+  await expect(result(page)).toContainText(
+    '从英国到西班牙，不坐船、不乘飞机，最少要跨越 2 条边界。',
+  );
+  await expect(page).toHaveURL(/[?&]to=ne-724(?:&|$)/u);
 });
 
 test('explains islands, unreachable destinations and turns a neighbour into the destination', async ({

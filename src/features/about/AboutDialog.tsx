@@ -42,7 +42,7 @@ const COPY = {
       ],
       [
         '陆路接力',
-        '把每个国家或地区按 Mundus 高精度边界（Natural Earth）拆成互不相连的陆块；两块陆地共用一段边界线才算接壤，只在一点相接不算。飞地和海外领土不能借道本土，例如法属圭亚那让法国与巴西接壤，却不把南美洲连到欧洲。简化几何漏掉的中国—澳门、博茨瓦纳—赞比亚两段边界经审定补入；另计入 7 座审定的跨海桥梁和隧道，不计渡轮。边界数只计国家或地区之间的穿越。结果只反映边界视图中的陆地连通，不代表口岸开放、签证或实际通行。',
+        '把每个国家或地区按 Mundus 高精度边界（Natural Earth）拆成互不相连的陆块；两块陆地共用一段边界线才算接壤，只在一点相接不算。飞地和海外领土不能借道本土，例如法属圭亚那让法国与巴西接壤，却不把南美洲连到欧洲。简化几何漏掉的中国—澳门、博茨瓦纳—赞比亚两段边界经审定补入，只经坦噶尼喀湖湖面的刚果（金）—坦桑尼亚边界不算接壤；另计入 7 座审定的跨海桥梁和隧道，不计渡轮。边界数只计国家或地区之间的穿越。结果只反映边界视图中的陆地连通，不代表口岸开放、签证或实际通行。',
       ],
       [
         '城市邻近性',
@@ -220,7 +220,7 @@ const COPY = {
       ],
       [
         'Border Hop',
-        'Each country or territory is split into its separate land parts in the high-detail Mundus boundaries (Natural Earth); two parts border each other only when they share a stretch of boundary, not a single point. Exclaves and overseas territories cannot be used to reach the mainland: French Guiana makes France a neighbour of Brazil but does not join South America to Europe. Two borders the simplified geometry loses, China–Macao and Botswana–Zambia, are added after review, as are seven reviewed sea bridges and tunnels; ferries are excluded. Only crossings between countries or territories are counted. Results describe land connection in the boundary view, not open crossings, visas or actual passage.',
+        'Each country or territory is split into its separate land parts in the high-detail Mundus boundaries (Natural Earth); two parts border each other only when they share a stretch of boundary, not a single point. Exclaves and overseas territories cannot be used to reach the mainland: French Guiana makes France a neighbour of Brazil but does not join South America to Europe. Two borders the simplified geometry loses, China–Macao and Botswana–Zambia, are added after review; DR Congo and Tanzania, which meet only in Lake Tanganyika, do not count as neighbours; also counted are seven reviewed sea bridges and tunnels; ferries are excluded. Only crossings between countries or territories are counted. Results describe land connection in the boundary view, not open crossings, visas or actual passage.',
       ],
       [
         'Urban Proximity',

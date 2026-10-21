@@ -18,6 +18,14 @@ domain). `pnpm data:verify` rebuilds it and fails if a single byte differs.
 - **Borders.** Two parts of different units border each other when they share
   a TopoJSON boundary arc. A shared point alone is not a border (this drops the
   false Namibia–Zimbabwe quadripoint).
+- **Water-only boundaries (2026-10-21).** Country polygons cover lakes, so a
+  shared arc can lie entirely in water. Every shared arc was checked against
+  the Natural Earth 1:10m lakes layer (a review aid, not a shipped input): only
+  DR Congo–Tanzania, along Lake Tanganyika, has no land at all, and it is
+  removed. Pairs that also share land (Uganda–Tanzania at Lake Victoria,
+  Malawi–Tanzania at Lake Malawi and others) stay neighbours. Nigeria–Chad,
+  across the largely dry bed of Lake Chad, stays a land border as the source
+  draws it.
 - **Reviewed borders (2026-10-21).** The simplified geometry loses two real
   land borders, added explicitly: China–Macao (Barrier Gate, a hairline gap in
   the source) and Botswana–Zambia (Kazungula, about 150 m, a point in the

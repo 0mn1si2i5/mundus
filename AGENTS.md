@@ -74,7 +74,7 @@ Observation contracts:
 - **Border Hop** — the fewest border crossings between the selected unit and a
   destination without boats or planes, over land parts of the high-detail
   boundary view: exclaves and overseas parts do not join landmasses, two
-  reviewed missing borders are added and seven reviewed bridges and tunnels
+  reviewed missing borders are added, one water-only lake boundary is dropped, and seven reviewed bridges and tunnels
   count, never ferries. Without a destination the globe colours every unit by
   crossings from the start. It says nothing about whether a crossing is open.
   Contract: `docs/data/land-borders.md`.

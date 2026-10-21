@@ -30,6 +30,19 @@ export const REVIEWED_BORDERS = [
 ];
 
 /**
+ * Boundaries that run only through water: the units share a boundary arc but
+ * no land. Reviewed 2026-10-21 against Natural Earth lakes.
+ */
+export const WATER_BOUNDARIES = [
+  {
+    a: { countryId: 'ne-180', point: [15.3, -4.3] },
+    b: { countryId: 'ne-834', point: [39.28, -6.82] },
+    reason:
+      'DR Congo and Tanzania meet only along the median line of Lake Tanganyika.',
+  },
+];
+
+/**
  * Bridges and tunnels that join otherwise separate landmasses on a route
  * without boats or planes. Points pick the landmass on each side.
  */
@@ -88,12 +101,17 @@ export const FIXED_LINKS = [
 /**
  * Splits every Mundus country unit into its separate land parts, numbers the
  * parts by area (part 0 is the largest), and joins parts of different units
- * that share a boundary arc. Only parts with a connection are kept.
+ * that share a boundary arc, except reviewed water-only boundaries. Only parts
+ * with a connection are kept.
  */
 export function buildLandBorders(
   topology,
   source,
-  { reviewedBorders = REVIEWED_BORDERS, fixedLinks = FIXED_LINKS } = {},
+  {
+    reviewedBorders = REVIEWED_BORDERS,
+    waterBoundaries = WATER_BOUNDARIES,
+    fixedLinks = FIXED_LINKS,
+  } = {},
 ) {
   const parts = landParts(topology);
   const arcOwners = new Map();
@@ -126,6 +144,23 @@ export function buildLandBorders(
           connect(owners[i], owners[j]);
         }
       }
+    }
+  }
+  for (const boundary of waterBoundaries) {
+    const first = partAt(parts, boundary.a);
+    const second = partAt(parts, boundary.b);
+    if (!borders.get(first.key)?.has(second.key)) {
+      throw new Error(
+        `Water boundary ${first.key}–${second.key} is not in the source`,
+      );
+    }
+    for (const [from, to] of [
+      [first, second],
+      [second, first],
+    ]) {
+      const set = borders.get(from.key);
+      set.delete(to.key);
+      if (set.size === 0) borders.delete(from.key);
     }
   }
   for (const border of reviewedBorders) {

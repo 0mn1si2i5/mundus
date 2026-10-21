@@ -51,6 +51,7 @@ function fixture() {
 test('joins land parts that share an arc and ignores a shared point', () => {
   const output = buildLandBorders(fixture(), SOURCE, {
     reviewedBorders: [],
+    waterBoundaries: [],
     fixedLinks: [],
   });
   assert.deepEqual(output.parts, {
@@ -61,8 +62,41 @@ test('joins land parts that share an arc and ignores a shared point', () => {
   });
 });
 
+test('removes a reviewed water-only boundary and rejects one that is absent', () => {
+  const water = (a, b) => ({
+    waterBoundaries: [{ a, b, reason: 'fixture' }],
+    reviewedBorders: [],
+    fixedLinks: [],
+  });
+  const output = buildLandBorders(
+    fixture(),
+    SOURCE,
+    water(
+      { countryId: 'ne-001', point: [0.5, 0.5] },
+      { countryId: 'ne-002', point: [1.5, 0.5] },
+    ),
+  );
+  assert.deepEqual(output.parts, {
+    'ne-001/1': ['ne-004/0'],
+    'ne-004/0': ['ne-001/1'],
+  });
+  assert.throws(
+    () =>
+      buildLandBorders(
+        fixture(),
+        SOURCE,
+        water(
+          { countryId: 'ne-002', point: [1.5, 0.5] },
+          { countryId: 'ne-003', point: [2.5, 1.5] },
+        ),
+      ),
+    /is not in the source/u,
+  );
+});
+
 test('adds reviewed borders and fixed links by the land part at a point', () => {
   const output = buildLandBorders(fixture(), SOURCE, {
+    waterBoundaries: [],
     reviewedBorders: [
       {
         a: { countryId: 'ne-002', point: [1.5, 0.5] },
@@ -96,6 +130,7 @@ test('rejects redundant reviews, unresolved points and self links', () => {
   const run = (options) =>
     buildLandBorders(fixture(), SOURCE, {
       reviewedBorders: [],
+      waterBoundaries: [],
       fixedLinks: [],
       ...options,
     });

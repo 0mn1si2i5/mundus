@@ -28,6 +28,9 @@ describe('land border graph', () => {
     expect(graph.neighbours.get('ne-072')).toContain('ne-894');
     expect(graph.neighbours.get(FRANCE)).toContain(BRAZIL);
     expect(graph.neighbours.get('ne-392')).toBeUndefined();
+    // DR Congo and Tanzania meet only in Lake Tanganyika.
+    expect(graph.neighbours.get('ne-180')).not.toContain('ne-834');
+    expect(route('ne-180', 'ne-834').crossings).toBe(2);
     expect(mostNeighbours(graph, 2)).toEqual([
       { countryId: CHINA, count: 16 },
       { countryId: 'ne-643', count: 14 },
