@@ -14,6 +14,13 @@ import {
 } from '../src/features/reshaped/metadata.mjs';
 import { verifyCityReach } from './city-reach/verify.mjs';
 import { verifyCountryNames } from './verify-country-names.mjs';
+import {
+  ASSET_PATH as LAND_BORDERS_ASSET,
+  MANIFEST_PATH as LAND_BORDERS_MANIFEST,
+  buildLandBorders,
+  readSourceTopology,
+  serializeLandBorders,
+} from './build-land-borders.mjs';
 
 const reshapedMetrics = ['population', 'gdp', 'co2', 'lights'];
 
@@ -107,6 +114,11 @@ const assets = [
     manifest: 'src/data/manifests/urban-isolation.json',
     asset: 'src/data/generated/urban-isolation.json',
     hashField: 'derivedAsset.sha256',
+  },
+  {
+    manifest: LAND_BORDERS_MANIFEST,
+    asset: LAND_BORDERS_ASSET,
+    hashField: 'derivedAssetSha256',
   },
 ];
 
@@ -247,6 +259,32 @@ try {
 } catch (error) {
   failed = true;
   console.error(error.message);
+}
+
+try {
+  const { topology, source } = await readSourceTopology();
+  const rebuilt = serializeLandBorders(buildLandBorders(topology, source));
+  const bytes = await readFile(LAND_BORDERS_ASSET);
+  assert.equal(
+    bytes.toString('utf8'),
+    rebuilt,
+    'asset differs from a rebuild of the pinned topology',
+  );
+  const manifest = JSON.parse(await readFile(LAND_BORDERS_MANIFEST, 'utf8'));
+  assert.deepEqual(manifest.sourceAssets, { '50m': source });
+  assert.equal(manifest.rawBytes, bytes.byteLength);
+  assert.equal(
+    manifest.gzipBytes,
+    gzipSync(bytes, { level: 9, mtime: 0 }).byteLength,
+  );
+  assert.equal(
+    manifest.recordCount,
+    Object.keys(JSON.parse(rebuilt).parts).length,
+  );
+  console.log('Land borders: rebuild, source and sizes verified');
+} catch (error) {
+  failed = true;
+  console.error(`Land borders: ${error.message}`);
 }
 
 try {

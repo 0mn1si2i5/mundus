@@ -41,6 +41,10 @@ const COPY = {
         '太阳位置与晨昏线采用 NOAA/Meeus 近似算法，仅供教育参考，不能用于导航、航空或法定时间。',
       ],
       [
+        '陆路接力',
+        '把每个国家或地区按 Mundus 高精度边界（Natural Earth）拆成互不相连的陆块；两块陆地共用一段边界线才算接壤，只在一点相接不算。飞地和海外领土不能借道本土，例如法属圭亚那让法国与巴西接壤，却不把南美洲连到欧洲。简化几何漏掉的中国—澳门、博茨瓦纳—赞比亚两段边界经审定补入；另计入 7 座审定的跨海桥梁和隧道，不计渡轮。边界数只计国家或地区之间的穿越。结果只反映边界视图中的陆地连通，不代表口岸开放、签证或实际通行。',
+      ],
+      [
         '城市邻近性',
         '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级邻近距离是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，距离呈阶梯式增长。单城观察只反映几何与人口规模。全球分区采用交通时间 − k × log₁₀(人口) 的加法得分，在人口 ≥10 万的中心之间比较；人口每大十倍，得分减去 k 小时。使用 MAP 2019 估计摩擦面与约 4 km 网格，结果按档位离线计算；颜色区分归属，明度反映 GHS-POP 2020 人口密度。仅按约 15 km 显示网格采样，计算仍在 1/30° 网格上进行，中心切换阈值和父城市不变。这是负责人于 2026-10-12 作出的决定，替代提案 D5 原来的“按 1/30° 显示”；以后提高显示精度需另行审批。路径按 Natural Earth 实控边界及公开开放表计算，绘制使用 Mundus 中国视角；争议区画斜纹隐藏归属，模型不计渡轮，粗网格可能将约 7 km 内的水道视为相通。中心归属切换阈值仅描述中心单元，不代表整座城区消失。相邻城市可能合并为一个 GHSL 中心。这是透明思想实验，不测量通勤、就医、实际统辖或经济联系。',
       ],
@@ -213,6 +217,10 @@ const COPY = {
       [
         'Sunline',
         'Solar position and the terminator use NOAA/Meeus-style approximations, for education only — not for navigation, aviation or legal time.',
+      ],
+      [
+        'Border Hop',
+        'Each country or territory is split into its separate land parts in the high-detail Mundus boundaries (Natural Earth); two parts border each other only when they share a stretch of boundary, not a single point. Exclaves and overseas territories cannot be used to reach the mainland: French Guiana makes France a neighbour of Brazil but does not join South America to Europe. Two borders the simplified geometry loses, China–Macao and Botswana–Zambia, are added after review, as are seven reviewed sea bridges and tunnels; ferries are excluded. Only crossings between countries or territories are counted. Results describe land connection in the boundary view, not open crossings, visas or actual passage.',
       ],
       [
         'Urban Proximity',

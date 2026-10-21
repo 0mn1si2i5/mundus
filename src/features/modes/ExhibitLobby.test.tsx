@@ -23,11 +23,13 @@ describe('ExhibitLobby', () => {
     const onEnter = vi.fn();
     render(<ExhibitLobby locale="en" onEnter={onEnter} />);
     const more = screen.getByRole('list', { name: 'More' });
-    expect(more.querySelectorAll('li')).toHaveLength(2);
+    expect(more.querySelectorAll('li')).toHaveLength(3);
     fireEvent.click(screen.getByRole('button', { name: 'Sunline' }));
     expect(onEnter).toHaveBeenCalledWith('sunline');
     fireEvent.click(screen.getByRole('button', { name: 'True Size' }));
     expect(onEnter).toHaveBeenCalledWith('truesize');
+    fireEvent.click(screen.getByRole('button', { name: 'Border Hop' }));
+    expect(onEnter).toHaveBeenCalledWith('borders');
     fireEvent.click(screen.getByRole('button', { name: /Urban Proximity/u }));
     expect(onEnter).toHaveBeenCalledWith('isolation');
   });

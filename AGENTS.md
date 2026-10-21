@@ -21,7 +21,8 @@ observation while keeping the selected place.
 - The bare address opens a neutral lobby. The header switcher offers the four
   primary observations, **Other Side** (`antipodes`), **Surname Atlas**
   (`surnames`), **Urban Proximity** (`isolation`) and **Reshaped Earth**
-  (`reshaped`); **Sunline** (`sunline`) and **True Size** (`truesize`)
+  (`reshaped`); **Sunline** (`sunline`), **True Size** (`truesize`) and
+  **Border Hop** (`borders`)
   sit under "More observations".
   **Development, Unpacked** was retired in 2026-10: its links
   (`mode=development`) open the lobby with a "retired" notice, and its UNDP
@@ -70,6 +71,13 @@ Observation contracts:
   its solid core represents the target area. Colours encode the area multiplier
   around 1×, while night lights use a dark-earth theme; real coordinates remain
   shareable. Rebuild and acceptance details: `docs/data/reshaped-earth.md`.
+- **Border Hop** — the fewest border crossings between the selected unit and a
+  destination without boats or planes, over land parts of the high-detail
+  boundary view: exclaves and overseas parts do not join landmasses, two
+  reviewed missing borders are added and seven reviewed bridges and tunnels
+  count, never ferries. Without a destination the globe colours every unit by
+  crossings from the start. It says nothing about whether a crossing is open.
+  Contract: `docs/data/land-borders.md`.
 
 Experience requirements: the first screen is the globe; Chinese and English
 agree in meaning; desktop and mobile complete the same loop; keyboard, focus
@@ -141,9 +149,10 @@ Locale and first-use state are local preferences.
 Mode parameters are written only when they differ from the default: Sunline
 `time` (fixed clock), Surname Atlas `surname`, Urban Proximity `alpha`,
 `view=field` and, in the field view, `reach` (one of the seven approved levels;
-invalid values fall back to 4), Reshaped Earth `metric` and True Size
-`country` (a 1:110m unit id; invalid values fall back to Greenland, `ne-304`). Reshaped Earth
-ignores legacy `level` parameters; shape and animation progress stay local.
+invalid values fall back to 4), Reshaped Earth `metric`, True Size `country` (a
+1:110m unit id; invalid values fall back to Greenland, `ne-304`) and Border Hop
+`to` (a reviewed unit id; anything else is ignored). Reshaped Earth ignores
+legacy `level` parameters; shape and animation progress stay local.
 
 ## 4. Data
 

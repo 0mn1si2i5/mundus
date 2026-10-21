@@ -23,6 +23,11 @@ const TrueSizeResult = lazy(() =>
     default: module.TrueSizeResult,
   })),
 );
+const BordersResult = lazy(() =>
+  import('../borders/BordersResult').then((module) => ({
+    default: module.BordersResult,
+  })),
+);
 
 export function ModeResult({
   locale,
@@ -291,6 +296,12 @@ export function ModeResult({
       return (
         <Suspense fallback={null}>
           <TrueSizeResult locale={locale} presentation={presentation} />
+        </Suspense>
+      );
+    case 'borders':
+      return (
+        <Suspense fallback={null}>
+          <BordersResult locale={locale} presentation={presentation} />
         </Suspense>
       );
     default:

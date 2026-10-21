@@ -21,7 +21,8 @@ export function useUrlState() {
           state.isolationView === previous.isolationView &&
           state.isolationReach === previous.isolationReach &&
           state.reshapedMetric === previous.reshapedMetric &&
-          state.trueSizeCountry === previous.trueSizeCountry)
+          state.trueSizeCountry === previous.trueSizeCountry &&
+          state.bordersDestination === previous.bordersDestination)
       ) {
         return;
       }
@@ -65,8 +66,10 @@ export function useUrlState() {
 
     const restore = () => {
       applyingHistory = true;
+      const parsed = parseUrlState(window.location.search);
       useAppStore.setState({
-        ...parseUrlState(window.location.search),
+        ...parsed,
+        bordersDestination: parsed.bordersDestination ?? null,
         navigationNotice: parseNavigationNotice(window.location.search),
         hoveredCountry: null,
         reshapedSelectedUnitId: undefined,

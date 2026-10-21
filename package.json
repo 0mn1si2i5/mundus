@@ -18,6 +18,8 @@
     "data:cities": "node scripts/build-geonames-major-cities.mjs",
     "data:cities:capture": "node scripts/build-geonames-major-cities.mjs --capture",
     "data:surnames": "node scripts/build-surname-observation.mjs",
+    "data:land-borders": "node scripts/build-land-borders.mjs",
+    "test:data-land-borders": "node --test scripts/build-land-borders.test.mjs",
     "toolchain:verify": "node scripts/verify-toolchain.mjs",
     "data:verify": "pnpm toolchain:verify && node scripts/verify-generated-data.mjs",
     "release:verify": "node scripts/verify-pages-artifact.mjs",
@@ -49,7 +51,7 @@
     "test:e2e": "node scripts/run-playwright-e2e.mjs",
     "test:e2e:smoke": "node scripts/run-playwright-e2e.mjs --project=chromium --grep @smoke",
     "test:e2e:resources": "MUNDUS_E2E_RESOURCES=1 node scripts/run-playwright-e2e.mjs --grep @resources",
-    "check:source": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-countries && pnpm test:data-cities && pnpm test:data-isolation && pnpm test:data-city-reach && pnpm test:data-reshaped && pnpm test:toolchain && pnpm test:performance && pnpm test && pnpm test:release && pnpm test:previews",
+    "check:source": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-countries && pnpm test:data-land-borders && pnpm test:data-cities && pnpm test:data-isolation && pnpm test:data-city-reach && pnpm test:data-reshaped && pnpm test:toolchain && pnpm test:performance && pnpm test && pnpm test:release && pnpm test:previews",
     "check": "pnpm check:source && pnpm test:data-vector-globe && pnpm build && pnpm release:verify"
   },
   "dependencies": {

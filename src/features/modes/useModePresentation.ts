@@ -55,6 +55,17 @@ import {
   placeTrueSizeCountry,
   type TrueSizePlacement,
 } from '../truesize/trueSize';
+import {
+  useLandBorders,
+  type LandBordersLoadState,
+} from '../borders/useLandBorders';
+import {
+  findRoute,
+  summarizeReach,
+  type ReachSummary,
+  type RouteResult,
+} from '../borders/landBorders';
+import { bordersCountryColors } from '../borders/bordersPalette';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -69,6 +80,8 @@ export interface GlobePresentation {
     data: ReshapedLoadState;
     replayKey: number;
   } | null;
+  /** Per-unit land colours; `null` keeps the base land colour. */
+  countryColors: ReadonlyMap<string, string> | null;
 }
 
 export interface IsolationGlobePresentation {
@@ -153,6 +166,14 @@ export type ModePresentation =
       point: GeoPoint;
       selectedCountry: CountryRef | null;
       placement: TrueSizePlacement | null;
+    }
+  | {
+      id: 'borders';
+      selectedCountry: CountryRef | null;
+      destination: string | null;
+      data: LandBordersLoadState;
+      reach: ReachSummary | null;
+      route: RouteResult | null;
     };
 
 /**
@@ -192,6 +213,14 @@ export function useModePresentation(
   );
   const reshapedLoad = sharedReshapedData ?? localReshapedLoad;
   const selectedUnitId = useAppStore((state) => state.reshapedSelectedUnitId);
+  const bordersDestination = useAppStore((state) => state.bordersDestination);
+  const landBorders = useLandBorders(activeMode === 'borders');
+  const borders = useBordersAnalysis(
+    activeMode === 'borders',
+    landBorders,
+    selectedCountry?.countryId ?? null,
+    bordersDestination,
+  );
 
   const relation = useMemo(
     () =>
@@ -338,9 +367,35 @@ export function useModePresentation(
         selectedCountry,
         placement: trueSizePlacement,
       };
+    case 'borders':
+      return {
+        id: activeMode,
+        selectedCountry,
+        destination: bordersDestination,
+        data: landBorders,
+        reach: borders.reach,
+        route: borders.route,
+      };
     default:
       return assertNever(activeMode);
   }
+}
+
+function useBordersAnalysis(
+  enabled: boolean,
+  data: LandBordersLoadState,
+  startId: string | null,
+  destination: string | null,
+): { reach: ReachSummary | null; route: RouteResult | null } {
+  return useMemo(() => {
+    if (!enabled || data.status !== 'ready' || !startId) {
+      return { reach: null, route: null };
+    }
+    return {
+      reach: summarizeReach(data.data, startId),
+      route: destination ? findRoute(data.data, startId, destination) : null,
+    };
+  }, [data, destination, enabled, startId]);
 }
 
 /** Globe-only presentation; isolation uses the same selection as the card. */
@@ -377,6 +432,22 @@ export function useGlobePresentation(
     reshapedMetric,
   );
   const reshapedData = sharedReshapedData ?? localReshapedData;
+  const selectedCountry = useAppStore((state) => state.selectedCountry);
+  const bordersDestination = useAppStore((state) => state.bordersDestination);
+  const landBorders = useLandBorders(activeMode === 'borders');
+  const borders = useBordersAnalysis(
+    activeMode === 'borders',
+    landBorders,
+    selectedCountry?.countryId ?? null,
+    bordersDestination,
+  );
+  const countryColors = useMemo(
+    () =>
+      activeMode === 'borders'
+        ? bordersCountryColors(borders.reach, borders.route)
+        : null,
+    [activeMode, borders],
+  );
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
@@ -496,6 +567,7 @@ export function useGlobePresentation(
             replayKey: reshapedReplayKey,
           }
         : null,
+    countryColors,
   };
 }
 

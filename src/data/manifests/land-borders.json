@@ -1,0 +1,31 @@
+{
+  "id": "land-borders",
+  "sourceName": "Mundus country boundary view (Natural Earth Admin 0), land parts and shared borders",
+  "sourceUrl": "https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/",
+  "distributionUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
+  "licenseName": "Public domain",
+  "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
+  "version": "Natural Earth 5.1.2, Mundus boundary view, high detail",
+  "retrievedAt": "2026-10-21",
+  "derivedAssetSha256": "73865b33deea749792aaffc965523135d54b8fbae3a055f51e5f8381d443f364",
+  "attribution": "Made with Natural Earth",
+  "redistribution": "allowed",
+  "transformations": [
+    "Split every high-detail Mundus country unit into its separate land parts and number them by spherical area, largest first",
+    "Join parts of different units that share a TopoJSON boundary arc; a shared point alone is not a border",
+    "Add two reviewed land borders the simplified geometry loses: China–Macao (Barrier Gate) and Botswana–Zambia (Kazungula, about 150 m)",
+    "List seven reviewed bridges and tunnels that join separate landmasses (Channel Tunnel, Øresund, Great Belt, Little Belt, Bosphorus, Johor–Singapore Causeway, King Fahd Causeway); no ferries",
+    "Keep only parts with at least one border or fixed link; units without one have no land route"
+  ],
+  "missingValuePolicy": "A unit absent from the asset has no land border and no fixed link. Units missing from the low-detail globe are still part of every route.",
+  "boundaryPolicy": "Mundus draws boundaries from the Natural Earth China point of view, except that Taiwan is shown as its own unit. Borders follow that view and are not a legal authority on territorial status or on whether a crossing is open.",
+  "sourceAssets": {
+    "50m": {
+      "path": "src/data/generated/mundus-countries-50m.json",
+      "sha256": "b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4"
+    }
+  },
+  "recordCount": 202,
+  "rawBytes": 11526,
+  "gzipBytes": 2665
+}
