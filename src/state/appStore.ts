@@ -25,6 +25,7 @@ import {
   isCityReachLevel,
   type CityReachLevel,
 } from '../features/isolation/cityReachLevel';
+import { isCircleRadius } from '../features/circle/circleRadius';
 
 export type ReshapedMorphState = 'pending' | 'animating' | 'settled';
 
@@ -61,6 +62,10 @@ interface AppState {
   setBordersDestination: (countryId: string | null) => void;
   /** Moves the start and the destination in one history entry. */
   selectBordersTrip: (point: GeoPoint, destination: string | null) => void;
+  circleRadiusKm: number | null;
+  setCircleRadiusKm: (value: number | null) => void;
+  /** Moves the circle and returns it to the half circle in one history entry. */
+  selectCircleHalfAt: (point: GeoPoint) => void;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -115,6 +120,7 @@ export const useAppStore = create<AppState>((set) => ({
     initialUrlState.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
   isolationAlpha: initialUrlState.isolationAlpha,
   bordersDestination: initialUrlState.bordersDestination ?? null,
+  circleRadiusKm: initialUrlState.circleRadiusKm ?? null,
   navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
   antipodeCountry: null,
@@ -217,6 +223,17 @@ export const useAppStore = create<AppState>((set) => ({
         ? { trueSizeCountry: countryId }
         : state,
     ),
+  setCircleRadiusKm: (value) =>
+    set({ circleRadiusKm: isCircleRadius(value) ? value : null }),
+  selectCircleHalfAt: (point) =>
+    set({
+      point,
+      circleRadiusKm: null,
+      reshapedSelectedUnitId: undefined,
+      cameraFocusIntent: { side: 'origin', target: point },
+      hasInteracted: true,
+      hasMeaningfulInteraction: true,
+    }),
   returnSunlineToLive: (timestampMs = Date.now()) =>
     set({
       sunlineTimeMs: clampSunlineTime(timestampMs),

@@ -87,7 +87,9 @@ export function ModeSwitcher({
             {activeMore ? activeMore.title[locale] : t.moreModes}
           </span>
           <span className={styles.compactTitle} aria-hidden="true">
-            {activeMore ? activeMore.title[locale] : t.moreModesCompact}
+            {activeMore
+              ? (activeMore.compactTitle ?? activeMore.title)[locale]
+              : t.moreModesCompact}
           </span>
           <span className={styles.caret} aria-hidden="true">
             ▾

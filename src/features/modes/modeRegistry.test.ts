@@ -17,7 +17,7 @@ describe('mode registry', () => {
   });
 
   it('provides one explicit product order with unique identifiers', () => {
-    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
@@ -37,7 +37,7 @@ describe('mode registry', () => {
     }
   });
 
-  it('offers Reshaped Earth as a primary observation and Sunline, True Size and Border Hop under More', () => {
+  it('offers Reshaped Earth as a primary observation and Sunline, True Size, Border Hop and People in a Circle under More', () => {
     expect(modesInTier('primary').map((mode) => mode.id)).toEqual([
       'antipodes',
       'surnames',
@@ -48,6 +48,7 @@ describe('mode registry', () => {
       'sunline',
       'truesize',
       'borders',
+      'circle',
     ]);
   });
 

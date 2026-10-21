@@ -7,6 +7,7 @@ import {
   isCityReachLevel,
 } from '../isolation/cityReachLevel';
 import { isTrueSizeCountry } from '../truesize/trueSize';
+import { isCircleRadius } from '../circle/circleRadius';
 
 export const MODE_ORDER = [
   'antipodes',
@@ -16,6 +17,7 @@ export const MODE_ORDER = [
   'sunline',
   'truesize',
   'borders',
+  'circle',
 ] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
 
@@ -216,6 +218,31 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         longitude: z.number().min(-180).max(180),
       }),
       to: z.string().nullable(),
+    }),
+  },
+  circle: {
+    id: 'circle',
+    version: 1,
+    tier: 'more',
+    title: { zh: '半人口圈', en: 'People in a Circle' },
+    compactTitle: { zh: '半人口圈', en: 'Circle' },
+    titlePhrases: { zh: ['半人口圈'] },
+    question: {
+      zh: '以这里为圆心，多大的圆能装下世界一半的人？',
+      en: "How wide must a circle around here be to hold half the world's people?",
+    },
+    summary: {
+      zh: '从选中的地点画圆，看圆内住着多少人；拖动半径，或跳到世界上最小的半人口圈。',
+      en: 'Draw a circle around the selected place and count who lives inside; change the radius or jump to the smallest half-world circle.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['population-circle'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
+      radiusKm: z.number().refine(isCircleRadius).nullable(),
     }),
   },
 };

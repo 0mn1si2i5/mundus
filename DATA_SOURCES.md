@@ -297,6 +297,21 @@ applicable. Raw GeoTIFFs, netCDF4/HDF5 files and classification caches remain
 outside the worktree. Every source notice and the method summary appears in
 the About dialog.
 
+## People in a Circle
+
+- Source: the same pinned GHS-POP R2023A V1-0 2020 snapshot used by Reshaped
+  Earth (CC BY 4.0, ZIP SHA-256
+  `579fb7477b33d9be61e9562b170ea108a670b85ef6fe23b61a22d17200929636`).
+  Citation: Schiavina, Freire, Carioli & MacManus (2023), European Commission,
+  Joint Research Centre, DOI `10.2905/2FF68A52-5B5B-4A22-8F40-C41DA8332CFE`.
+- Transformation: source pixels are summed by centre into a 0.25° grid,
+  rounded to whole persons and published as an RGB8 PNG
+  (`src/data/generated/population-circle-0p25.png`) verified by
+  `src/data/manifests/population-circle.json`. The smallest half-population
+  circle is precomputed from the same grid.
+- The runtime loads the grid only when the observation opens. Method, accepted
+  totals and rebuild steps: [docs/data/population-circle.md](docs/data/population-circle.md).
+
 ## Solar calculations
 
 - Method source: [NOAA Solar Calculator calculation details](https://gml.noaa.gov/grad/solcalc/calcdetails.html)

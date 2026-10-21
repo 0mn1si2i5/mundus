@@ -56,6 +56,10 @@ const COPY = {
         '真实大小',
         '国家轮廓取自 Natural Earth 1:110m，先绕地轴平移经度，再沿经线移到选中点，整体转动保持形状和面积。国家最大一块陆地的中心落在选中点上。面积由简化轮廓在球面上算出，与官方面积会有差别。“网络地图放大”是轮廓在 Web 墨卡托地图上的面积与真实面积之比，地图只画到约南北纬 85°。',
       ],
+      [
+        '半人口圈',
+        '把 GHS-POP 2020 年 30 角秒人口栅格按像元中心汇总到 0.25° 网格（赤道处约 28 公里），在浏览器中按球面大圆距离逐公里累加，求出以选中地点为圆心、装下世界一半人口所需的半径；滑块可改为任意半径。格子按中心点计入或不计入圆，所以半径小于约 200 公里时只是粗略结果。“世界最小的半人口圈”由同一网格离线搜索得到（2° 粗筛后在 0.25° 和 0.05° 上细化），只代表这一网格下的结果。人口为模型估计，不是普查数字。',
+      ],
     ] as const,
     credits: [
       {
@@ -148,7 +152,7 @@ const COPY = {
       },
       {
         name: 'GHS-POP R2023A',
-        use: '变形地球 · 2020 年人口',
+        use: '变形地球与半人口圈 · 2020 年人口',
         notice:
           'European Commission, Joint Research Centre（JRC），GHS-POP R2023A V1-0 · CC BY 4.0。人口为模型估计。',
         links: [
@@ -233,6 +237,10 @@ const COPY = {
       [
         'True Size',
         'Country outlines come from Natural Earth 1:110m. Each outline turns about the polar axis to shift longitude, then slides along the meridian to the selected point; turning as a whole keeps shape and area. The centre of the country’s largest landmass sits on the selected point. Area is measured on the sphere from the simplified outline and differs from official figures. “Web map enlargement” is the outline’s area on a Web Mercator map divided by its true area; the map stops at about 85° north and south.',
+      ],
+      [
+        'People in a Circle',
+        "The GHS-POP 2020 30-arcsecond population grid is summed by pixel centre into 0.25° cells (about 28 km at the equator). The browser accumulates people by great-circle distance, kilometre by kilometre, to find the radius around the selected place that holds half the world's population; the slider sets any other radius. Cells count wholly inside or outside by their centre, so radii below about 200 km are only rough. The smallest half-world circle comes from an offline search of the same grid (a 2° screen refined at 0.25° and 0.05°) and holds only for this grid. Population figures are modelled estimates, not census counts.",
       ],
     ] as const,
     credits: [
@@ -327,7 +335,7 @@ const COPY = {
       },
       {
         name: 'GHS-POP R2023A',
-        use: 'Reshaped Earth · 2020 population',
+        use: 'Reshaped Earth and People in a Circle · 2020 population',
         notice:
           'European Commission, Joint Research Centre (JRC), GHS-POP R2023A V1-0 · CC BY 4.0. Population is modelled.',
         links: [

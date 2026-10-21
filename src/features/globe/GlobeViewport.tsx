@@ -70,6 +70,7 @@ interface GlobeViewportProps {
   isolation: IsolationGlobePresentation | null;
   reshaped: GlobePresentation['reshaped'];
   countryColors: GlobePresentation['countryColors'];
+  circle: GlobePresentation['circle'];
 }
 
 interface PointerStart {
@@ -96,6 +97,7 @@ export function GlobeViewport({
   isolation,
   reshaped,
   countryColors,
+  circle,
 }: GlobeViewportProps) {
   const reshapedMorphState = useAppStore((state) => state.reshapedMorphState);
   const [supported] = useState(supportsWebGL2);
@@ -609,6 +611,7 @@ export function GlobeViewport({
           isolation={isolation}
           reshaped={reshaped}
           countryColors={countryColors}
+          circle={circle}
           onIsolationFieldRendered={setFieldRenderedFrame}
           cameraGestureCancelRef={cancelCameraGesture}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}

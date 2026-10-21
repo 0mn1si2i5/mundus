@@ -389,6 +389,49 @@ describe('URL state codec', () => {
       });
     });
 
+    it('writes a People in a Circle radius only when one was chosen', () => {
+      const half = serializeUrlState({
+        ...lobby,
+        activeMode: 'circle',
+        circleRadiusKm: null,
+      });
+      expect(half).toBe('?mode=circle&v=2');
+      expect(parseUrlState(half, nowMs)).toEqual({
+        ...lobby,
+        activeMode: 'circle',
+        circleRadiusKm: null,
+      });
+      const chosen = serializeUrlState({
+        ...lobby,
+        activeMode: 'circle',
+        circleRadiusKm: 1250,
+      });
+      expect(chosen).toBe('?mode=circle&radius=1250&v=2');
+      expect(parseUrlState(chosen, nowMs)).toEqual({
+        ...lobby,
+        activeMode: 'circle',
+        circleRadiusKm: 1250,
+      });
+    });
+
+    it('falls back to the half circle for invalid radii and ignores radius elsewhere', () => {
+      for (const radius of ['49', '20001', '12.5', '-100', 'far', ''])
+        expect(
+          parseUrlState(`?v=2&mode=circle&radius=${radius}`, nowMs)
+            .circleRadiusKm,
+        ).toBeNull();
+      expect(
+        parseUrlState('?v=2&mode=sunline&radius=1250', nowMs),
+      ).not.toHaveProperty('circleRadiusKm');
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'isolation',
+          circleRadiusKm: 1250,
+        }),
+      ).toBe('?mode=isolation&v=2');
+    });
+
     it('round-trips an Urban Proximity alpha through V2', () => {
       const link = serializeUrlState({
         ...lobby,

@@ -21,9 +21,9 @@ observation while keeping the selected place.
 - The bare address opens a neutral lobby. The header switcher offers the four
   primary observations, **Other Side** (`antipodes`), **Surname Atlas**
   (`surnames`), **Urban Proximity** (`isolation`) and **Reshaped Earth**
-  (`reshaped`); **Sunline** (`sunline`), **True Size** (`truesize`) and
-  **Border Hop** (`borders`)
-  sit under "More observations".
+  (`reshaped`); **Sunline** (`sunline`), **True Size** (`truesize`),
+  **Border Hop** (`borders`) and **People in a Circle** (`circle`) sit under
+  "More observations".
   **Development, Unpacked** was retired in 2026-10: its links
   (`mode=development`) open the lobby with a "retired" notice, and its UNDP
   data, code and attribution were removed.
@@ -65,6 +65,11 @@ Observation contracts:
   both without an owner. It does not show commuting, healthcare or
   administrative reach. Contracts:
   `docs/URBAN_ISOLATION.md` and `docs/data/city-reach.md`.
+- **People in a Circle** — GHS-POP 2020 summed to a 0.25° grid; the browser
+  finds the great-circle radius around the selected place that holds half the
+  world's people, or counts the people within a chosen radius (rough below
+  about 200 km), and offers the precomputed smallest half circle. Contract:
+  `docs/data/population-circle.md`.
 - **Reshaped Earth** — offline country-level cartograms for 2020 population,
   PPP GDP (2021 international dollars), fossil CO₂ and relative nightlight DN.
   Excess area that continuous reshaping cannot remove is hatched as padding;
@@ -150,9 +155,10 @@ Mode parameters are written only when they differ from the default: Sunline
 `time` (fixed clock), Surname Atlas `surname`, Urban Proximity `alpha`,
 `view=field` and, in the field view, `reach` (one of the seven approved levels;
 invalid values fall back to 4), Reshaped Earth `metric`, True Size `country` (a
-1:110m unit id; invalid values fall back to Greenland, `ne-304`) and Border Hop
-`to` (a reviewed unit id; anything else is ignored). Reshaped Earth ignores
-legacy `level` parameters; shape and animation progress stay local.
+1:110m unit id; invalid values fall back to Greenland, `ne-304`), Border Hop
+`to` (a reviewed unit id; anything else is ignored) and People in a Circle
+`radius` (whole km, 50–20,000; absent means the half circle). Reshaped Earth
+ignores legacy `level` parameters; shape and animation progress stay local.
 
 ## 4. Data
 
@@ -187,7 +193,7 @@ live smoke against the deployed URL. Live smoke only proves the host serves the
 artifact and renders the lobby; it does not replace the browser suites.
 
 Browser tests live in `tests/e2e/`, one file per area (`shell`, `layout`,
-`globe`, `other-side`, `surnames`, `sunline`, `reshaped`) with shared
+`globe`, `other-side`, `surnames`, `sunline`, `reshaped`, `circle`) with shared
 helpers in `helpers.ts`; `@smoke` tags the CI smoke subset. `@resources`
 tags the 20-cycle Reshaped Earth resource regression, which routine runs
 exclude; it runs nightly and on demand in the Resources workflow
