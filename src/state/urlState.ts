@@ -82,6 +82,7 @@ const modeSchema = z.enum([
   'borders',
   'circle',
   'names',
+  'climate',
 ]);
 /** Observations that once shipped; their links open the lobby with a notice. */
 const RETIRED_MODES: ReadonlySet<string> = new Set(['development']);

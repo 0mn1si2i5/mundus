@@ -22,8 +22,9 @@ observation while keeping the selected place.
   primary observations, **Other Side** (`antipodes`), **Surname Atlas**
   (`surnames`), **Urban Proximity** (`isolation`) and **Reshaped Earth**
   (`reshaped`); **Sunline** (`sunline`), **True Size** (`truesize`),
-  **Border Hop** (`borders`), **People in a Circle** (`circle`) and **Literal
-  Names** (`names`) sit under "More observations".
+  **Border Hop** (`borders`), **People in a Circle** (`circle`), **Literal
+  Names** (`names`) and **Climate Twins** (`climate`) sit under "More
+  observations".
   **Development, Unpacked** was retired in 2026-10: its links
   (`mode=development`) open the lobby with a "retired" notice, and its UNDP
   data, code and attribution were removed.
@@ -75,6 +76,12 @@ Observation contracts:
   world's people, or counts the people within a chosen radius (rough below
   about 200 km), and offers the precomputed smallest half circle. Contract:
   `docs/data/population-circle.md`.
+- **Climate Twins** — Köppen-Geiger class of the selected point from Beck et
+  al. (2023), 1991–2020 average, 0.1° grid used unchanged; same-class land is
+  lit and a latitude circle drawn; the card lists GeoNames major cities on the
+  same latitude (±1°) with a different class and same-class cities at least
+  3,000 km away, with explicit empty and ocean states. Historical average
+  only. Contract: `docs/data/koppen-geiger.md`.
 - **Reshaped Earth** — offline country-level cartograms for 2020 population,
   PPP GDP (2021 international dollars), fossil CO₂ and relative nightlight DN.
   Excess area that continuous reshaping cannot remove is hatched as padding;
@@ -165,6 +172,7 @@ invalid values fall back to 4), Reshaped Earth `metric`, True Size `country` (a
 `radius` (whole km, 50–20,000; absent means the half circle) and Literal Names
 `label=local`. Reshaped Earth
 ignores legacy `level` parameters; shape and animation progress stay local.
+Climate Twins (`mode=climate`) writes only `point`; it has no mode parameters.
 
 ## 4. Data
 
@@ -199,7 +207,7 @@ live smoke against the deployed URL. Live smoke only proves the host serves the
 artifact and renders the lobby; it does not replace the browser suites.
 
 Browser tests live in `tests/e2e/`, one file per area (`shell`, `layout`,
-`globe`, `other-side`, `surnames`, `sunline`, `reshaped`, `circle`, `names`) with shared
+`globe`, `other-side`, `surnames`, `sunline`, `reshaped`, `circle`, `names`, `climate`) with shared
 helpers in `helpers.ts`; `@smoke` tags the CI smoke subset. `@resources`
 tags the 20-cycle Reshaped Earth resource regression, which routine runs
 exclude; it runs nightly and on demand in the Resources workflow

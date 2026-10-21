@@ -85,6 +85,16 @@ import {
   type CircleSelection,
 } from '../circle/circleSelection';
 import { radiusForShare } from '../circle/circleProfile.mjs';
+import {
+  useClimateDataset,
+  type ClimateLoadState,
+} from '../climate/useClimateDataset';
+import {
+  findClimateTwins,
+  sampleClimate,
+  type ClimateDataset,
+  type ClimateTwins,
+} from '../climate/climateMetrics';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -103,6 +113,7 @@ export interface GlobePresentation {
   /** Per-unit land colours; `null` keeps the base land colour. */
   countryColors: ReadonlyMap<string, string> | null;
   circle: CircleGlobePresentation | null;
+  climate: ClimateGlobePresentation | null;
 }
 
 export interface CircleGlobePresentation {
@@ -111,6 +122,12 @@ export interface CircleGlobePresentation {
   displayDensity: Uint8Array | null;
   gridWidth: number;
   gridHeight: number;
+}
+
+export interface ClimateGlobePresentation {
+  dataset: ClimateDataset | null;
+  selectedValue: number | null;
+  latitude: number;
 }
 
 export interface IsolationGlobePresentation {
@@ -217,6 +234,14 @@ export type ModePresentation =
       selectedCountry: CountryRef | null;
       label: LiteralNameLabel;
       data: LiteralNamesLoadState;
+    }
+  | {
+      id: 'climate';
+      point: GeoPoint;
+      selectedCountry: CountryRef | null;
+      data: ClimateLoadState;
+      cities: GeoNamesCityLoadState;
+      twins: ClimateTwins | null;
     };
 
 /**
@@ -283,6 +308,19 @@ export function useModePresentation(
         ? selectionFromProfile(circleData.data, circleProfile, circleRadiusKm)
         : null,
     [circleData, circleProfile, circleRadiusKm],
+  );
+  const climateData = useClimateDataset(activeMode === 'climate');
+  const climateCities = useGeoNamesCityIndex(activeMode === 'climate');
+  const climateTwins = useMemo(
+    () =>
+      activeMode === 'climate' && climateData.status === 'ready'
+        ? findClimateTwins(
+            climateData.data,
+            climateCities.status === 'ready' ? climateCities.data : [],
+            point,
+          )
+        : null,
+    [activeMode, climateCities, climateData, point],
   );
 
   const relation = useMemo(
@@ -455,6 +493,15 @@ export function useModePresentation(
         label: namesLabel,
         data: literalNames,
       };
+    case 'climate':
+      return {
+        id: activeMode,
+        point,
+        selectedCountry,
+        data: climateData,
+        cities: climateCities,
+        twins: climateTwins,
+      };
     default:
       return assertNever(activeMode);
   }
@@ -553,6 +600,7 @@ export function useGlobePresentation(
       gridHeight: dataset?.height ?? 0,
     };
   }, [activeMode, circleData, circleHalfRadiusKm, circleRadiusKm, point]);
+  const climateData = useClimateDataset(activeMode === 'climate');
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
@@ -676,6 +724,18 @@ export function useGlobePresentation(
     point,
   ]);
 
+  const climate = useMemo<ClimateGlobePresentation | null>(() => {
+    if (activeMode !== 'climate') return null;
+    const dataset = climateData.status === 'ready' ? climateData.data : null;
+    return {
+      dataset,
+      selectedValue: dataset
+        ? (sampleClimate(dataset, point)?.value ?? null)
+        : null,
+      latitude: point.latitude,
+    };
+  }, [activeMode, climateData, point]);
+
   return {
     showAntipodes: activeMode === 'antipodes',
     sunline,
@@ -694,6 +754,7 @@ export function useGlobePresentation(
         : null,
     countryColors,
     circle,
+    climate,
   };
 }
 

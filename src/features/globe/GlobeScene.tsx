@@ -92,6 +92,7 @@ import { SurnameMapLabelLayer } from './SurnameMapLabelLayer';
 import { IsolationLayer } from './IsolationLayer';
 import { CircleLayer } from './CircleLayer';
 import { CityReachFieldLayer } from './CityReachFieldLayer';
+import { ClimateLayer } from './ClimateLayer';
 import type { CityReachFrame } from '../isolation/cityReachTypes';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
 import type { ReshapedMappingHandle } from './ReshapedLayer';
@@ -146,6 +147,7 @@ interface GlobeSceneProps {
   reshaped: GlobePresentation['reshaped'];
   countryColors: GlobePresentation['countryColors'];
   circle: GlobePresentation['circle'];
+  climate: GlobePresentation['climate'];
   onIsolationFieldRendered: (frame: CityReachFrame) => void;
   cameraGestureCancelRef: MutableRefObject<(() => void) | null>;
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
@@ -189,6 +191,7 @@ export function GlobeScene({
   reshaped,
   countryColors,
   circle,
+  climate,
   onIsolationFieldRendered,
   cameraGestureCancelRef,
   onSurnameLabelVisibilityChange,
@@ -936,6 +939,7 @@ export function GlobeScene({
     if (
       !wordmarkMode &&
       activeMode !== 'reshaped' &&
+      activeMode !== 'climate' &&
       isolation?.view !== 'field' &&
       !hasInteracted &&
       !manualCameraInteraction.current &&
@@ -1430,6 +1434,15 @@ export function GlobeScene({
               depthWrite={SUNLINE_RENDERING.selectedMarker.depthWrite}
             />
           </>
+        ) : null}
+        {climate?.dataset && vectorResources ? (
+          <ClimateLayer
+            key={`climate:${vectorRenderSampleKey}`}
+            surface={vectorResources.surface}
+            dataset={climate.dataset}
+            selectedValue={climate.selectedValue}
+            latitude={climate.latitude}
+          />
         ) : null}
         {isolation?.view === 'field' &&
         isolation.field.metadata &&

@@ -23,7 +23,7 @@ describe('ExhibitLobby', () => {
     const onEnter = vi.fn();
     render(<ExhibitLobby locale="en" onEnter={onEnter} />);
     const more = screen.getByRole('list', { name: 'More' });
-    expect(more.querySelectorAll('li')).toHaveLength(5);
+    expect(more.querySelectorAll('li')).toHaveLength(6);
     fireEvent.click(screen.getByRole('button', { name: 'Sunline' }));
     expect(onEnter).toHaveBeenCalledWith('sunline');
     fireEvent.click(screen.getByRole('button', { name: 'True Size' }));
@@ -34,6 +34,8 @@ describe('ExhibitLobby', () => {
     expect(onEnter).toHaveBeenCalledWith('circle');
     fireEvent.click(screen.getByRole('button', { name: 'Literal Names' }));
     expect(onEnter).toHaveBeenCalledWith('names');
+    fireEvent.click(screen.getByRole('button', { name: 'Climate Twins' }));
+    expect(onEnter).toHaveBeenCalledWith('climate');
     fireEvent.click(screen.getByRole('button', { name: /Urban Proximity/u }));
     expect(onEnter).toHaveBeenCalledWith('isolation');
   });

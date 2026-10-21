@@ -45,6 +45,7 @@ describe('useGlobePresentation', () => {
       reshaped: null,
       countryColors: null,
       circle: null,
+      climate: null,
     });
     expect(loadReshapedData).not.toHaveBeenCalled();
   });

@@ -69,6 +69,7 @@ interface GlobeViewportProps {
   reshaped: GlobePresentation['reshaped'];
   countryColors: GlobePresentation['countryColors'];
   circle: GlobePresentation['circle'];
+  climate: GlobePresentation['climate'];
 }
 
 interface PointerStart {
@@ -96,6 +97,7 @@ export function GlobeViewport({
   reshaped,
   countryColors,
   circle,
+  climate,
 }: GlobeViewportProps) {
   const reshapedMorphState = useAppStore((state) => state.reshapedMorphState);
   const [supported] = useState(supportsWebGL2);
@@ -506,6 +508,12 @@ export function GlobeViewport({
           ? surnameLabelLayout.visibleRectangles
           : undefined
       }
+      data-climate-state={
+        climate ? (climate.dataset ? 'ready' : 'loading') : undefined
+      }
+      data-climate-class={
+        climate?.dataset ? String(climate.selectedValue ?? 0) : undefined
+      }
       data-isolation-city-id={isolation?.cityId}
       data-isolation-view={isolation?.view}
       data-isolation-field-state={
@@ -608,6 +616,7 @@ export function GlobeViewport({
           reshaped={reshaped}
           countryColors={countryColors}
           circle={circle}
+          climate={climate}
           onIsolationFieldRendered={setFieldRenderedFrame}
           cameraGestureCancelRef={cancelCameraGesture}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}

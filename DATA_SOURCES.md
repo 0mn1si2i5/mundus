@@ -325,6 +325,23 @@ the About dialog.
 - Transformation: hand-reviewed, rewritten in Chinese and English; no raw
   download is committed. Contract: [docs/data/literal-names.md](docs/data/literal-names.md).
 
+## Köppen-Geiger climate classes
+
+- Source: Beck, H.E. et al. (2023), [High-resolution (1 km) Köppen-Geiger maps
+  for 1901–2099 based on constrained CMIP6 projections](https://doi.org/10.1038/s41597-023-02549-6),
+  Scientific Data 10, 724; data release
+  [figshare 21789074 v2](https://doi.org/10.6084/m9.figshare.21789074)
+- License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- Use: Climate Twins class map, land shares and city climate comparison
+- Transformation: the 0.1° 1991–2020 GeoTIFF is used unchanged and re-encoded
+  as a class PNG; the archive legend must match the reviewed Mundus classes
+- Pinned archive: `koppen_geiger_tif.zip`, SHA-256
+  `bb84453d4541f1a0bc5a804ead83f483c19ce70f16a5197f6d3a7b6a63e65562`
+
+Only the derived class raster is redistributed; the raw archive stays outside
+the worktree. Method, runtime rules and rebuild steps:
+[docs/data/koppen-geiger.md](docs/data/koppen-geiger.md).
+
 ## Solar calculations
 
 - Method source: [NOAA Solar Calculator calculation details](https://gml.noaa.gov/grad/solcalc/calcdetails.html)

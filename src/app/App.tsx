@@ -252,6 +252,7 @@ export function App() {
               reshaped={globe.reshaped}
               countryColors={globe.countryColors}
               circle={globe.circle}
+              climate={globe.climate}
             />
           </Suspense>
         </ErrorBoundary>

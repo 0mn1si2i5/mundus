@@ -22,6 +22,7 @@ import {
   serializeLandBorders,
 } from './build-land-borders.mjs';
 import { verifyPopulationCircle } from './population-circle/verify.mjs';
+import { verifyKoppenGeiger } from './koppen-geiger/verify.mjs';
 
 const reshapedMetrics = ['population', 'gdp', 'co2', 'lights'];
 
@@ -286,6 +287,14 @@ try {
 } catch (error) {
   failed = true;
   console.error(`Land borders: ${error.message}`);
+}
+
+try {
+  const koppen = await verifyKoppenGeiger();
+  console.log(`Köppen-Geiger: verified ${koppen.sha256}`);
+} catch (error) {
+  failed = true;
+  console.error(`Köppen-Geiger: ${error.message}`);
 }
 
 try {

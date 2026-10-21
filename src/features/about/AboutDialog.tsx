@@ -64,6 +64,10 @@ const COPY = {
         '国名本义',
         '每个国家的名字字面上是什么意思，由 Mundus 逐条撰写。英文词源以已停刊的 CIA World Factbook “国名词源”条目（公共领域）为主干核对，凡与其不同或补充之处都列出依据。词源常有多种说法：地球上只写最常见的一种，有争议的加问号，本义未知的不写字面义。中文名按音译、意译、音意合译、本国汉字名和简称分类。',
       ],
+      [
+        '气候孪生',
+        'Köppen-Geiger 分类取自 Beck 等（2023）1991–2020 年气候平均图，0.1° 网格原样使用，不重新分类；地图只在 Natural Earth 陆地上着色，图例颜色沿用数据集。选点或城市落在水面格子时，采用两格内最近的陆地格。同纬度和远方同气候的城市只在 GeoNames 主要城市快照中比较，按人口排序，同纬度每种气候只列一座、远方每个国家只列一座。这是气候平均类型，不是天气，也不代表某一年。',
+      ],
     ] as const,
     credits: [
       {
@@ -216,6 +220,20 @@ const COPY = {
           },
         ],
       },
+      {
+        name: 'Köppen-Geiger（Beck 等 2023）',
+        use: '气候孪生',
+        notice:
+          'Beck, H.E. 等（2023）High-resolution (1 km) Köppen-Geiger maps for 1901–2099 based on constrained CMIP6 projections, Scientific Data 10, 724 · 数据版本 V2 · CC BY 4.0。',
+        links: [
+          {
+            label: '数据集',
+            href: 'https://doi.org/10.6084/m9.figshare.21789074',
+          },
+          { label: '论文', href: 'https://doi.org/10.1038/s41597-023-02549-6' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
     ] satisfies readonly Credit[],
   },
   en: {
@@ -265,6 +283,10 @@ const COPY = {
       [
         'Literal Names',
         'What each country’s name literally says, written record by record by Mundus. English etymologies are checked against the country-name etymology entries of the discontinued CIA World Factbook (public domain), and every departure or addition lists its sources. Etymologies often compete: the globe shows the most common reading, marks disputed ones with a question mark and leaves unknown meanings blank. Chinese names are classed as transliterated, translated, mixed, native or abbreviated.',
+      ],
+      [
+        'Climate Twins',
+        'Köppen-Geiger classes come from the Beck et al. (2023) map of the 1991–2020 climate average, used unchanged on its 0.1° grid; the map is coloured only on Natural Earth land, with the dataset’s legend colours. A point or city on a water cell takes the nearest land cell within two cells. Same-latitude and distant same-climate cities are compared only within the GeoNames major-city snapshot, ordered by population, with one city per climate on the same latitude and one per country among distant twins. These are average climate types, not weather or any single year.',
       ],
     ] as const,
     credits: [
@@ -417,6 +439,23 @@ const COPY = {
             label: 'CC0',
             href: 'https://creativecommons.org/publicdomain/zero/1.0/',
           },
+        ],
+      },
+      {
+        name: 'Köppen-Geiger (Beck et al. 2023)',
+        use: 'Climate Twins',
+        notice:
+          'Beck, H.E. et al. (2023), High-resolution (1 km) Köppen-Geiger maps for 1901–2099 based on constrained CMIP6 projections, Scientific Data 10, 724 · dataset version 2 · CC BY 4.0.',
+        links: [
+          {
+            label: 'Dataset',
+            href: 'https://doi.org/10.6084/m9.figshare.21789074',
+          },
+          {
+            label: 'Paper',
+            href: 'https://doi.org/10.1038/s41597-023-02549-6',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
         ],
       },
     ] satisfies readonly Credit[],

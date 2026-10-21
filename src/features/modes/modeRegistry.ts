@@ -19,6 +19,7 @@ export const MODE_ORDER = [
   'borders',
   'circle',
   'names',
+  'climate',
 ] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
 
@@ -269,6 +270,29 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         longitude: z.number().min(-180).max(180),
       }),
       label: z.enum(['literal', 'local']),
+    }),
+  },
+  climate: {
+    id: 'climate',
+    version: 1,
+    tier: 'more',
+    title: { zh: '气候孪生', en: 'Climate Twins' },
+    titlePhrases: { zh: ['气候', '孪生'] },
+    question: {
+      zh: '和你同纬度的地方，气候一样吗？',
+      en: 'Do places on your latitude share your climate?',
+    },
+    summary: {
+      zh: '选择一个地点，点亮同一 Köppen 气候类型的地方，对照同一纬度。',
+      en: 'Choose a point to light up places with the same Köppen climate and compare its latitude.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['mundus-countries', 'koppen-geiger', 'geonames-major-cities'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
     }),
   },
 };
