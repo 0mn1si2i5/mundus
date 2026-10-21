@@ -1409,10 +1409,13 @@ export const LITERAL_NAMES: readonly LiteralNameRecord[] = [
     local: 'Heard Island and McDonald Islands',
     lang: 'en',
     confidence: 'established',
-    literal: { zh: '赫德与麦克唐纳', en: 'Heard and McDonald' },
+    literal: {
+      zh: '赫德船长与麦克唐纳船长的岛',
+      en: 'Captains Heard’s and McDonald’s Isles',
+    },
     from: {
-      zh: '美国船长约翰·赫德（1853 年）和威廉·麦克唐纳（1854 年）',
-      en: 'US captains John Heard (1853) and William McDonald (1854)',
+      zh: '美国船长约翰·赫德（1853 年）和船长威廉·麦克唐纳（1854 年）',
+      en: 'US Captain John Heard (1853) and Captain William McDonald (1854)',
     },
     zhKind: 'phonetic',
   },
@@ -1697,9 +1700,9 @@ export const LITERAL_NAMES: readonly LiteralNameRecord[] = [
     lang: 'ko',
     confidence: 'disputed',
     basis: 'local',
-    literal: { zh: '朝日鲜明', en: 'Morning Calm' },
+    literal: { zh: '晨静之国', en: 'Land of Morning Calm' },
     from: {
-      zh: '本地名“朝鲜”常被解释为“朝日鲜明”或“晨静之国”；Korea 来自高丽王朝',
+      zh: '本地名“朝鲜”通常被解释为“晨静之国”；Korea 来自高丽王朝',
       en: 'The local Chosŏn is popularly “land of the morning calm”; Korea comes from the Goryeo dynasty',
     },
     note: {
@@ -2813,7 +2816,7 @@ export const LITERAL_NAMES: readonly LiteralNameRecord[] = [
     local: 'السعودية',
     lang: 'ar',
     confidence: 'established',
-    literal: { zh: '沙特家族的阿拉伯', en: 'Saudi Arabia' },
+    literal: { zh: '沙特家族的阿拉伯', en: 'Arabia of the House of Saud' },
     from: {
       zh: '统治王朝沙特家族加 Arabia（阿拉伯半岛）',
       en: 'The ruling House of Saud plus Arabia',
@@ -3568,7 +3571,7 @@ export const LITERAL_NAMES: readonly LiteralNameRecord[] = [
     local: 'بير طويل',
     lang: 'ar',
     confidence: 'established',
-    literal: { zh: '深井', en: 'Tall Well' },
+    literal: { zh: '长井', en: 'Long Well' },
     from: {
       zh: '阿拉伯语 bīr（水井）+ ṭawīl（高、长）',
       en: 'Arabic bīr, “water well”, + ṭawīl, “tall, long”',

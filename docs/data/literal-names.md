@@ -42,6 +42,8 @@ entered.
 
 ## Display rules
 
+- `literal` must say what the name means, not repeat the name, and the
+  Chinese and English texts must carry the same meaning.
 - The globe draws a wordmark for every unit with a known meaning, in the
   interface language. A `disputed` record ends in "？" (Chinese) or "?"
   (English). An `unknown` record draws no literal wordmark; the result card
@@ -50,6 +52,13 @@ entered.
   is written only when it differs from the default literal label.
 - The result card shows confidence, the local form, the derivation, notes, the
   Chinese-name kind and links to the pinned Factbook entry and further sources.
+
+## Loading
+
+Entering the mode loads two chunks: the reviewed table (about 33 kB gzip)
+and the shared wordmark runtime that Surname Atlas also uses
+(`surnameAtlasRuntime`, about 470 kB gzip, carrying the 50m country topology
+and label slots). The lobby loads neither.
 
 ## Acceptance
 
