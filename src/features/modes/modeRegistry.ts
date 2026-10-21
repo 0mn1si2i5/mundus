@@ -6,6 +6,8 @@ import {
   CITY_REACH_DEFAULT,
   isCityReachLevel,
 } from '../isolation/cityReachLevel';
+import { isTrueSizeCountry } from '../truesize/trueSize';
+import { isCircleRadius } from '../circle/circleRadius';
 
 export const MODE_ORDER = [
   'antipodes',
@@ -13,6 +15,9 @@ export const MODE_ORDER = [
   'isolation',
   'reshaped',
   'sunline',
+  'truesize',
+  'borders',
+  'circle',
   'names',
 ] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
@@ -166,6 +171,79 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         .min(SUNLINE_MIN_TIME_MS)
         .max(SUNLINE_MAX_TIME_MS),
       clockMode: z.enum(['live', 'fixed']),
+    }),
+  },
+  truesize: {
+    id: 'truesize',
+    version: 1,
+    tier: 'more',
+    title: { zh: '真实大小', en: 'True Size' },
+    titlePhrases: { zh: ['真实大小'] },
+    question: {
+      zh: '把一个国家搬到这里，它到底有多大？',
+      en: 'How big is a country, really, once you move it here?',
+    },
+    summary: {
+      zh: '把国家轮廓搬到选中的地点，形状和面积在球面上保持不变。',
+      en: 'Carry a country outline to the selected place; its shape and area stay true on the sphere.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['mundus-countries'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
+      country: z.string().refine(isTrueSizeCountry),
+    }),
+  },
+  borders: {
+    id: 'borders',
+    version: 1,
+    tier: 'more',
+    title: { zh: '陆路接力', en: 'Border Hop' },
+    titlePhrases: { zh: ['陆路接力'] },
+    question: {
+      zh: '不坐船、不乘飞机，从这里到另一个国家要跨越几条边界？',
+      en: 'Without boats or planes, how many borders lie between here and another country?',
+    },
+    summary: {
+      zh: '沿陆地边界一国接一国走，找出最少要跨越几条边界。',
+      en: 'Hop from country to country over land borders and count the fewest crossings.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['mundus-countries', 'land-borders'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
+      to: z.string().nullable(),
+    }),
+  },
+  circle: {
+    id: 'circle',
+    version: 1,
+    tier: 'more',
+    title: { zh: '半人口圈', en: 'People in a Circle' },
+    compactTitle: { zh: '半人口圈', en: 'Circle' },
+    titlePhrases: { zh: ['半人口圈'] },
+    question: {
+      zh: '以这里为圆心，多大的圆能装下世界一半的人？',
+      en: "How wide must a circle around here be to hold half the world's people?",
+    },
+    summary: {
+      zh: '从选中的地点画圆，看圆内住着多少人；拖动半径，或跳到世界上最小的半人口圈。',
+      en: 'Draw a circle around the selected place and count who lives inside; change the radius or jump to the smallest half-world circle.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['population-circle'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
+      radiusKm: z.number().refine(isCircleRadius).nullable(),
     }),
   },
   names: {

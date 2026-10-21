@@ -18,6 +18,22 @@ const ReshapedResult = lazy(() =>
     default: module.ReshapedResult,
   })),
 );
+const TrueSizeResult = lazy(() =>
+  import('../truesize/TrueSizeResult').then((module) => ({
+    default: module.TrueSizeResult,
+  })),
+);
+const BordersResult = lazy(() =>
+  import('../borders/BordersResult').then((module) => ({
+    default: module.BordersResult,
+  })),
+);
+
+const CircleResult = lazy(() =>
+  import('../circle/CircleResult').then((module) => ({
+    default: module.CircleResult,
+  })),
+);
 const LiteralNameResult = lazy(() =>
   import('../names/LiteralNameResult').then((module) => ({
     default: module.LiteralNameResult,
@@ -285,6 +301,24 @@ export function ModeResult({
       return (
         <Suspense fallback={null}>
           <ReshapedResult locale={locale} presentation={presentation} />
+        </Suspense>
+      );
+    case 'truesize':
+      return (
+        <Suspense fallback={null}>
+          <TrueSizeResult locale={locale} presentation={presentation} />
+        </Suspense>
+      );
+    case 'borders':
+      return (
+        <Suspense fallback={null}>
+          <BordersResult locale={locale} presentation={presentation} />
+        </Suspense>
+      );
+    case 'circle':
+      return (
+        <Suspense fallback={null}>
+          <CircleResult locale={locale} presentation={presentation} />
         </Suspense>
       );
     case 'names':

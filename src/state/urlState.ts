@@ -24,6 +24,12 @@ import {
   type CityReachLevel,
 } from '../features/isolation/cityReachLevel';
 import {
+  TRUE_SIZE_DEFAULT_COUNTRY,
+  parseTrueSizeCountryParam,
+} from '../features/truesize/trueSize';
+import { COUNTRY_NAMES } from '../features/globe/countryNames';
+import { parseCircleRadiusParam } from '../features/circle/circleRadius';
+import {
   DEFAULT_LITERAL_NAME_LABEL,
   type LiteralNameLabel,
 } from '../features/names/literalNameWordmark';
@@ -55,6 +61,12 @@ export interface ShareableState {
   isolationView: IsolationView;
   reshapedMetric?: ReshapedMetricId;
   isolationReach: CityReachLevel;
+  /** True Size: the carried country unit id. */
+  trueSizeCountry?: string;
+  /** Border Hop destination unit id; `null` shows reach from the start. */
+  bordersDestination?: string | null;
+  /** People in a Circle: a chosen radius in km; `null` is the half circle. */
+  circleRadiusKm?: number | null;
   namesLabel?: LiteralNameLabel;
 }
 
@@ -66,6 +78,9 @@ const modeSchema = z.enum([
   'surnames',
   'isolation',
   'reshaped',
+  'truesize',
+  'borders',
+  'circle',
   'names',
 ]);
 /** Observations that once shipped; their links open the lobby with a notice. */
@@ -137,6 +152,11 @@ export function parseUrlState(
     activeMode === 'isolation' && isolationView === 'field'
       ? parseCityReachParam(params.get('reach'))
       : CITY_REACH_DEFAULT;
+  const rawDestination = params.get('to');
+  const bordersDestination =
+    rawDestination !== null && Object.hasOwn(COUNTRY_NAMES, rawDestination)
+      ? rawDestination
+      : null;
   const namesLabel: LiteralNameLabel =
     params.get('label') === 'local' ? 'local' : DEFAULT_LITERAL_NAME_LABEL;
 
@@ -157,6 +177,13 @@ export function parseUrlState(
     isolationView,
     ...(activeMode === 'reshaped' ? { reshapedMetric } : {}),
     isolationReach,
+    ...(activeMode === 'truesize'
+      ? { trueSizeCountry: parseTrueSizeCountryParam(params.get('country')) }
+      : {}),
+    ...(activeMode === 'borders' ? { bordersDestination } : {}),
+    ...(activeMode === 'circle'
+      ? { circleRadiusKm: parseCircleRadiusParam(params.get('radius')) }
+      : {}),
     ...(activeMode === 'names' ? { namesLabel } : {}),
   };
 }
@@ -224,6 +251,23 @@ export function serializeUrlState(state: ShareableState): string {
       state.isolationReach !== CITY_REACH_DEFAULT
     ) {
       params.set('reach', String(state.isolationReach));
+    }
+    if (
+      state.activeMode === 'truesize' &&
+      (state.trueSizeCountry ?? TRUE_SIZE_DEFAULT_COUNTRY) !==
+        TRUE_SIZE_DEFAULT_COUNTRY
+    ) {
+      params.set('country', state.trueSizeCountry ?? TRUE_SIZE_DEFAULT_COUNTRY);
+    }
+    if (state.activeMode === 'borders' && state.bordersDestination) {
+      params.set('to', state.bordersDestination);
+    }
+    if (
+      state.activeMode === 'circle' &&
+      state.circleRadiusKm !== null &&
+      state.circleRadiusKm !== undefined
+    ) {
+      params.set('radius', String(state.circleRadiusKm));
     }
     if (
       state.activeMode === 'names' &&

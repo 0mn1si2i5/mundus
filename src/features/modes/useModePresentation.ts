@@ -59,6 +59,32 @@ import {
 import { cityReachPointSelection } from '../isolation/cityReachData';
 import type { CityReachPointSelection } from '../isolation/cityReachTypes';
 import type { CityReachLevel } from '../isolation/cityReachLevel';
+import {
+  TRUE_SIZE_DEFAULT_COUNTRY,
+  placeTrueSizeCountry,
+  type TrueSizePlacement,
+} from '../truesize/trueSize';
+import {
+  useLandBorders,
+  type LandBordersLoadState,
+} from '../borders/useLandBorders';
+import {
+  findRoute,
+  summarizeReach,
+  type ReachSummary,
+  type RouteResult,
+} from '../borders/landBorders';
+import { bordersCountryColors } from '../borders/bordersPalette';
+import {
+  useCircleDataset,
+  type CircleLoadState,
+} from '../circle/useCircleDataset';
+import {
+  circleProfileAt,
+  selectionFromProfile,
+  type CircleSelection,
+} from '../circle/circleSelection';
+import { radiusForShare } from '../circle/circleProfile.mjs';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -74,6 +100,17 @@ export interface GlobePresentation {
     data: ReshapedLoadState;
     replayKey: number;
   } | null;
+  /** Per-unit land colours; `null` keeps the base land colour. */
+  countryColors: ReadonlyMap<string, string> | null;
+  circle: CircleGlobePresentation | null;
+}
+
+export interface CircleGlobePresentation {
+  centre: GeoPoint;
+  radiusKm: number | null;
+  displayDensity: Uint8Array | null;
+  gridWidth: number;
+  gridHeight: number;
 }
 
 export interface IsolationGlobePresentation {
@@ -154,6 +191,28 @@ export type ModePresentation =
       ranking: readonly import('../reshaped/reshapedData').ReshapedValueRow[];
     }
   | {
+      id: 'truesize';
+      point: GeoPoint;
+      selectedCountry: CountryRef | null;
+      placement: TrueSizePlacement | null;
+    }
+  | {
+      id: 'borders';
+      selectedCountry: CountryRef | null;
+      destination: string | null;
+      data: LandBordersLoadState;
+      reach: ReachSummary | null;
+      route: RouteResult | null;
+    }
+  | {
+      id: 'circle';
+      point: GeoPoint;
+      selectedCountry: CountryRef | null;
+      radiusKm: number | null;
+      data: CircleLoadState;
+      selection: CircleSelection | null;
+    }
+  | {
       id: 'names';
       selectedCountry: CountryRef | null;
       label: LiteralNameLabel;
@@ -200,6 +259,31 @@ export function useModePresentation(
   );
   const reshapedLoad = sharedReshapedData ?? localReshapedLoad;
   const selectedUnitId = useAppStore((state) => state.reshapedSelectedUnitId);
+  const bordersDestination = useAppStore((state) => state.bordersDestination);
+  const landBorders = useLandBorders(activeMode === 'borders');
+  const borders = useBordersAnalysis(
+    activeMode === 'borders',
+    landBorders,
+    selectedCountry?.countryId ?? null,
+    bordersDestination,
+  );
+  const circleRadiusKm = useAppStore((state) => state.circleRadiusKm);
+  const circleData = useCircleDataset(activeMode === 'circle');
+  // The profile depends only on the place; slider ticks reuse it.
+  const circleProfile = useMemo(
+    () =>
+      activeMode === 'circle' && circleData.status === 'ready'
+        ? circleProfileAt(circleData.data, point)
+        : null,
+    [activeMode, circleData, point],
+  );
+  const circleSelection = useMemo(
+    () =>
+      circleProfile && circleData.status === 'ready'
+        ? selectionFromProfile(circleData.data, circleProfile, circleRadiusKm)
+        : null,
+    [circleData, circleProfile, circleRadiusKm],
+  );
 
   const relation = useMemo(
     () =>
@@ -225,6 +309,16 @@ export function useModePresentation(
       return null;
     return computeIsolationSelection(point, isolationAlpha, isolationData.data);
   }, [activeMode, isolationAlpha, isolationData, point]);
+  const trueSizeCountry = useAppStore(
+    (state) => state.trueSizeCountry ?? TRUE_SIZE_DEFAULT_COUNTRY,
+  );
+  const trueSizePlacement = useMemo(
+    () =>
+      activeMode === 'truesize'
+        ? placeTrueSizeCountry(trueSizeCountry, point)
+        : null,
+    [activeMode, point, trueSizeCountry],
+  );
   const fieldSelection = useMemo(
     () =>
       field.metadata && field.frame
@@ -329,6 +423,31 @@ export function useModePresentation(
         ranking,
       };
     }
+    case 'truesize':
+      return {
+        id: activeMode,
+        point,
+        selectedCountry,
+        placement: trueSizePlacement,
+      };
+    case 'borders':
+      return {
+        id: activeMode,
+        selectedCountry,
+        destination: bordersDestination,
+        data: landBorders,
+        reach: borders.reach,
+        route: borders.route,
+      };
+    case 'circle':
+      return {
+        id: activeMode,
+        point,
+        selectedCountry,
+        radiusKm: circleRadiusKm,
+        data: circleData,
+        selection: circleSelection,
+      };
     case 'names':
       return {
         id: activeMode,
@@ -339,6 +458,23 @@ export function useModePresentation(
     default:
       return assertNever(activeMode);
   }
+}
+
+function useBordersAnalysis(
+  enabled: boolean,
+  data: LandBordersLoadState,
+  startId: string | null,
+  destination: string | null,
+): { reach: ReachSummary | null; route: RouteResult | null } {
+  return useMemo(() => {
+    if (!enabled || data.status !== 'ready' || !startId) {
+      return { reach: null, route: null };
+    }
+    return {
+      reach: summarizeReach(data.data, startId),
+      route: destination ? findRoute(data.data, startId, destination) : null,
+    };
+  }, [data, destination, enabled, startId]);
 }
 
 /** Globe-only presentation; isolation uses the same selection as the card. */
@@ -379,6 +515,44 @@ export function useGlobePresentation(
     reshapedMetric,
   );
   const reshapedData = sharedReshapedData ?? localReshapedData;
+  const selectedCountry = useAppStore((state) => state.selectedCountry);
+  const bordersDestination = useAppStore((state) => state.bordersDestination);
+  const landBorders = useLandBorders(activeMode === 'borders');
+  const borders = useBordersAnalysis(
+    activeMode === 'borders',
+    landBorders,
+    selectedCountry?.countryId ?? null,
+    bordersDestination,
+  );
+  const countryColors = useMemo(
+    () =>
+      activeMode === 'borders'
+        ? bordersCountryColors(borders.reach, borders.route)
+        : null,
+    [activeMode, borders],
+  );
+  const circleRadiusKm = useAppStore((state) => state.circleRadiusKm);
+  const circleData = useCircleDataset(activeMode === 'circle');
+  // A chosen radius is drawn as is; only the default half circle needs the
+  // population profile, which changes with the place, not the slider.
+  const circleHalfRadiusKm = useMemo(
+    () =>
+      activeMode === 'circle' && circleData.status === 'ready'
+        ? radiusForShare(circleProfileAt(circleData.data, point), 0.5)
+        : null,
+    [activeMode, circleData, point],
+  );
+  const circle = useMemo<CircleGlobePresentation | null>(() => {
+    if (activeMode !== 'circle') return null;
+    const dataset = circleData.status === 'ready' ? circleData.data : null;
+    return {
+      centre: point,
+      radiusKm: dataset ? (circleRadiusKm ?? circleHalfRadiusKm) : null,
+      displayDensity: dataset?.displayDensity ?? null,
+      gridWidth: dataset?.width ?? 0,
+      gridHeight: dataset?.height ?? 0,
+    };
+  }, [activeMode, circleData, circleHalfRadiusKm, circleRadiusKm, point]);
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
@@ -518,6 +692,8 @@ export function useGlobePresentation(
             replayKey: reshapedReplayKey,
           }
         : null,
+    countryColors,
+    circle,
   };
 }
 

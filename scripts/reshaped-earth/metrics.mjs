@@ -167,7 +167,7 @@ function geographicGridFromTags({
  * sample descriptions, select 2020, then decode ONE sample in row stripes.
  * Reversed affine axes are normalized. Rotated/projected inputs fail visibly.
  */
-async function openGeoTiffReader(path, { key, stripeRows } = {}) {
+export async function openGeoTiffReader(path, { key, stripeRows } = {}) {
   if (!['population', 'gdp', 'lights'].includes(key))
     throw new Error(`No approved GeoTIFF reader for ${key}`);
   if (!path) throw new TypeError('GeoTIFF path is required');

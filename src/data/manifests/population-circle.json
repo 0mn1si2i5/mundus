@@ -1,0 +1,52 @@
+{
+  "id": "population-circle",
+  "formatVersion": 1,
+  "sourceName": "GHS-POP R2023A",
+  "sourceUrl": "https://human-settlement.emergency.copernicus.eu/ghs_pop2023.php",
+  "licenseName": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "version": "R2023A V1-0, epoch 2020, WGS84 30 arcseconds",
+  "retrievedAt": "2026-10-10",
+  "attribution": "Schiavina, Freire, Carioli & MacManus (2023), GHS-POP R2023A, European Commission, Joint Research Centre (JRC), DOI 10.2905/2FF68A52-5B5B-4A22-8F40-C41DA8332CFE",
+  "redistribution": "allowed",
+  "source": {
+    "fileName": "GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.zip",
+    "url": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/GHS_POP_E2020_GLOBE_R2023A_4326_30ss/V1-0/GHS_POP_E2020_GLOBE_R2023A_4326_30ss_V1_0.zip",
+    "sha256": "579fb7477b33d9be61e9562b170ea108a670b85ef6fe23b61a22d17200929636",
+    "bytes": 482351880
+  },
+  "transformations": [
+    "Sum every 30-arcsecond source pixel into the 0.25° cell containing its centre (Kahan-compensated)",
+    "Round each cell to whole persons (or to the published unit when a cell exceeds 24 bits)",
+    "Encode counts as RGB8 PNG: R × 65536 + G × 256 + B, multiplied by unit",
+    "Smallest half-population circle: 2° coarse ranking, then 0.25° and 0.05° refinement on the published grid"
+  ],
+  "missingValuePolicy": "The source declares every cell valid; zero means no modelled residents. Ocean and Antarctica are zero.",
+  "year": 2020,
+  "grid": {
+    "width": 1440,
+    "height": 720,
+    "cellDegrees": 0.25,
+    "west": -180,
+    "north": 90,
+    "unit": 1,
+    "encoding": "RGB8: R * 65536 + G * 256 + B"
+  },
+  "totals": {
+    "source": 7840952947,
+    "published": 7840952200,
+    "populatedCells": 164963,
+    "maximumCell": 14702271
+  },
+  "smallestHalfCircle": {
+    "latitude": 28.65,
+    "longitude": 100.6,
+    "radiusKm": 3343,
+    "population": 3920476100
+  },
+  "derivedAsset": {
+    "path": "src/data/generated/population-circle-0p25.png",
+    "sha256": "27fa5cc50515b899b904a1559f2bfe37204d032763966ec0c2de4cc4fed85ef5",
+    "bytes": 419909
+  }
+}

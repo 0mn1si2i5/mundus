@@ -79,8 +79,11 @@ test('offers the other observations behind a keyboard-friendly More menu', async
   await page.keyboard.press('Enter');
   await expect(more).toHaveAttribute('aria-expanded', 'true');
   const menu = nav.getByRole('list', { name: '更多观察' });
-  await expect(menu.getByRole('button')).toHaveCount(2);
+  await expect(menu.getByRole('button')).toHaveCount(5);
   await expect(menu.getByRole('button', { name: '日照线' })).toBeVisible();
+  await expect(menu.getByRole('button', { name: /^真实大小/u })).toBeVisible();
+  await expect(menu.getByRole('button', { name: '陆路接力' })).toBeVisible();
+  await expect(menu.getByRole('button', { name: /^半人口圈/u })).toBeVisible();
   await expect(menu.getByRole('button', { name: /^国名本义/u })).toBeVisible();
 
   await page.keyboard.press('Escape');
@@ -522,8 +525,11 @@ test('presents the primary observations and keeps the others one step away', asy
   await expect(list.getByRole('button', { name: /城市邻近性/ })).toBeVisible();
   await expect(list.getByRole('button', { name: /变形地球/ })).toBeVisible();
   const more = page.getByRole('list', { name: '更多观察' });
-  await expect(more.getByRole('listitem')).toHaveCount(2);
+  await expect(more.getByRole('listitem')).toHaveCount(5);
   await expect(more.getByRole('button', { name: '日照线' })).toBeVisible();
+  await expect(more.getByRole('button', { name: /^真实大小/u })).toBeVisible();
+  await expect(more.getByRole('button', { name: '陆路接力' })).toBeVisible();
+  await expect(more.getByRole('button', { name: /^半人口圈/u })).toBeVisible();
   await expect(more.getByRole('button', { name: /国名本义/u })).toBeVisible();
 });
 
@@ -589,6 +595,8 @@ test('opens every existing mode directly from a V2 URL', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '姓氏观察' })).toBeVisible();
   await page.goto('./?mode=sunline&v=2');
   await expect(page.getByRole('heading', { name: '日照线' })).toBeVisible();
+  await page.goto('./?mode=truesize&v=2');
+  await expect(page.getByRole('heading', { name: '真实大小' })).toBeVisible();
   await page.goto('./?mode=antipodes&v=2');
   await expect(page.getByRole('heading', { name: '地球另一端' })).toBeVisible();
 });

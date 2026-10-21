@@ -44,6 +44,7 @@ import {
 import { type QualityProfile } from './quality';
 import {
   ANTIPODE_DRAG_RENDERING,
+  CIRCLE_RENDERING,
   GLOBE_COLOR_CONTRACT,
   GLOBE_RENDERING,
   SUNLINE_RENDERING,
@@ -89,6 +90,7 @@ import {
 } from './surnameLabelLayout';
 import { SurnameMapLabelLayer } from './SurnameMapLabelLayer';
 import { IsolationLayer } from './IsolationLayer';
+import { CircleLayer } from './CircleLayer';
 import { CityReachFieldLayer } from './CityReachFieldLayer';
 import type { CityReachFrame } from '../isolation/cityReachTypes';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
@@ -99,6 +101,7 @@ const ReshapedLayer = lazy(() =>
     default: module.ReshapedLayer,
   })),
 );
+const TrueSizeLayer = lazy(() => import('./TrueSizeLayer'));
 
 export interface GlobeKeyboardController {
   rotateHorizontal: (radians: number) => void;
@@ -141,6 +144,8 @@ interface GlobeSceneProps {
   wordmarkKey: string;
   isolation: IsolationGlobePresentation | null;
   reshaped: GlobePresentation['reshaped'];
+  countryColors: GlobePresentation['countryColors'];
+  circle: GlobePresentation['circle'];
   onIsolationFieldRendered: (frame: CityReachFrame) => void;
   cameraGestureCancelRef: MutableRefObject<(() => void) | null>;
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
@@ -182,6 +187,8 @@ export function GlobeScene({
   wordmarkKey,
   isolation,
   reshaped,
+  countryColors,
+  circle,
   onIsolationFieldRendered,
   cameraGestureCancelRef,
   onSurnameLabelVisibilityChange,
@@ -696,6 +703,10 @@ export function GlobeScene({
   );
   const selectedMarkerPosition = useMemo(
     () => geoToVector3(point, SUNLINE_RENDERING.selectedMarker.radius),
+    [point],
+  );
+  const circleMarkerPosition = useMemo(
+    () => geoToVector3(point, CIRCLE_RENDERING.centreMarker.radius),
     [point],
   );
   const sunLightPosition = useMemo(
@@ -1223,6 +1234,7 @@ export function GlobeScene({
             profile={profile}
             hoveredCountryId={hoveredCountry?.countryId ?? null}
             selectedCountryId={selectedCountry?.countryId ?? null}
+            countryColors={countryColors}
             dragActive={antipodeDragActive}
             onStateChange={handleVectorStateChange}
             onPaletteUpdate={onVectorPaletteUpdate}
@@ -1396,6 +1408,29 @@ export function GlobeScene({
           </>
         ) : null}
         {isolation ? <IsolationLayer isolation={isolation} /> : null}
+        {activeMode === 'truesize' ? (
+          <Suspense fallback={null}>
+            <TrueSizeLayer profile={profile} />
+          </Suspense>
+        ) : null}
+        {circle ? (
+          <>
+            <CircleLayer
+              circle={circle}
+              sphereSegments={profile.sphereSegments}
+            />
+            <Marker
+              position={circleMarkerPosition}
+              color={CIRCLE_RENDERING.centreMarker.color}
+              centerColor={CIRCLE_RENDERING.centreMarker.color}
+              role="selected"
+              targetCssPixels={CIRCLE_RENDERING.centreMarker.cssDiameter}
+              renderOrder={SUNLINE_RENDERING.selectedMarker.renderOrder}
+              depthTest={SUNLINE_RENDERING.selectedMarker.depthTest}
+              depthWrite={SUNLINE_RENDERING.selectedMarker.depthWrite}
+            />
+          </>
+        ) : null}
         {isolation?.view === 'field' &&
         isolation.field.metadata &&
         vectorResources ? (

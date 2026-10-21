@@ -67,6 +67,8 @@ interface GlobeViewportProps {
   wordmarkKey: string;
   isolation: IsolationGlobePresentation | null;
   reshaped: GlobePresentation['reshaped'];
+  countryColors: GlobePresentation['countryColors'];
+  circle: GlobePresentation['circle'];
 }
 
 interface PointerStart {
@@ -92,6 +94,8 @@ export function GlobeViewport({
   wordmarkKey,
   isolation,
   reshaped,
+  countryColors,
+  circle,
 }: GlobeViewportProps) {
   const reshapedMorphState = useAppStore((state) => state.reshapedMorphState);
   const [supported] = useState(supportsWebGL2);
@@ -387,6 +391,7 @@ export function GlobeViewport({
       data-reshaped-mode={reshaped ? 'active' : undefined}
       data-reshaped-theme={reshaped ? reshaped.metric : undefined}
       data-morph-state={reshaped ? reshapedMorphState : undefined}
+      data-country-color-count={countryColors?.size}
       data-vector-render-draws={vectorRenderEvidence?.vectorDraws}
       data-vector-renderer-calls={vectorRenderEvidence?.rendererCalls}
       data-vector-render-revision={vectorRenderEvidence?.revision}
@@ -601,6 +606,8 @@ export function GlobeViewport({
           wordmarkKey={wordmarkKey}
           isolation={isolation}
           reshaped={reshaped}
+          countryColors={countryColors}
+          circle={circle}
           onIsolationFieldRendered={setFieldRenderedFrame}
           cameraGestureCancelRef={cancelCameraGesture}
           onSurnameLabelVisibilityChange={setSurnameLabelVisible}

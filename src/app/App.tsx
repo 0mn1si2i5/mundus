@@ -250,6 +250,8 @@ export function App() {
               wordmarkKey={globe.wordmarkKey}
               isolation={globe.isolation}
               reshaped={globe.reshaped}
+              countryColors={globe.countryColors}
+              circle={globe.circle}
             />
           </Suspense>
         </ErrorBoundary>
