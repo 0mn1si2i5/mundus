@@ -13,12 +13,12 @@ export const CLIMATE_COPY = {
     finding: '这里属于 {code}，{name}。这类气候约占全球陆地的 {share}。',
     ocean:
       '这里是海洋或冰架，Köppen 分类只覆盖陆地。下面仍列出同一纬度上的大城市。',
-    snapped: '该点所在的约 10 km 网格是水面，采用了约 20 km 内最近的陆地格。',
+    snapped:
+      '该点所在的约 10 km 网格是水面，采用了两格内（约 20–30 km）最近的陆地格。',
     sameLatitude: '同纬度（±1°），不同气候',
     sameLatitudeOcean: '同纬度（±1°）的大城市',
     farTwins: '相隔 3,000 km 以上，同一气候',
     none: '没有符合条件的收录大城市。',
-    focus: '选这里',
     distance: '距选点 {km} km',
     legend: '图例',
     legendHint: '颜色为数据集标准图例；选中一个地点后，其他气候类型会压暗。',
@@ -39,12 +39,11 @@ export const CLIMATE_COPY = {
     ocean:
       'This is ocean or an ice shelf; Köppen classes cover land only. Major cities on the same latitude are still listed below.',
     snapped:
-      'The point’s ~10 km grid cell is water, so the nearest land cell within about 20 km is used.',
+      'The point’s ~10 km grid cell is water, so the nearest land cell within two cells (about 20–30 km) is used.',
     sameLatitude: 'Same latitude (±1°), different climate',
     sameLatitudeOcean: 'Major cities on the same latitude (±1°)',
     farTwins: 'More than 3,000 km away, same climate',
     none: 'No listed major city meets this condition.',
-    focus: 'Select',
     distance: '{km} km from the point',
     legend: 'Legend',
     legendHint:

@@ -143,6 +143,7 @@ Mode parameters are written only when they differ from the default: Sunline
 `view=field` and, in the field view, `reach` (one of the seven approved levels;
 invalid values fall back to 4), and Reshaped Earth `metric`. Reshaped Earth
 ignores legacy `level` parameters; shape and animation progress stay local.
+Climate Twins (`mode=climate`) writes only `point`; it has no mode parameters.
 
 ## 4. Data
 

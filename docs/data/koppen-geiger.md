@@ -42,7 +42,7 @@ added.
 ## Runtime rules
 
 - A selected point or city on a water cell takes the nearest classified cell
-  within two cells (about 20 km), by squared cell distance and then row-major
+  within two cells (about 20–30 km at low latitudes, counting diagonals), by squared cell distance and then row-major
   order; otherwise it has no class. The card says when this happened.
 - Same latitude: GeoNames major cities within ±1° latitude, at least 500 km
   away, with a different class; largest population first, one city per class,

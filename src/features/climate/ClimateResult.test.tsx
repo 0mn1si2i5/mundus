@@ -65,7 +65,7 @@ describe('ClimateResult', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/采用了约 20 km 内最近的陆地格/),
+      screen.getByText(/采用了两格内（约 20–30 km）最近的陆地格/),
     ).toBeInTheDocument();
     expect(screen.getAllByText('没有符合条件的收录大城市。')).toHaveLength(2);
   });
