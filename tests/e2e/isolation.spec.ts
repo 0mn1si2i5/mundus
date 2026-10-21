@@ -9,6 +9,8 @@ import type {
   CityReachManifest,
   CityReachTextureAsset,
 } from '../../src/features/isolation/cityReachTypes';
+import { expandCityTable } from '../../src/features/isolation/cityReachTable';
+import { ghslCountryNameZh } from '../../src/features/globe/countryNames';
 import {
   globeRegion,
   globeCenter,
@@ -38,12 +40,15 @@ function readReachAssets(level: ReachLevel = 4): ReachAssets {
       'utf8',
     ),
   ) as CityReachManifest;
-  const { cities } = JSON.parse(
-    readFileSync(
-      new URL(`../../${manifest.cityAsset.path}`, import.meta.url),
-      'utf8',
+  const { cities }: { cities: CityReachCity[] } = expandCityTable(
+    JSON.parse(
+      readFileSync(
+        new URL(`../../${manifest.cityAsset.path}`, import.meta.url),
+        'utf8',
+      ),
     ),
-  ) as { cities: CityReachCity[] };
+    ghslCountryNameZh,
+  );
   const tiles = manifest.ownershipAssets[level].low.map((asset) => {
     // Independent Node PNG parser, not the browser's decoder or selection code.
     const decoded = decodeOwnerPng(
