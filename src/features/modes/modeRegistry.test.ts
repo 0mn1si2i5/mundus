@@ -17,7 +17,7 @@ describe('mode registry', () => {
   });
 
   it('provides one explicit product order with unique identifiers', () => {
-    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(MODE_ORDER.map(modeIndex)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     expect(new Set(MODE_ORDER).size).toBe(MODE_ORDER.length);
   });
 
