@@ -175,7 +175,8 @@ Browser tests live in `tests/e2e/`, one file per area (`shell`, `layout`,
 helpers in `helpers.ts`; `@smoke` tags the CI smoke subset. `@resources`
 tags the 20-cycle Reshaped Earth resource regression, which routine runs
 exclude; it runs nightly and on demand in the Resources workflow
-(`pnpm test:e2e:resources`).
+(`pnpm test:e2e:resources`). Routine runs keep the same checks for the first
+three cycles.
 
 Test discipline: never loosen an assertion, add retries, raise timeouts or skip
 a test to get green. Reproduce a failure, find the root cause, fix it, then

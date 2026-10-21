@@ -27,7 +27,8 @@ product-owner approval.
   Pages artifact job.
 - The Resources workflow runs the `@resources` 20-cycle Reshaped Earth
   resource regression on both projects nightly and on demand. It is not a
-  required check.
+  required check; the complete desktop/mobile suite runs the first three
+  cycles on every pull request.
 - A push to protected `main` must pass all required checks, then uploads the
   exact Pages artifact and deploys it through the `github-pages` environment.
 - The deployment job alone receives `pages: write` and `id-token: write`.

@@ -200,6 +200,9 @@ test('optional local atlas failure retains usable GDP results and base graphics'
   await page.route(/\/ids-patches[^/]*\.png(?:\?|$)/u, (route) =>
     route.abort(),
   );
+  // This test covers the atlas failure, not the morph. On CI's software
+  // renderer the 1.6 s morph can take most of ready()'s budget.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('./?v=2&mode=reshaped&metric=gdp&point=22.2686,114.1506');
   await ready(page);
   await expect(result(page)).toContainText('香港');
@@ -286,6 +289,13 @@ test('area legend, dark-earth theme and small GDP results are readable', async (
 
 async function ready(page: Page) {
   await expect(result(page)).toBeVisible();
+  // Loading and drawing the requested map, then the 1.6 s morph, each get the
+  // default budget. On CI's software renderer a desktop frame can take over
+  // 1.5 s, so one budget for both phases ran out during the morph.
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-morph-state',
+    /^(?:animating|settled)$/u,
+  );
   await expect(globeRegion(page)).toHaveAttribute(
     'data-morph-state',
     'settled',
@@ -1754,210 +1764,220 @@ for (const decoderRestriction of ['worker', 'blob-url'] as const) {
   });
 }
 
-// Runs in the manual and nightly resources workflow, not in the routine suite.
-test.describe.serial(
-  'Reshaped Earth resources across 20 continuous mode cycles',
-  { tag: '@resources' },
-  () => {
-    let context: BrowserContext;
-    let page: Page;
-    let sampler: Awaited<ReturnType<typeof createReshapedResourceSampler>>;
-    let firstExit: ReshapedResourceSample | undefined;
-    let fifthExit: ReshapedResourceSample | undefined;
-    const samples: ReshapedResourceSample[] = [];
-    const pageErrors: string[] = [];
-    const metrics = [
-      ['GDP', 'gdp'],
-      ['CO₂', 'co2'],
-      ['夜光', 'lights'],
-      ['人口', 'population'],
-    ] as const;
+// The routine suite runs the first three cycles on every pull request; the
+// manual and nightly resources workflow runs all 20 (@resources).
+function describeResourceCycles(rounds: number, tag?: string) {
+  test.describe.serial(
+    `Reshaped Earth resources across ${rounds} continuous mode cycles`,
+    tag ? { tag } : {},
+    () => {
+      let context: BrowserContext;
+      let page: Page;
+      let sampler: Awaited<ReturnType<typeof createReshapedResourceSampler>>;
+      let firstExit: ReshapedResourceSample | undefined;
+      let fifthExit: ReshapedResourceSample | undefined;
+      const samples: ReshapedResourceSample[] = [];
+      const pageErrors: string[] = [];
+      const metrics = [
+        ['GDP', 'gdp'],
+        ['CO₂', 'co2'],
+        ['夜光', 'lights'],
+        ['人口', 'population'],
+      ] as const;
 
-    async function baseMapReady() {
-      const detail = await globeRegion(page).getAttribute('data-vector-detail');
-      expect(['110m', '50m']).toContain(detail);
-      await expectVectorReady(page, detail as '110m' | '50m');
-    }
-
-    async function noPendingFrame() {
-      // Wait for the normal demand-render loop to finish; do not replace it with
-      // a fixed sleep or accept a perpetually running frame callback as baseline.
-      await expect
-        .poll(() =>
-          page.evaluate(() => {
-            const probe = (
-              window as typeof window & {
-                __reshapedResourceProbe: {
-                  snapshot(): { animationFrames: number };
-                };
-              }
-            ).__reshapedResourceProbe;
-            return probe.snapshot().animationFrames;
-          }),
-        )
-        .toBe(0);
-    }
-
-    test.beforeAll(async ({ browser }, testInfo) => {
-      const use = testInfo.project.use;
-      context = await browser.newContext({
-        viewport: use.viewport,
-        deviceScaleFactor: use.deviceScaleFactor,
-        isMobile: use.isMobile,
-        hasTouch: use.hasTouch,
-        locale: use.locale,
-        baseURL: use.baseURL,
-        userAgent: use.userAgent,
-      });
-      page = await context.newPage();
-      page.on('pageerror', (error) => pageErrors.push(error.message));
-      await page.emulateMedia({ reducedMotion: 'reduce' });
-      await installReshapedResourceProbe(page);
-      sampler = await createReshapedResourceSampler(page);
-      await page.goto('./?v=2&mode=antipodes&point=30.25%2C120.75');
-      await baseMapReady();
-      await noPendingFrame();
-    });
-
-    test.afterAll(async () => {
-      try {
-        await sampler?.dispose();
-      } finally {
-        await context?.close();
+      async function baseMapReady() {
+        const detail =
+          await globeRegion(page).getAttribute('data-vector-detail');
+        expect(['110m', '50m']).toContain(detail);
+        await expectVectorReady(page, detail as '110m' | '50m');
       }
-    });
 
-    // Each ordinary test retains Playwright's existing 30s timeout. The shared
-    // page/context stay alive across the entire serial suite; no reload/reset.
-    for (let round = 1; round <= 20; round += 1) {
-      test(`round ${String(round).padStart(2, '0')}: enter, change metric, exit and collect resources`, async ({
-        page: fixturePage,
-      }, testInfo) => {
-        void fixturePage;
-        const roundSamples: ReshapedResourceSample[] = [];
-        let completed = false;
-        const [label, metric] = metrics[(round - 1) % metrics.length]!;
+      async function noPendingFrame() {
+        // Wait for the normal demand-render loop to finish; do not replace it with
+        // a fixed sleep or accept a perpetually running frame callback as baseline.
+        await expect
+          .poll(() =>
+            page.evaluate(() => {
+              const probe = (
+                window as typeof window & {
+                  __reshapedResourceProbe: {
+                    snapshot(): { animationFrames: number };
+                  };
+                }
+              ).__reshapedResourceProbe;
+              return probe.snapshot().animationFrames;
+            }),
+          )
+          .toBe(0);
+      }
+
+      test.beforeAll(async ({ browser }, testInfo) => {
+        const use = testInfo.project.use;
+        context = await browser.newContext({
+          viewport: use.viewport,
+          deviceScaleFactor: use.deviceScaleFactor,
+          isMobile: use.isMobile,
+          hasTouch: use.hasTouch,
+          locale: use.locale,
+          baseURL: use.baseURL,
+          userAgent: use.userAgent,
+        });
+        page = await context.newPage();
+        page.on('pageerror', (error) => pageErrors.push(error.message));
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await installReshapedResourceProbe(page);
+        sampler = await createReshapedResourceSampler(page);
+        await page.goto('./?v=2&mode=antipodes&point=30.25%2C120.75');
+        await baseMapReady();
+        await noPendingFrame();
+      });
+
+      test.afterAll(async () => {
         try {
-          await switchMode(page, '变形地球');
-          await ready(page);
-          // The metric persists across mode exits. This four-item cycle ensures
-          // every round performs a real field change instead of checking the
-          // already checked population radio.
-          await controls(page)
-            .getByRole('radio', { name: label, exact: true })
-            .check();
-          await ready(page);
-          await expect(globeRegion(page)).toHaveAttribute(
-            'data-reshaped-theme',
-            metric,
-          );
-          await noPendingFrame();
-          const switched = await sampler.sample(
-            `round-${round}-switch-${metric}`,
-          );
-          roundSamples.push(switched);
-          samples.push(switched);
-
-          await switchMode(page, '地球另一端');
-          await expect(globeRegion(page)).not.toHaveAttribute(
-            'data-reshaped-mode',
-            /.+/,
-          );
-          await baseMapReady();
-          await noPendingFrame();
-          // Meshopt closes itself after useWorkers(0), so wait for the actual
-          // worker-close event rather than counting terminate() calls.
-          let workerExitError: unknown;
-          try {
-            await expect.poll(() => page.workers().length).toBe(0);
-          } catch (error) {
-            workerExitError = error;
-          }
-          const exited = await sampler.sample(`round-${round}-exit`);
-          roundSamples.push(exited);
-          samples.push(exited);
-          if (workerExitError) throw workerExitError;
-          const baseline = firstExit ?? exited;
-          firstExit ??= exited;
-          if (round === 5) fifthExit = exited;
-
-          expect(exited.workersAlive).toBe(0);
-          expect(exited.cdpWorkersAlive).toBe(0);
-          expect(exited.renderersCreated).toBe(1);
-          expect(exited.renderersAlive).toBe(1);
-          expect(exited.contextsAlive).toBe(1);
-          expect(exited.renderersCreated).toBe(baseline.renderersCreated);
-          expect(exited.contextsCreated).toBe(baseline.contextsCreated);
-          expect(exited.animationFrames).toBe(0);
-          for (const key of [
-            'renderersAlive',
-            'textures',
-            'geometries',
-            'programs',
-            'contextsAlive',
-            'contextCanvasesConnected',
-            'timeouts',
-            'intervals',
-            'eventListeners',
-            'imageBitmaps',
-            'imageBitmapEstimatedBytes',
-          ] as const) {
-            expect(
-              exited[key],
-              `${key} after round ${round}; first-exit=${baseline[key]}`,
-            ).toBeLessThanOrEqual(baseline[key]);
-          }
-          expect(pageErrors).toEqual([]);
-
-          if (round === 20) {
-            if (!fifthExit) throw new Error('Missing round-five GC sample');
-            // backingStorage and ArrayBuffer byte counts overlap. Check each
-            // separately; their sum must not be reported as physical memory.
-            for (const key of [
-              'heapUsedBytes',
-              'backingStorageBytes',
-              'arrayBufferBytes',
-            ] as const) {
-              const reference = fifthExit[key];
-              if (reference === 0)
-                expect(exited[key], `${key} remained zero`).toBe(0);
-              else
-                expect(exited[key], `${key}: round20 vs round5`).toBeLessThan(
-                  reference * 1.1,
-                );
-            }
-          }
-          completed = true;
+          await sampler?.dispose();
         } finally {
-          await testInfo.attach(`resource-round-${round}.json`, {
-            body: Buffer.from(
-              JSON.stringify(
-                {
-                  project: testInfo.project.name,
-                  round,
-                  samples: roundSamples,
-                  pageErrors,
-                },
-                null,
-                2,
-              ),
-            ),
-            contentType: 'application/json',
-          });
-          if (round === 20 || !completed) {
-            await testInfo.attach('resource-cycles.json', {
+          await context?.close();
+        }
+      });
+
+      // Each ordinary test retains Playwright's existing 30s timeout. The shared
+      // page/context stay alive across the entire serial suite; no reload/reset.
+      for (let round = 1; round <= rounds; round += 1) {
+        test(`round ${String(round).padStart(2, '0')}: enter, change metric, exit and collect resources`, async ({
+          page: fixturePage,
+        }, testInfo) => {
+          void fixturePage;
+          const roundSamples: ReshapedResourceSample[] = [];
+          let completed = false;
+          const [label, metric] = metrics[(round - 1) % metrics.length]!;
+          try {
+            await switchMode(page, '变形地球');
+            await ready(page);
+            // The metric persists across mode exits. This four-item cycle ensures
+            // every round performs a real field change instead of checking the
+            // already checked population radio.
+            await controls(page)
+              .getByRole('radio', { name: label, exact: true })
+              .check();
+            await ready(page);
+            await expect(globeRegion(page)).toHaveAttribute(
+              'data-reshaped-theme',
+              metric,
+            );
+            await noPendingFrame();
+            const switched = await sampler.sample(
+              `round-${round}-switch-${metric}`,
+            );
+            roundSamples.push(switched);
+            samples.push(switched);
+
+            await switchMode(page, '地球另一端');
+            await expect(globeRegion(page)).not.toHaveAttribute(
+              'data-reshaped-mode',
+              /.+/,
+            );
+            await baseMapReady();
+            await noPendingFrame();
+            // Meshopt closes itself after useWorkers(0), so wait for the actual
+            // worker-close event rather than counting terminate() calls.
+            let workerExitError: unknown;
+            try {
+              await expect.poll(() => page.workers().length).toBe(0);
+            } catch (error) {
+              workerExitError = error;
+            }
+            const exited = await sampler.sample(`round-${round}-exit`);
+            roundSamples.push(exited);
+            samples.push(exited);
+            if (workerExitError) throw workerExitError;
+            const baseline = firstExit ?? exited;
+            firstExit ??= exited;
+            if (round === 5) fifthExit = exited;
+
+            expect(exited.workersAlive).toBe(0);
+            expect(exited.cdpWorkersAlive).toBe(0);
+            expect(exited.renderersCreated).toBe(1);
+            expect(exited.renderersAlive).toBe(1);
+            expect(exited.contextsAlive).toBe(1);
+            expect(exited.renderersCreated).toBe(baseline.renderersCreated);
+            expect(exited.contextsCreated).toBe(baseline.contextsCreated);
+            expect(exited.animationFrames).toBe(0);
+            for (const key of [
+              'renderersAlive',
+              'textures',
+              'geometries',
+              'programs',
+              'contextsAlive',
+              'contextCanvasesConnected',
+              'timeouts',
+              'intervals',
+              'eventListeners',
+              'imageBitmaps',
+              'imageBitmapEstimatedBytes',
+            ] as const) {
+              expect(
+                exited[key],
+                `${key} after round ${round}; first-exit=${baseline[key]}`,
+              ).toBeLessThanOrEqual(baseline[key]);
+            }
+            expect(pageErrors).toEqual([]);
+
+            // Heap growth is compared against round five, so only runs that go
+            // well past it can check it.
+            if (round === rounds && rounds > 5) {
+              if (!fifthExit) throw new Error('Missing round-five GC sample');
+              // backingStorage and ArrayBuffer byte counts overlap. Check each
+              // separately; their sum must not be reported as physical memory.
+              for (const key of [
+                'heapUsedBytes',
+                'backingStorageBytes',
+                'arrayBufferBytes',
+              ] as const) {
+                const reference = fifthExit[key];
+                if (reference === 0)
+                  expect(exited[key], `${key} remained zero`).toBe(0);
+                else
+                  expect(
+                    exited[key],
+                    `${key}: round${rounds} vs round5`,
+                  ).toBeLessThan(reference * 1.1);
+              }
+            }
+            completed = true;
+          } finally {
+            await testInfo.attach(`resource-round-${round}.json`, {
               body: Buffer.from(
                 JSON.stringify(
-                  { project: testInfo.project.name, samples, pageErrors },
+                  {
+                    project: testInfo.project.name,
+                    round,
+                    samples: roundSamples,
+                    pageErrors,
+                  },
                   null,
                   2,
                 ),
               ),
               contentType: 'application/json',
             });
+            if (round === rounds || !completed) {
+              await testInfo.attach('resource-cycles.json', {
+                body: Buffer.from(
+                  JSON.stringify(
+                    { project: testInfo.project.name, samples, pageErrors },
+                    null,
+                    2,
+                  ),
+                ),
+                contentType: 'application/json',
+              });
+            }
           }
-        }
-      });
-    }
-  },
-);
+        });
+      }
+    },
+  );
+}
+
+describeResourceCycles(3);
+describeResourceCycles(20, '@resources');
