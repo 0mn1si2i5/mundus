@@ -30,6 +30,7 @@ interface VectorGlobeLayerProps {
   profile: QualityProfile;
   hoveredCountryId: string | null;
   selectedCountryId: string | null;
+  countryColors: ReadonlyMap<string, string> | null;
   dragActive: boolean;
   onStateChange: (
     state: VectorGlobeState,
@@ -89,6 +90,7 @@ export function VectorGlobeLayer({
   profile,
   hoveredCountryId,
   selectedCountryId,
+  countryColors,
   dragActive,
   onStateChange,
   onPaletteUpdate,
@@ -175,11 +177,17 @@ export function VectorGlobeLayer({
 
   useEffect(() => {
     if (!resources) return;
-    updateVectorPalette(resources, hoveredCountryId, selectedCountryId);
+    updateVectorPalette(
+      resources,
+      hoveredCountryId,
+      selectedCountryId,
+      countryColors,
+    );
     onPaletteUpdate(resources.palette.version);
     requestRenderEvidence();
     invalidate();
   }, [
+    countryColors,
     hoveredCountryId,
     invalidate,
     onPaletteUpdate,

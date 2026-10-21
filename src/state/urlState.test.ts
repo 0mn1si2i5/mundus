@@ -332,6 +332,43 @@ describe('URL state codec', () => {
         serializeUrlState({ ...state, activeMode: 'antipodes' }),
       ).not.toMatch(/metric=|level=/);
     });
+
+    it('serializes a Border Hop destination only in Border Hop', () => {
+      const state: ShareableState = {
+        ...lobby,
+        activeMode: 'borders',
+        bordersDestination: 'ne-250',
+      };
+      const query = serializeUrlState(state);
+      expect(query).toBe('?mode=borders&to=ne-250&v=2');
+      expect(parseUrlState(query, nowMs)).toEqual(state);
+      expect(serializeUrlState({ ...state, bordersDestination: null })).toBe(
+        '?mode=borders&v=2',
+      );
+      expect(
+        serializeUrlState({ ...state, activeMode: 'sunline' }),
+      ).not.toMatch(/to=/);
+    });
+
+    it.each(['ne-999', 'France', 'ne-250/1', ''])(
+      'ignores an unknown Border Hop destination %s',
+      (to) => {
+        expect(
+          parseUrlState(`?v=2&mode=borders&to=${encodeURIComponent(to)}`, nowMs)
+            .bordersDestination,
+        ).toBeNull();
+      },
+    );
+
+    it('reads a destination only in Border Hop', () => {
+      expect(
+        parseUrlState('?v=2&mode=sunline&to=ne-250', nowMs),
+      ).not.toHaveProperty('bordersDestination');
+      expect(
+        parseUrlState('?v=2&mode=borders&to=ne-x-bir-tawil', nowMs)
+          .bordersDestination,
+      ).toBe('ne-x-bir-tawil');
+    });
   });
 
   describe('round trips', () => {

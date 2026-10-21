@@ -100,6 +100,7 @@ export function updateVectorPalette(
   resources: VectorGlobeResources,
   hoveredCountryId: string | null,
   selectedCountryId: string | null,
+  countryColors: ReadonlyMap<string, string> | null = null,
 ) {
   const bytes = resources.palette.image.data as Uint8Array;
   bytes.fill(0);
@@ -107,6 +108,10 @@ export function updateVectorPalette(
     const color = new Color(BASE_LAND);
     if (country.countryId === selectedCountryId) color.copy(SELECTED);
     else if (country.countryId === hoveredCountryId) color.copy(HOVER);
+    else {
+      const override = countryColors?.get(country.countryId);
+      if (override) color.set(override);
+    }
     color.convertLinearToSRGB();
     const offset = country.countryIndex * 4;
     bytes[offset] = Math.round(color.r * 255);

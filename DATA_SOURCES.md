@@ -96,6 +96,22 @@ both details place more on land than the former `world-atlas` 1:110m and 1:50m
 files did. Boundaries are a cartographic view and are not a legal authority on
 territorial status.
 
+## Land borders for Border Hop (derived from Natural Earth)
+
+- Source: the high-detail Mundus country topology above, pinned by SHA-256; no
+  new download. Public domain; redistribution allowed.
+- Use: Border Hop land-route graph (`pnpm data:land-borders`)
+- Transformation: split each unit into land parts, join parts of different
+  units that share a boundary arc, drop one reviewed water-only boundary
+  (DR Congo–Tanzania, Lake Tanganyika), add two reviewed borders the simplified
+  geometry loses (China–Macao, Botswana–Zambia) and seven reviewed bridges and
+  tunnels; ferries are excluded. `pnpm data:verify` rebuilds the asset and
+  rejects any difference.
+- Method, reviewed lists and missing states:
+  [docs/data/land-borders.md](docs/data/land-borders.md); identity in
+  `src/data/manifests/land-borders.json`
+- Attribution shown in the product: **Made with Natural Earth**
+
 ## Natural Earth vector globe, 1:110m and 1:50m
 
 - Source: the Mundus country boundaries above, at low (110m) and high (50m)

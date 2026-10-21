@@ -27,6 +27,7 @@ import {
   TRUE_SIZE_DEFAULT_COUNTRY,
   parseTrueSizeCountryParam,
 } from '../features/truesize/trueSize';
+import { COUNTRY_NAMES } from '../features/globe/countryNames';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
@@ -57,6 +58,8 @@ export interface ShareableState {
   isolationReach: CityReachLevel;
   /** True Size: the carried country unit id. */
   trueSizeCountry?: string;
+  /** Border Hop destination unit id; `null` shows reach from the start. */
+  bordersDestination?: string | null;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
@@ -68,6 +71,7 @@ const modeSchema = z.enum([
   'isolation',
   'reshaped',
   'truesize',
+  'borders',
 ]);
 /** Observations that once shipped; their links open the lobby with a notice. */
 const RETIRED_MODES: ReadonlySet<string> = new Set(['development']);
@@ -138,6 +142,11 @@ export function parseUrlState(
     activeMode === 'isolation' && isolationView === 'field'
       ? parseCityReachParam(params.get('reach'))
       : CITY_REACH_DEFAULT;
+  const rawDestination = params.get('to');
+  const bordersDestination =
+    rawDestination !== null && Object.hasOwn(COUNTRY_NAMES, rawDestination)
+      ? rawDestination
+      : null;
 
   return {
     activeMode,
@@ -159,6 +168,7 @@ export function parseUrlState(
     ...(activeMode === 'truesize'
       ? { trueSizeCountry: parseTrueSizeCountryParam(params.get('country')) }
       : {}),
+    ...(activeMode === 'borders' ? { bordersDestination } : {}),
   };
 }
 
@@ -232,6 +242,9 @@ export function serializeUrlState(state: ShareableState): string {
         TRUE_SIZE_DEFAULT_COUNTRY
     ) {
       params.set('country', state.trueSizeCountry ?? TRUE_SIZE_DEFAULT_COUNTRY);
+    }
+    if (state.activeMode === 'borders' && state.bordersDestination) {
+      params.set('to', state.bordersDestination);
     }
     params.set('v', '2');
   }

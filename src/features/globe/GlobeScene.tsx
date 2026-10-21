@@ -143,6 +143,7 @@ interface GlobeSceneProps {
   surnameDisplayMode: SurnameDisplayMode;
   isolation: IsolationGlobePresentation | null;
   reshaped: GlobePresentation['reshaped'];
+  countryColors: GlobePresentation['countryColors'];
   onIsolationFieldRendered: (frame: CityReachFrame) => void;
   cameraGestureCancelRef: MutableRefObject<(() => void) | null>;
   onSurnameLabelVisibilityChange: (visible: boolean) => void;
@@ -184,6 +185,7 @@ export function GlobeScene({
   surnameDisplayMode,
   isolation,
   reshaped,
+  countryColors,
   onIsolationFieldRendered,
   cameraGestureCancelRef,
   onSurnameLabelVisibilityChange,
@@ -1228,6 +1230,7 @@ export function GlobeScene({
             profile={profile}
             hoveredCountryId={hoveredCountry?.countryId ?? null}
             selectedCountryId={selectedCountry?.countryId ?? null}
+            countryColors={countryColors}
             dragActive={antipodeDragActive}
             onStateChange={handleVectorStateChange}
             onPaletteUpdate={onVectorPaletteUpdate}

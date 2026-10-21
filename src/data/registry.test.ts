@@ -31,6 +31,7 @@ describe('data registry', () => {
       'surname-coverage',
       'urban-isolation',
       'reshaped-earth',
+      'land-borders',
     ]);
     expect(
       DATA_MANIFESTS.every(

@@ -1,0 +1,158 @@
+/* Border Hop result: extends the shared result card. */
+.result {
+  --borders-start: #c98755;
+
+  width: 19rem;
+}
+
+.finding {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.route {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.route small,
+.chips small {
+  grid-column: 2;
+  color: var(--color-subtle);
+  font-size: 0.72rem;
+}
+
+.crossing {
+  grid-column: 2;
+  color: var(--color-accent);
+  font-size: 0.72rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  flex-shrink: 0;
+  border: 1px solid rgb(41 36 30 / 25%);
+  border-radius: 2px;
+}
+
+.swatch.unreachable {
+  background: #ddd2b5;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips li {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.chip {
+  min-block-size: 2rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+  background: var(--color-control);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.farthest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.farthest > span {
+  margin-inline-end: 0.2rem;
+}
+
+.legend {
+  margin: 0;
+}
+
+.legend figcaption {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+
+.legend ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.7rem;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.ranking summary {
+  color: var(--color-subtle);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.ranking ol {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.45rem 0 0;
+  padding: 0 0 0 1.2rem;
+  font-size: 0.82rem;
+}
+
+.ranking li span:last-child {
+  float: right;
+  color: var(--color-subtle);
+  font-family: var(--font-mono);
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .result {
+    width: 16.5rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .result {
+    width: auto;
+  }
+
+  .chip {
+    min-block-size: 2.75rem;
+    padding-inline: 0.8rem;
+  }
+}

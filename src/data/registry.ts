@@ -13,6 +13,7 @@ import surnameLabelSlotsManifest from './manifests/surname-label-slots.json';
 import surnameCoverageManifest from './manifests/surname-coverage.json';
 import urbanIsolationManifest from './manifests/urban-isolation.json';
 import reshapedEarthManifest from './manifests/reshaped-earth.json';
+import landBordersManifest from './manifests/land-borders.json';
 
 export const dataManifestSchema = z
   .union([
@@ -61,4 +62,5 @@ export const DATA_MANIFESTS: readonly DataManifest[] = [
   dataManifestSchema.parse(surnameCoverageManifest),
   dataManifestSchema.parse(urbanIsolationManifest),
   dataManifestSchema.parse(reshapedEarthManifest),
+  dataManifestSchema.parse(landBordersManifest),
 ];

@@ -57,6 +57,10 @@ interface AppState {
   setReshapedGraphicsUnavailable: (unavailable: boolean) => void;
   isolationReach: CityReachLevel;
   trueSizeCountry: string;
+  bordersDestination: string | null;
+  setBordersDestination: (countryId: string | null) => void;
+  /** Moves the start and the destination in one history entry. */
+  selectBordersTrip: (point: GeoPoint, destination: string | null) => void;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -110,6 +114,7 @@ export const useAppStore = create<AppState>((set) => ({
   surnameDisplayMode:
     initialUrlState.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
   isolationAlpha: initialUrlState.isolationAlpha,
+  bordersDestination: initialUrlState.bordersDestination ?? null,
   navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
   antipodeCountry: null,
@@ -191,6 +196,16 @@ export const useAppStore = create<AppState>((set) => ({
   setReshapedGraphicsUnavailable: (reshapedGraphicsUnavailable) =>
     set({ reshapedGraphicsUnavailable }),
   setReshapedMetric: (reshapedMetric) => set({ reshapedMetric }),
+  setBordersDestination: (bordersDestination) => set({ bordersDestination }),
+  selectBordersTrip: (point, bordersDestination) =>
+    set({
+      point,
+      bordersDestination,
+      reshapedSelectedUnitId: undefined,
+      cameraFocusIntent: { side: 'origin', target: point },
+      hasInteracted: true,
+      hasMeaningfulInteraction: true,
+    }),
   setReshapedShape: (reshapedShape) => set({ reshapedShape }),
   setIsolationReach: (value) =>
     set({

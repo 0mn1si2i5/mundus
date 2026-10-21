@@ -15,6 +15,7 @@ export const MODE_ORDER = [
   'reshaped',
   'sunline',
   'truesize',
+  'borders',
 ] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
 
@@ -191,6 +192,30 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         longitude: z.number().min(-180).max(180),
       }),
       country: z.string().refine(isTrueSizeCountry),
+    }),
+  },
+  borders: {
+    id: 'borders',
+    version: 1,
+    tier: 'more',
+    title: { zh: '陆路接力', en: 'Border Hop' },
+    titlePhrases: { zh: ['陆路接力'] },
+    question: {
+      zh: '不坐船、不乘飞机，从这里到另一个国家要跨越几条边界？',
+      en: 'Without boats or planes, how many borders lie between here and another country?',
+    },
+    summary: {
+      zh: '沿陆地边界一国接一国走，找出最少要跨越几条边界。',
+      en: 'Hop from country to country over land borders and count the fewest crossings.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['mundus-countries', 'land-borders'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
+      to: z.string().nullable(),
     }),
   },
 };

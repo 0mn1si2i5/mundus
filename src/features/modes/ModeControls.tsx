@@ -27,6 +27,11 @@ const TrueSizeControls = lazy(() =>
     default: module.TrueSizeControls,
   })),
 );
+const BordersControls = lazy(() =>
+  import('../borders/BordersControls').then((module) => ({
+    default: module.BordersControls,
+  })),
+);
 export function ModeControls({
   locale,
   presentation,
@@ -61,6 +66,9 @@ export function ModeControls({
       controls = (
         <TrueSizeControls locale={locale} presentation={presentation} />
       );
+      break;
+    case 'borders':
+      controls = <BordersControls locale={locale} />;
       break;
     default:
       return assertNever(presentation);
