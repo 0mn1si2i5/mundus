@@ -17,10 +17,19 @@ import { clampAlpha } from '../features/isolation/isolationMetric';
 import type { ReshapedMetricId } from '../features/reshaped/metrics';
 import { RESHAPED_DEFAULT_METRIC } from '../features/reshaped/metrics';
 import {
+  TRUE_SIZE_DEFAULT_COUNTRY,
+  isTrueSizeCountry,
+} from '../features/truesize/trueSize';
+import {
   CITY_REACH_DEFAULT,
   isCityReachLevel,
   type CityReachLevel,
 } from '../features/isolation/cityReachLevel';
+import { isCircleRadius } from '../features/circle/circleRadius';
+import {
+  DEFAULT_LITERAL_NAME_LABEL,
+  type LiteralNameLabel,
+} from '../features/names/literalNameWordmark';
 
 export type ReshapedMorphState = 'pending' | 'animating' | 'settled';
 
@@ -52,6 +61,16 @@ interface AppState {
   setReshapedMorphState: (state: ReshapedMorphState) => void;
   setReshapedGraphicsUnavailable: (unavailable: boolean) => void;
   isolationReach: CityReachLevel;
+  trueSizeCountry: string;
+  bordersDestination: string | null;
+  setBordersDestination: (countryId: string | null) => void;
+  /** Moves the start and the destination in one history entry. */
+  selectBordersTrip: (point: GeoPoint, destination: string | null) => void;
+  circleRadiusKm: number | null;
+  setCircleRadiusKm: (value: number | null) => void;
+  /** Moves the circle and returns it to the half circle in one history entry. */
+  selectCircleHalfAt: (point: GeoPoint) => void;
+  namesLabel: LiteralNameLabel;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -75,6 +94,8 @@ interface AppState {
   setReshapedMetric: (metric: ReshapedMetricId) => void;
   setReshapedShape: (shape: 'true' | 'reshaped') => void;
   setIsolationReach: (value: number) => void;
+  setTrueSizeCountry: (countryId: string) => void;
+  setNamesLabel: (label: LiteralNameLabel) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
   setAntipodeCountry: (country: CountryRef | null) => void;
@@ -100,9 +121,13 @@ export const useAppStore = create<AppState>((set) => ({
   locale: preferredLocale(),
   ...initialUrlState,
   reshapedMetric: initialUrlState.reshapedMetric ?? RESHAPED_DEFAULT_METRIC,
+  trueSizeCountry: initialUrlState.trueSizeCountry ?? TRUE_SIZE_DEFAULT_COUNTRY,
   surnameDisplayMode:
     initialUrlState.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
   isolationAlpha: initialUrlState.isolationAlpha,
+  bordersDestination: initialUrlState.bordersDestination ?? null,
+  circleRadiusKm: initialUrlState.circleRadiusKm ?? null,
+  namesLabel: initialUrlState.namesLabel ?? DEFAULT_LITERAL_NAME_LABEL,
   navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
   antipodeCountry: null,
@@ -166,6 +191,7 @@ export const useAppStore = create<AppState>((set) => ({
       sunlineClockMode: sunlinePlaying ? 'fixed' : state.sunlineClockMode,
     })),
   setSurnameDisplayMode: (surnameDisplayMode) => set({ surnameDisplayMode }),
+  setNamesLabel: (namesLabel) => set({ namesLabel }),
   setIsolationAlpha: (value) => set({ isolationAlpha: clampAlpha(value) }),
   setIsolationView: (isolationView) => set({ isolationView }),
   reshapedShape: 'reshaped',
@@ -184,10 +210,37 @@ export const useAppStore = create<AppState>((set) => ({
   setReshapedGraphicsUnavailable: (reshapedGraphicsUnavailable) =>
     set({ reshapedGraphicsUnavailable }),
   setReshapedMetric: (reshapedMetric) => set({ reshapedMetric }),
+  setBordersDestination: (bordersDestination) => set({ bordersDestination }),
+  selectBordersTrip: (point, bordersDestination) =>
+    set({
+      point,
+      bordersDestination,
+      reshapedSelectedUnitId: undefined,
+      cameraFocusIntent: { side: 'origin', target: point },
+      hasInteracted: true,
+      hasMeaningfulInteraction: true,
+    }),
   setReshapedShape: (reshapedShape) => set({ reshapedShape }),
   setIsolationReach: (value) =>
     set({
       isolationReach: isCityReachLevel(value) ? value : CITY_REACH_DEFAULT,
+    }),
+  setTrueSizeCountry: (countryId) =>
+    set((state) =>
+      isTrueSizeCountry(countryId) && countryId !== state.trueSizeCountry
+        ? { trueSizeCountry: countryId }
+        : state,
+    ),
+  setCircleRadiusKm: (value) =>
+    set({ circleRadiusKm: isCircleRadius(value) ? value : null }),
+  selectCircleHalfAt: (point) =>
+    set({
+      point,
+      circleRadiusKm: null,
+      reshapedSelectedUnitId: undefined,
+      cameraFocusIntent: { side: 'origin', target: point },
+      hasInteracted: true,
+      hasMeaningfulInteraction: true,
     }),
   returnSunlineToLive: (timestampMs = Date.now()) =>
     set({

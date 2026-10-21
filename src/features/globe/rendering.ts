@@ -1,4 +1,4 @@
-import { BackSide, FrontSide } from 'three';
+import { BackSide, Color, FrontSide } from 'three';
 import { COUNTRY_VECTOR_BORDER_COLOR } from './countryData';
 
 export const GLOBE_RENDERING = {
@@ -141,6 +141,19 @@ export const SUNLINE_RENDERING = {
     depthTest: true,
     depthWrite: false,
   },
+} as const;
+
+/** People in a Circle: density inside the circle, a paper veil outside. */
+export const CIRCLE_RENDERING = {
+  surface: { radius: 1.007, renderOrder: 2 },
+  density: {
+    color: new Color('#8a3b12'),
+    insideAlpha: 0.88,
+    outsideAlpha: 0.22,
+  },
+  veil: { color: new Color('#efe9dc'), alpha: 0.55 },
+  ring: { radius: 1.012, renderOrder: 4, color: '#1f5a60' },
+  centreMarker: { radius: 1.03, color: '#1f5a60', cssDiameter: 8 },
 } as const;
 
 export function sunlineOverlayAtAltitude(altitudeDegrees: number) {

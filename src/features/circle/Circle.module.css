@@ -1,0 +1,101 @@
+.result {
+  gap: 0.8rem;
+}
+
+.finding {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.milestones {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.milestones caption {
+  margin-bottom: 0.35rem;
+  color: var(--color-muted);
+  font-size: var(--text-label);
+  letter-spacing: 0.12em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.milestones th,
+.milestones td {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--color-hairline);
+  font-weight: 400;
+  text-align: left;
+}
+
+.milestones td {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.milestones thead th {
+  color: var(--color-subtle);
+  font-size: 0.72rem;
+}
+
+.milestones thead th:last-child {
+  text-align: right;
+}
+
+.milestones tr[aria-current='true'] th,
+.milestones tr[aria-current='true'] td {
+  color: var(--color-accent);
+}
+
+.slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 0.7rem;
+  align-items: center;
+}
+
+.slider span {
+  color: var(--color-muted);
+  font-size: var(--text-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.slider strong {
+  font-family: var(--font-mono);
+  font-weight: 400;
+}
+
+.slider input {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--color-brass);
+}
+
+.actions {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.8rem;
+}
+
+.actions button {
+  min-block-size: 2.75rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+.panelNote {
+  margin: 0.7rem 0 0;
+  color: var(--color-subtle);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.actions button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}

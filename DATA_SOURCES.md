@@ -96,6 +96,22 @@ both details place more on land than the former `world-atlas` 1:110m and 1:50m
 files did. Boundaries are a cartographic view and are not a legal authority on
 territorial status.
 
+## Land borders for Border Hop (derived from Natural Earth)
+
+- Source: the high-detail Mundus country topology above, pinned by SHA-256; no
+  new download. Public domain; redistribution allowed.
+- Use: Border Hop land-route graph (`pnpm data:land-borders`)
+- Transformation: split each unit into land parts, join parts of different
+  units that share a boundary arc, drop one reviewed water-only boundary
+  (DR Congo–Tanzania, Lake Tanganyika), add two reviewed borders the simplified
+  geometry loses (China–Macao, Botswana–Zambia) and seven reviewed bridges and
+  tunnels; ferries are excluded. `pnpm data:verify` rebuilds the asset and
+  rejects any difference.
+- Method, reviewed lists and missing states:
+  [docs/data/land-borders.md](docs/data/land-borders.md); identity in
+  `src/data/manifests/land-borders.json`
+- Attribution shown in the product: **Made with Natural Earth**
+
 ## Natural Earth vector globe, 1:110m and 1:50m
 
 - Source: the Mundus country boundaries above, at low (110m) and high (50m)
@@ -280,6 +296,34 @@ redistributed. They retain the source attribution above and CC BY 4.0 where
 applicable. Raw GeoTIFFs, netCDF4/HDF5 files and classification caches remain
 outside the worktree. Every source notice and the method summary appears in
 the About dialog.
+
+## People in a Circle
+
+- Source: the same pinned GHS-POP R2023A V1-0 2020 snapshot used by Reshaped
+  Earth (CC BY 4.0, ZIP SHA-256
+  `579fb7477b33d9be61e9562b170ea108a670b85ef6fe23b61a22d17200929636`).
+  Citation: Schiavina, Freire, Carioli & MacManus (2023), European Commission,
+  Joint Research Centre, DOI `10.2905/2FF68A52-5B5B-4A22-8F40-C41DA8332CFE`.
+- Transformation: source pixels are summed by centre into a 0.25° grid,
+  rounded to whole persons and published as an RGB8 PNG
+  (`src/data/generated/population-circle-0p25.png`) verified by
+  `src/data/manifests/population-circle.json`. The smallest half-population
+  circle is precomputed from the same grid.
+- The runtime loads the grid only when the observation opens. Method, accepted
+  totals and rebuild steps: [docs/data/population-circle.md](docs/data/population-circle.md).
+
+## Literal Names
+
+- Source: CIA World Factbook, final edition, "Country name — etymology" field,
+  read through the [factbook.json](https://github.com/factbook/factbook.json)
+  mirror at commit `144d6977b2b01ac1cbd220de754c0a005616760b`.
+- Licence: the Factbook is a US government work in the public domain; the
+  factbook.json mirror is CC0.
+- Use: the backbone that each Mundus-written literal meaning in
+  `src/features/names/literalNames.ts` is checked against. Corrections and
+  additions cite their own sources per record; no CC BY-SA text is reused.
+- Transformation: hand-reviewed, rewritten in Chinese and English; no raw
+  download is committed. Contract: [docs/data/literal-names.md](docs/data/literal-names.md).
 
 ## Köppen-Geiger climate classes
 

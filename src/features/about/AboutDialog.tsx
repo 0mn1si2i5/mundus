@@ -41,12 +41,28 @@ const COPY = {
         '太阳位置与晨昏线采用 NOAA/Meeus 近似算法，仅供教育参考，不能用于导航、航空或法定时间。',
       ],
       [
+        '陆路接力',
+        '把每个国家或地区按 Mundus 高精度边界（Natural Earth）拆成互不相连的陆块；两块陆地共用一段边界线才算接壤，只在一点相接不算。飞地和海外领土不能借道本土，例如法属圭亚那让法国与巴西接壤，却不把南美洲连到欧洲。简化几何漏掉的中国—澳门、博茨瓦纳—赞比亚两段边界经审定补入，只经坦噶尼喀湖湖面的刚果（金）—坦桑尼亚边界不算接壤；另计入 7 座审定的跨海桥梁和隧道，不计渡轮。边界数只计国家或地区之间的穿越。结果只反映边界视图中的陆地连通，不代表口岸开放、签证或实际通行。',
+      ],
+      [
         '城市邻近性',
         '使用 GHSL 城市中心数据库（R2024A）2025 年人口。层级邻近距离是从一座人口 ≥100 万的城市出发、到最近一座人口至少为其 α 倍的城市中心的大圆距离；α 越大门槛越高，距离呈阶梯式增长。单城观察只反映几何与人口规模。全球分区采用交通时间 − k × log₁₀(人口) 的加法得分，在人口 ≥10 万的中心之间比较；人口每大十倍，得分减去 k 小时。使用 MAP 2019 估计摩擦面与约 4 km 网格，结果按档位离线计算；颜色区分归属，明度反映 GHS-POP 2020 人口密度。仅按约 15 km 显示网格采样，计算仍在 1/30° 网格上进行，中心切换阈值和父城市不变。这是负责人于 2026-10-12 作出的决定，替代提案 D5 原来的“按 1/30° 显示”；以后提高显示精度需另行审批。路径按 Natural Earth 实控边界及公开开放表计算，绘制使用 Mundus 中国视角；争议区画斜纹隐藏归属，模型不计渡轮，粗网格可能将约 7 km 内的水道视为相通。中心归属切换阈值仅描述中心单元，不代表整座城区消失。相邻城市可能合并为一个 GHSL 中心。这是透明思想实验，不测量通勤、就医、实际统辖或经济联系。',
       ],
       [
         '变形地球',
         `方法采用 2020 年人口、${HAS_GDP ? 'PPP GDP、' : ''}化石燃料与水泥 CO₂ 排放和夜光快照，在等积圆柱网格上离线计算 Gastner–Seguy–More（2018）连续面积变形图。国家值由 Mundus 国家栅格聚合，边界沿用 Mundus 国家视角。海洋、南极和缺失单元用平均密度填充；真实零值使用平均密度 1% 的显示下限。连续变形无法压到应得大小的多余面积画成斜线，实色核心面积表达指标份额。${HAS_GDP ? 'GDP 是以 2021 年国际元计的模型下采样估计；' : ''}夜光是有饱和上限的相对亮度指数。`,
+      ],
+      [
+        '真实大小',
+        '国家轮廓取自 Natural Earth 1:110m，先绕地轴平移经度，再沿经线移到选中点，整体转动保持形状和面积。国家最大一块陆地的中心落在选中点上。面积由简化轮廓在球面上算出，与官方面积会有差别。“网络地图放大”是轮廓在 Web 墨卡托地图上的面积与真实面积之比，地图只画到约南北纬 85°。',
+      ],
+      [
+        '半人口圈',
+        '把 GHS-POP 2020 年 30 角秒人口栅格按像元中心汇总到 0.25° 网格（赤道处约 28 公里），在浏览器中按球面大圆距离逐公里累加，求出以选中地点为圆心、装下世界一半人口所需的半径；滑块可改为任意半径。格子按中心点计入或不计入圆，所以半径小于约 200 公里时只是粗略结果。“世界最小的半人口圈”由同一网格离线搜索得到（2° 粗筛后在 0.25° 和 0.05° 上细化），只代表这一网格下的结果。人口为模型估计，不是普查数字。',
+      ],
+      [
+        '国名本义',
+        '每个国家的名字字面上是什么意思，由 Mundus 逐条撰写。英文词源以已停刊的 CIA World Factbook “国名词源”条目（公共领域）为主干核对，凡与其不同或补充之处都列出依据。词源常有多种说法：地球上只写最常见的一种，有争议的加问号，本义未知的不写字面义。中文名按音译、意译、音意合译、本国汉字名和简称分类。',
       ],
       [
         '气候孪生',
@@ -56,7 +72,7 @@ const COPY = {
     credits: [
       {
         name: 'Natural Earth',
-        use: '国家边界与地球矢量底图。边界采用 Natural Earth 中国视角数据，台湾单独显示；地图边界不构成对领土地位的法律认定。',
+        use: '国家边界与地球矢量底图，也是真实大小的国家轮廓。边界采用 Natural Earth 中国视角数据，台湾单独显示；地图边界不构成对领土地位的法律认定。',
         notice: 'Made with Natural Earth · 公共领域数据',
         links: [
           { label: '来源', href: 'https://www.naturalearthdata.com/' },
@@ -144,7 +160,7 @@ const COPY = {
       },
       {
         name: 'GHS-POP R2023A',
-        use: '变形地球 · 2020 年人口',
+        use: '变形地球与半人口圈 · 2020 年人口',
         notice:
           'European Commission, Joint Research Centre（JRC），GHS-POP R2023A V1-0 · CC BY 4.0。人口为模型估计。',
         links: [
@@ -189,6 +205,22 @@ const COPY = {
         ],
       },
       {
+        name: 'CIA World Factbook · factbook.json',
+        use: '国名本义 · 国名词源核对主干',
+        notice:
+          'CIA World Factbook 为美国政府作品，属公共领域；通过 factbook.json 镜像（CC0）固定版本读取。字面义与说明由 Mundus 改写，不代表 CIA 观点。',
+        links: [
+          {
+            label: '镜像',
+            href: 'https://github.com/factbook/factbook.json',
+          },
+          {
+            label: 'CC0',
+            href: 'https://creativecommons.org/publicdomain/zero/1.0/',
+          },
+        ],
+      },
+      {
         name: 'Köppen-Geiger（Beck 等 2023）',
         use: '气候孪生',
         notice:
@@ -229,12 +261,28 @@ const COPY = {
         'Solar position and the terminator use NOAA/Meeus-style approximations, for education only — not for navigation, aviation or legal time.',
       ],
       [
+        'Border Hop',
+        'Each country or territory is split into its separate land parts in the high-detail Mundus boundaries (Natural Earth); two parts border each other only when they share a stretch of boundary, not a single point. Exclaves and overseas territories cannot be used to reach the mainland: French Guiana makes France a neighbour of Brazil but does not join South America to Europe. Two borders the simplified geometry loses, China–Macao and Botswana–Zambia, are added after review; DR Congo and Tanzania, which meet only in Lake Tanganyika, do not count as neighbours; also counted are seven reviewed sea bridges and tunnels; ferries are excluded. Only crossings between countries or territories are counted. Results describe land connection in the boundary view, not open crossings, visas or actual passage.',
+      ],
+      [
         'Urban Proximity',
         'Uses 2025 populations from the GHSL Urban Centre Database (R2024A). The hierarchical proximity distance is the great-circle distance from a city of at least one million people to the nearest urban centre with at least α times its population; a higher α raises the bar, and the distance grows in steps. One city reflects geometry and population only. Global regions compare centres with at least 100,000 people using travel time − k × log₁₀(population): each tenfold population increase subtracts k hours. MAP 2019 estimated friction and a roughly 4 km grid produce offline results by level; colour distinguishes owners and brightness reflects GHS-POP 2020 population density. The sole display resolution samples at roughly 15 km; computation remains at 1/30°, with unchanged centre thresholds and parents. This owner decision of 2026-10-12 replaces proposal D5’s 1/30° display; higher display resolution requires separate approval. Paths follow Natural Earth control boundaries and public open-border rules; drawing follows Mundus’s China view. Hatching hides disputed ownership, ferries are excluded and the coarse grid can join waterways of roughly 7 km. Centre switch thresholds describe the centre cell, not the disappearance of an entire urban area. Neighbouring cities can merge into one GHSL centre. This is a transparent thought experiment, not a measurement of commuting, healthcare, actual jurisdiction or economic ties.',
       ],
       [
         'Reshaped Earth',
         `The method uses 2020 population, ${HAS_GDP ? 'PPP GDP, ' : ''}fossil-fuel and cement CO₂ emissions, and night-light snapshots for an offline Gastner–Seguy–More (2018) contiguous area cartogram on a cylindrical equal-area grid. Country values are aggregated against the Mundus country raster, following Mundus country boundaries. Oceans, Antarctica and missing units receive mean density; real zero values use a display floor of 1% of mean density. Hatching marks excess area the continuous reshaping could not remove; the solid core represents the country's share of the measure. ${HAS_GDP ? 'GDP is a modelled downscaled estimate in 2021 international dollars; ' : ''}night lights are a relative brightness index with sensor saturation.`,
+      ],
+      [
+        'True Size',
+        'Country outlines come from Natural Earth 1:110m. Each outline turns about the polar axis to shift longitude, then slides along the meridian to the selected point; turning as a whole keeps shape and area. The centre of the country’s largest landmass sits on the selected point. Area is measured on the sphere from the simplified outline and differs from official figures. “Web map enlargement” is the outline’s area on a Web Mercator map divided by its true area; the map stops at about 85° north and south.',
+      ],
+      [
+        'People in a Circle',
+        "The GHS-POP 2020 30-arcsecond population grid is summed by pixel centre into 0.25° cells (about 28 km at the equator). The browser accumulates people by great-circle distance, kilometre by kilometre, to find the radius around the selected place that holds half the world's population; the slider sets any other radius. Cells count wholly inside or outside by their centre, so radii below about 200 km are only rough. The smallest half-world circle comes from an offline search of the same grid (a 2° screen refined at 0.25° and 0.05°) and holds only for this grid. Population figures are modelled estimates, not census counts.",
+      ],
+      [
+        'Literal Names',
+        'What each country’s name literally says, written record by record by Mundus. English etymologies are checked against the country-name etymology entries of the discontinued CIA World Factbook (public domain), and every departure or addition lists its sources. Etymologies often compete: the globe shows the most common reading, marks disputed ones with a question mark and leaves unknown meanings blank. Chinese names are classed as transliterated, translated, mixed, native or abbreviated.',
       ],
       [
         'Climate Twins',
@@ -244,7 +292,7 @@ const COPY = {
     credits: [
       {
         name: 'Natural Earth',
-        use: 'Country borders and the vector globe. Boundaries follow the Natural Earth China point-of-view layer, with Taiwan shown separately. Map boundaries are not a legal statement on territorial status.',
+        use: 'Country borders, the vector globe and the True Size outlines. Boundaries follow the Natural Earth China point-of-view layer, with Taiwan shown separately. Map boundaries are not a legal statement on territorial status.',
         notice: 'Made with Natural Earth · public domain data',
         links: [
           { label: 'Source', href: 'https://www.naturalearthdata.com/' },
@@ -333,7 +381,7 @@ const COPY = {
       },
       {
         name: 'GHS-POP R2023A',
-        use: 'Reshaped Earth · 2020 population',
+        use: 'Reshaped Earth and People in a Circle · 2020 population',
         notice:
           'European Commission, Joint Research Centre (JRC), GHS-POP R2023A V1-0 · CC BY 4.0. Population is modelled.',
         links: [
@@ -375,6 +423,22 @@ const COPY = {
             href: 'https://figshare.com/articles/dataset/9828827/10',
           },
           { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'CIA World Factbook · factbook.json',
+        use: 'Literal Names · etymology backbone',
+        notice:
+          'The CIA World Factbook is a US government work in the public domain, read at a pinned version of the factbook.json mirror (CC0). Literal meanings and notes are rewritten by Mundus and do not represent the CIA.',
+        links: [
+          {
+            label: 'Mirror',
+            href: 'https://github.com/factbook/factbook.json',
+          },
+          {
+            label: 'CC0',
+            href: 'https://creativecommons.org/publicdomain/zero/1.0/',
+          },
         ],
       },
       {

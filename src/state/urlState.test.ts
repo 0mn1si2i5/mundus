@@ -332,6 +332,43 @@ describe('URL state codec', () => {
         serializeUrlState({ ...state, activeMode: 'antipodes' }),
       ).not.toMatch(/metric=|level=/);
     });
+
+    it('serializes a Border Hop destination only in Border Hop', () => {
+      const state: ShareableState = {
+        ...lobby,
+        activeMode: 'borders',
+        bordersDestination: 'ne-250',
+      };
+      const query = serializeUrlState(state);
+      expect(query).toBe('?mode=borders&to=ne-250&v=2');
+      expect(parseUrlState(query, nowMs)).toEqual(state);
+      expect(serializeUrlState({ ...state, bordersDestination: null })).toBe(
+        '?mode=borders&v=2',
+      );
+      expect(
+        serializeUrlState({ ...state, activeMode: 'sunline' }),
+      ).not.toMatch(/to=/);
+    });
+
+    it.each(['ne-999', 'France', 'ne-250/1', ''])(
+      'ignores an unknown Border Hop destination %s',
+      (to) => {
+        expect(
+          parseUrlState(`?v=2&mode=borders&to=${encodeURIComponent(to)}`, nowMs)
+            .bordersDestination,
+        ).toBeNull();
+      },
+    );
+
+    it('reads a destination only in Border Hop', () => {
+      expect(
+        parseUrlState('?v=2&mode=sunline&to=ne-250', nowMs),
+      ).not.toHaveProperty('bordersDestination');
+      expect(
+        parseUrlState('?v=2&mode=borders&to=ne-x-bir-tawil', nowMs)
+          .bordersDestination,
+      ).toBe('ne-x-bir-tawil');
+    });
   });
 
   describe('round trips', () => {
@@ -350,6 +387,49 @@ describe('URL state codec', () => {
         isolationView: 'city',
         isolationReach: CITY_REACH_DEFAULT,
       });
+    });
+
+    it('writes a People in a Circle radius only when one was chosen', () => {
+      const half = serializeUrlState({
+        ...lobby,
+        activeMode: 'circle',
+        circleRadiusKm: null,
+      });
+      expect(half).toBe('?mode=circle&v=2');
+      expect(parseUrlState(half, nowMs)).toEqual({
+        ...lobby,
+        activeMode: 'circle',
+        circleRadiusKm: null,
+      });
+      const chosen = serializeUrlState({
+        ...lobby,
+        activeMode: 'circle',
+        circleRadiusKm: 1250,
+      });
+      expect(chosen).toBe('?mode=circle&radius=1250&v=2');
+      expect(parseUrlState(chosen, nowMs)).toEqual({
+        ...lobby,
+        activeMode: 'circle',
+        circleRadiusKm: 1250,
+      });
+    });
+
+    it('falls back to the half circle for invalid radii and ignores radius elsewhere', () => {
+      for (const radius of ['49', '20001', '12.5', '-100', 'far', ''])
+        expect(
+          parseUrlState(`?v=2&mode=circle&radius=${radius}`, nowMs)
+            .circleRadiusKm,
+        ).toBeNull();
+      expect(
+        parseUrlState('?v=2&mode=sunline&radius=1250', nowMs),
+      ).not.toHaveProperty('circleRadiusKm');
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'isolation',
+          circleRadiusKm: 1250,
+        }),
+      ).toBe('?mode=isolation&v=2');
     });
 
     it('round-trips an Urban Proximity alpha through V2', () => {
@@ -451,6 +531,104 @@ describe('URL state codec', () => {
         isolationReach: 8 as const,
       };
       expect(serializeUrlState(state)).toBe('?mode=isolation&v=2');
+    });
+
+    it('keeps a carried True Size country, defaulting to Greenland', () => {
+      expect(
+        parseUrlState('?v=2&mode=truesize&point=-3,25&country=ne-156', nowMs),
+      ).toMatchObject({
+        activeMode: 'truesize',
+        point: { latitude: -3, longitude: 25 },
+        trueSizeCountry: 'ne-156',
+      });
+      for (const country of ['', 'ne-999', 'CHN', 'ne-016']) {
+        expect(
+          parseUrlState(`?v=2&mode=truesize&country=${country}`, nowMs)
+            .trueSizeCountry,
+        ).toBe('ne-304');
+      }
+      expect(
+        parseUrlState('?v=2&mode=sunline&country=ne-156', nowMs),
+      ).not.toHaveProperty('trueSizeCountry');
+    });
+
+    it('serializes the True Size country only when it is not the default', () => {
+      const base = { ...lobby, activeMode: 'truesize' as const };
+      expect(serializeUrlState({ ...base, trueSizeCountry: 'ne-304' })).toBe(
+        '?mode=truesize&v=2',
+      );
+      const query = serializeUrlState({
+        ...base,
+        point: { latitude: 48.8566, longitude: 2.3522 },
+        trueSizeCountry: 'ne-076',
+      });
+      expect(query).toBe(
+        '?mode=truesize&point=48.8566%2C2.3522&country=ne-076&v=2',
+      );
+      expect(parseUrlState(query, nowMs)).toMatchObject({
+        activeMode: 'truesize',
+        trueSizeCountry: 'ne-076',
+      });
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'sunline',
+          trueSizeCountry: 'ne-076',
+        }),
+      ).not.toContain('country');
+    });
+  });
+
+  describe('Literal Names label', () => {
+    it('opens Literal Names with the default label unless the link asks for local names', () => {
+      expect(parseUrlState('?v=2&mode=names', nowMs)).toMatchObject({
+        activeMode: 'names',
+        namesLabel: 'literal',
+      });
+      expect(
+        parseUrlState('?v=2&mode=names&label=local', nowMs).namesLabel,
+      ).toBe('local');
+      expect(
+        parseUrlState('?v=2&mode=names&label=other', nowMs).namesLabel,
+      ).toBe('literal');
+      expect(parseNavigationNotice('?v=2&mode=names')).toBeNull();
+    });
+
+    it('ignores the label outside Literal Names', () => {
+      for (const query of [
+        '?v=2&mode=surnames&label=local',
+        '?v=2&label=local',
+        '?point=12.3457%2C-98.7654&label=local',
+      ]) {
+        expect(parseUrlState(query, nowMs)).not.toHaveProperty('namesLabel');
+      }
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'surnames',
+          namesLabel: 'local',
+        }),
+      ).toBe('?mode=surnames&v=2');
+    });
+
+    it('writes the label only when it differs from the default', () => {
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'names',
+          namesLabel: 'literal',
+        }),
+      ).toBe('?mode=names&v=2');
+      const query = serializeUrlState({
+        ...lobby,
+        activeMode: 'names',
+        namesLabel: 'local',
+      });
+      expect(query).toBe('?mode=names&label=local&v=2');
+      expect(parseUrlState(query, nowMs)).toMatchObject({
+        activeMode: 'names',
+        namesLabel: 'local',
+      });
     });
   });
 });

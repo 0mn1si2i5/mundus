@@ -22,6 +22,21 @@ const ReshapedControls = lazy(() =>
     default: module.ReshapedControls,
   })),
 );
+const TrueSizeControls = lazy(() =>
+  import('../truesize/TrueSizeControls').then((module) => ({
+    default: module.TrueSizeControls,
+  })),
+);
+const BordersControls = lazy(() =>
+  import('../borders/BordersControls').then((module) => ({
+    default: module.BordersControls,
+  })),
+);
+const CircleControls = lazy(() =>
+  import('../circle/CircleControls').then((module) => ({
+    default: module.CircleControls,
+  })),
+);
 export function ModeControls({
   locale,
   presentation,
@@ -42,6 +57,9 @@ export function ModeControls({
     case 'surnames':
       // The script toggle lives in the surname result card.
       return null;
+    case 'names':
+      // The label toggle lives in the Literal Names result card.
+      return null;
     case 'climate':
       // Climate Twins has no parameters; the point is the only input.
       return null;
@@ -54,6 +72,17 @@ export function ModeControls({
       controls = (
         <ReshapedControls locale={locale} presentation={presentation} />
       );
+      break;
+    case 'truesize':
+      controls = (
+        <TrueSizeControls locale={locale} presentation={presentation} />
+      );
+      break;
+    case 'borders':
+      controls = <BordersControls locale={locale} />;
+      break;
+    case 'circle':
+      controls = <CircleControls locale={locale} presentation={presentation} />;
       break;
     default:
       return assertNever(presentation);

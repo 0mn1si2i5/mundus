@@ -7,9 +7,10 @@ different scientific lenses. It is designed as a small digital museum exhibit:
 direct enough to explore, explicit about its methods, and careful about the
 limits of its data.
 
-The current implementation includes six observation modes. Other Side, Surname
-Atlas, Urban Proximity and Reshaped Earth are the primary observations; Sunline
-and Climate Twins sit under More observations:
+The current implementation includes ten observation modes. Other Side, Surname
+Atlas, Urban Proximity and Reshaped Earth are the primary observations; Sunline,
+True Size, Border Hop, People in a Circle, Literal Names and Climate Twins sit
+under More observations:
 
 - **Other Side** calculates exact antipodal endpoints and shows the nearest
   eligible major city to each endpoint in the bundled GeoNames snapshot. These
@@ -36,6 +37,11 @@ and Climate Twins sit under More observations:
   and ferries are not modelled.
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
+- **Border Hop** counts the fewest border crossings between two countries or
+  territories without boats or planes, and colours the globe by crossings from
+  the selected place. Exclaves do not join landmasses, ferries are excluded and
+  seven reviewed bridges and tunnels count; see the
+  [method notes](docs/data/land-borders.md).
 - **Climate Twins** shows the Köppen-Geiger climate class of the selected
   point (Beck et al. 2023, 1991–2020 average), lights up land with the same
   class, and lists large cities on the same latitude with a different climate

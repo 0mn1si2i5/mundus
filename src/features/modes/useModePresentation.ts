@@ -16,10 +16,19 @@ import {
   useSurnameDataset,
   type SurnameLoadState,
 } from '../surnames/useSurnameDataset';
+import { getDisplaySurnameRecord } from '../surnames/surnameData';
+import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
+import type { MapWordmarkLabel } from '../globe/mapWordmark';
+import { COUNTRY_NAMES } from '../globe/countryNames';
 import {
-  getDisplaySurnameRecord,
-  type SurnameMapLabel,
-} from '../surnames/surnameData';
+  useLiteralNames,
+  type LiteralNamesLoadState,
+} from '../names/useLiteralNames';
+import {
+  DEFAULT_LITERAL_NAME_LABEL,
+  resolveLiteralNameWordmark,
+  type LiteralNameLabel,
+} from '../names/literalNameWordmark';
 import type { SurnameDisplayMode } from '../../state/urlState';
 import { DEFAULT_SURNAME_DISPLAY_MODE } from '../../state/urlState';
 import {
@@ -51,6 +60,32 @@ import { cityReachPointSelection } from '../isolation/cityReachData';
 import type { CityReachPointSelection } from '../isolation/cityReachTypes';
 import type { CityReachLevel } from '../isolation/cityReachLevel';
 import {
+  TRUE_SIZE_DEFAULT_COUNTRY,
+  placeTrueSizeCountry,
+  type TrueSizePlacement,
+} from '../truesize/trueSize';
+import {
+  useLandBorders,
+  type LandBordersLoadState,
+} from '../borders/useLandBorders';
+import {
+  findRoute,
+  summarizeReach,
+  type ReachSummary,
+  type RouteResult,
+} from '../borders/landBorders';
+import { bordersCountryColors } from '../borders/bordersPalette';
+import {
+  useCircleDataset,
+  type CircleLoadState,
+} from '../circle/useCircleDataset';
+import {
+  circleProfileAt,
+  selectionFromProfile,
+  type CircleSelection,
+} from '../circle/circleSelection';
+import { radiusForShare } from '../circle/circleProfile.mjs';
+import {
   useClimateDataset,
   type ClimateLoadState,
 } from '../climate/useClimateDataset';
@@ -65,8 +100,9 @@ export interface GlobePresentation {
   showAntipodes: boolean;
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
-  surnameMapLabels: readonly SurnameMapLabel[];
-  surnameDisplayMode: SurnameDisplayMode;
+  mapWordmarks: readonly MapWordmarkLabel[];
+  /** Identifies the wordmark text source, so the label layer can reset. */
+  wordmarkKey: string;
   isolation: IsolationGlobePresentation | null;
   reshaped: {
     metric: ReshapedMetricId;
@@ -74,7 +110,18 @@ export interface GlobePresentation {
     data: ReshapedLoadState;
     replayKey: number;
   } | null;
+  /** Per-unit land colours; `null` keeps the base land colour. */
+  countryColors: ReadonlyMap<string, string> | null;
+  circle: CircleGlobePresentation | null;
   climate: ClimateGlobePresentation | null;
+}
+
+export interface CircleGlobePresentation {
+  centre: GeoPoint;
+  radiusKm: number | null;
+  displayDensity: Uint8Array | null;
+  gridWidth: number;
+  gridHeight: number;
 }
 
 export interface ClimateGlobePresentation {
@@ -161,6 +208,34 @@ export type ModePresentation =
       ranking: readonly import('../reshaped/reshapedData').ReshapedValueRow[];
     }
   | {
+      id: 'truesize';
+      point: GeoPoint;
+      selectedCountry: CountryRef | null;
+      placement: TrueSizePlacement | null;
+    }
+  | {
+      id: 'borders';
+      selectedCountry: CountryRef | null;
+      destination: string | null;
+      data: LandBordersLoadState;
+      reach: ReachSummary | null;
+      route: RouteResult | null;
+    }
+  | {
+      id: 'circle';
+      point: GeoPoint;
+      selectedCountry: CountryRef | null;
+      radiusKm: number | null;
+      data: CircleLoadState;
+      selection: CircleSelection | null;
+    }
+  | {
+      id: 'names';
+      selectedCountry: CountryRef | null;
+      label: LiteralNameLabel;
+      data: LiteralNamesLoadState;
+    }
+  | {
       id: 'climate';
       point: GeoPoint;
       selectedCountry: CountryRef | null;
@@ -187,6 +262,9 @@ export function useModePresentation(
     DEFAULT_SURNAME_DISPLAY_MODE;
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
   const surnameData = useSurnameDataset(activeMode === 'surnames');
+  const literalNames = useLiteralNames(activeMode === 'names');
+  const namesLabel =
+    useAppStore((state) => state.namesLabel) ?? DEFAULT_LITERAL_NAME_LABEL;
   const isolationView = useAppStore((state) => state.isolationView);
   const isolationData = useIsolationDataset(
     activeMode === 'isolation' && isolationView === 'city',
@@ -206,6 +284,31 @@ export function useModePresentation(
   );
   const reshapedLoad = sharedReshapedData ?? localReshapedLoad;
   const selectedUnitId = useAppStore((state) => state.reshapedSelectedUnitId);
+  const bordersDestination = useAppStore((state) => state.bordersDestination);
+  const landBorders = useLandBorders(activeMode === 'borders');
+  const borders = useBordersAnalysis(
+    activeMode === 'borders',
+    landBorders,
+    selectedCountry?.countryId ?? null,
+    bordersDestination,
+  );
+  const circleRadiusKm = useAppStore((state) => state.circleRadiusKm);
+  const circleData = useCircleDataset(activeMode === 'circle');
+  // The profile depends only on the place; slider ticks reuse it.
+  const circleProfile = useMemo(
+    () =>
+      activeMode === 'circle' && circleData.status === 'ready'
+        ? circleProfileAt(circleData.data, point)
+        : null,
+    [activeMode, circleData, point],
+  );
+  const circleSelection = useMemo(
+    () =>
+      circleProfile && circleData.status === 'ready'
+        ? selectionFromProfile(circleData.data, circleProfile, circleRadiusKm)
+        : null,
+    [circleData, circleProfile, circleRadiusKm],
+  );
   const climateData = useClimateDataset(activeMode === 'climate');
   const climateCities = useGeoNamesCityIndex(activeMode === 'climate');
   const climateTwins = useMemo(
@@ -244,6 +347,16 @@ export function useModePresentation(
       return null;
     return computeIsolationSelection(point, isolationAlpha, isolationData.data);
   }, [activeMode, isolationAlpha, isolationData, point]);
+  const trueSizeCountry = useAppStore(
+    (state) => state.trueSizeCountry ?? TRUE_SIZE_DEFAULT_COUNTRY,
+  );
+  const trueSizePlacement = useMemo(
+    () =>
+      activeMode === 'truesize'
+        ? placeTrueSizeCountry(trueSizeCountry, point)
+        : null,
+    [activeMode, point, trueSizeCountry],
+  );
   const fieldSelection = useMemo(
     () =>
       field.metadata && field.frame
@@ -348,6 +461,38 @@ export function useModePresentation(
         ranking,
       };
     }
+    case 'truesize':
+      return {
+        id: activeMode,
+        point,
+        selectedCountry,
+        placement: trueSizePlacement,
+      };
+    case 'borders':
+      return {
+        id: activeMode,
+        selectedCountry,
+        destination: bordersDestination,
+        data: landBorders,
+        reach: borders.reach,
+        route: borders.route,
+      };
+    case 'circle':
+      return {
+        id: activeMode,
+        point,
+        selectedCountry,
+        radiusKm: circleRadiusKm,
+        data: circleData,
+        selection: circleSelection,
+      };
+    case 'names':
+      return {
+        id: activeMode,
+        selectedCountry,
+        label: namesLabel,
+        data: literalNames,
+      };
     case 'climate':
       return {
         id: activeMode,
@@ -362,6 +507,23 @@ export function useModePresentation(
   }
 }
 
+function useBordersAnalysis(
+  enabled: boolean,
+  data: LandBordersLoadState,
+  startId: string | null,
+  destination: string | null,
+): { reach: ReachSummary | null; route: RouteResult | null } {
+  return useMemo(() => {
+    if (!enabled || data.status !== 'ready' || !startId) {
+      return { reach: null, route: null };
+    }
+    return {
+      reach: summarizeReach(data.data, startId),
+      route: destination ? findRoute(data.data, startId, destination) : null,
+    };
+  }, [data, destination, enabled, startId]);
+}
+
 /** Globe-only presentation; isolation uses the same selection as the card. */
 export function useGlobePresentation(
   sharedReshapedData?: ReshapedLoadState,
@@ -374,6 +536,10 @@ export function useGlobePresentation(
   const surnameDisplayMode =
     useAppStore((state) => state.surnameDisplayMode) ??
     DEFAULT_SURNAME_DISPLAY_MODE;
+  const literalNames = useLiteralNames(activeMode === 'names');
+  const namesLabel =
+    useAppStore((state) => state.namesLabel) ?? DEFAULT_LITERAL_NAME_LABEL;
+  const locale = useAppStore((state) => state.locale);
   const isolationView = useAppStore((state) => state.isolationView);
   const isolationData = useIsolationDataset(
     activeMode === 'isolation' && isolationView === 'city',
@@ -396,6 +562,44 @@ export function useGlobePresentation(
     reshapedMetric,
   );
   const reshapedData = sharedReshapedData ?? localReshapedData;
+  const selectedCountry = useAppStore((state) => state.selectedCountry);
+  const bordersDestination = useAppStore((state) => state.bordersDestination);
+  const landBorders = useLandBorders(activeMode === 'borders');
+  const borders = useBordersAnalysis(
+    activeMode === 'borders',
+    landBorders,
+    selectedCountry?.countryId ?? null,
+    bordersDestination,
+  );
+  const countryColors = useMemo(
+    () =>
+      activeMode === 'borders'
+        ? bordersCountryColors(borders.reach, borders.route)
+        : null,
+    [activeMode, borders],
+  );
+  const circleRadiusKm = useAppStore((state) => state.circleRadiusKm);
+  const circleData = useCircleDataset(activeMode === 'circle');
+  // A chosen radius is drawn as is; only the default half circle needs the
+  // population profile, which changes with the place, not the slider.
+  const circleHalfRadiusKm = useMemo(
+    () =>
+      activeMode === 'circle' && circleData.status === 'ready'
+        ? radiusForShare(circleProfileAt(circleData.data, point), 0.5)
+        : null,
+    [activeMode, circleData, point],
+  );
+  const circle = useMemo<CircleGlobePresentation | null>(() => {
+    if (activeMode !== 'circle') return null;
+    const dataset = circleData.status === 'ready' ? circleData.data : null;
+    return {
+      centre: point,
+      radiusKm: dataset ? (circleRadiusKm ?? circleHalfRadiusKm) : null,
+      displayDensity: dataset?.displayDensity ?? null,
+      gridWidth: dataset?.width ?? 0,
+      gridHeight: dataset?.height ?? 0,
+    };
+  }, [activeMode, circleData, circleHalfRadiusKm, circleRadiusKm, point]);
   const climateData = useClimateDataset(activeMode === 'climate');
 
   const sunline = useMemo(() => {
@@ -403,23 +607,43 @@ export function useGlobePresentation(
     return { subsolarPoint: solarPosition(sunlineTimeMs).subsolarPoint };
   }, [activeMode, sunlineTimeMs]);
 
-  const surnameMapLabels = useMemo(() => {
-    if (activeMode !== 'surnames' || surnameData.status !== 'ready') {
-      return [];
+  const mapWordmarks = useMemo<readonly MapWordmarkLabel[]>(() => {
+    if (activeMode === 'surnames' && surnameData.status === 'ready') {
+      return surnameData.data.countries.flatMap((country) => {
+        const record = getDisplaySurnameRecord(country);
+        return record
+          ? [
+              {
+                countryId: country.countryId,
+                countryName: country.countryIso2,
+                wordmark: resolveSurnameWordmark(record, surnameDisplayMode),
+              },
+            ]
+          : [];
+      });
     }
-    return surnameData.data.countries.flatMap((country) => {
-      const record = getDisplaySurnameRecord(country);
-      return record
-        ? [
-            {
-              countryId: country.countryId,
-              countryName: country.countryIso2,
-              record,
-            },
-          ]
-        : [];
-    });
-  }, [activeMode, surnameData]);
+    if (activeMode === 'names' && literalNames.status === 'ready') {
+      return literalNames.data.records.map((record) => ({
+        countryId: record.id,
+        countryName: COUNTRY_NAMES[record.id]?.en ?? record.id,
+        wordmark: resolveLiteralNameWordmark(record, namesLabel, locale),
+      }));
+    }
+    return [];
+  }, [
+    activeMode,
+    literalNames,
+    locale,
+    namesLabel,
+    surnameData,
+    surnameDisplayMode,
+  ]);
+  const wordmarkKey =
+    activeMode === 'surnames'
+      ? `surnames:${surnameDisplayMode}`
+      : activeMode === 'names'
+        ? `names:${namesLabel}:${locale}`
+        : '';
 
   const antipodeRelation = useMemo(() => {
     if (activeMode !== 'antipodes') return null;
@@ -516,8 +740,8 @@ export function useGlobePresentation(
     showAntipodes: activeMode === 'antipodes',
     sunline,
     antipodeRelation,
-    surnameMapLabels,
-    surnameDisplayMode,
+    mapWordmarks,
+    wordmarkKey,
     isolation,
     reshaped:
       activeMode === 'reshaped'
@@ -528,6 +752,8 @@ export function useGlobePresentation(
             replayKey: reshapedReplayKey,
           }
         : null,
+    countryColors,
+    circle,
     climate,
   };
 }

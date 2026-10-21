@@ -21,8 +21,10 @@ observation while keeping the selected place.
 - The bare address opens a neutral lobby. The header switcher offers the four
   primary observations, **Other Side** (`antipodes`), **Surname Atlas**
   (`surnames`), **Urban Proximity** (`isolation`) and **Reshaped Earth**
-  (`reshaped`); **Sunline** (`sunline`) and **Climate Twins** (`climate`)
-  sit under "More observations".
+  (`reshaped`); **Sunline** (`sunline`), **True Size** (`truesize`),
+  **Border Hop** (`borders`), **People in a Circle** (`circle`), **Literal
+  Names** (`names`) and **Climate Twins** (`climate`) sit under "More
+  observations".
   **Development, Unpacked** was retired in 2026-10: its links
   (`mode=development`) open the lobby with a "retired" notice, and its UNDP
   data, code and attribution were removed.
@@ -46,6 +48,17 @@ Observation contracts:
   approximate sunrise/sunset computed in the browser (NOAA/Meeus-style
   approximations, educational only; never legal, navigational or aviation
   time).
+- **True Size** — carries a Natural Earth 1:110m country outline to the
+  selected point (largest landmass centroid on the point; longitude shift then
+  meridian slide, so shape and area are exact on the sphere) with a faint
+  outline at home. Reports spherical area of the simplified outline, the area
+  ratio to the country under the point and the Web Mercator enlargement at
+  home and here. No new data.
+- **Literal Names** — what each country's name literally says, written by
+  Mundus for every country unit against the public-domain CIA World Factbook
+  etymology field (pinned factbook.json mirror), with per-record sources where
+  Mundus departs from it. Disputed meanings carry a question mark; unknown
+  meanings draw no wordmark. Contract: `docs/data/literal-names.md`.
 - **Urban Proximity** — two views over GHSL 2025 urban centres. The city view
   gives the hierarchical great-circle distance from a centre of at least one
   million people to the nearest centre meeting the visible α population
@@ -58,6 +71,11 @@ Observation contracts:
   both without an owner. It does not show commuting, healthcare or
   administrative reach. Contracts:
   `docs/URBAN_ISOLATION.md` and `docs/data/city-reach.md`.
+- **People in a Circle** — GHS-POP 2020 summed to a 0.25° grid; the browser
+  finds the great-circle radius around the selected place that holds half the
+  world's people, or counts the people within a chosen radius (rough below
+  about 200 km), and offers the precomputed smallest half circle. Contract:
+  `docs/data/population-circle.md`.
 - **Climate Twins** — Köppen-Geiger class of the selected point from Beck et
   al. (2023), 1991–2020 average, 0.1° grid used unchanged; same-class land is
   lit and a latitude circle drawn; the card lists GeoNames major cities on the
@@ -70,6 +88,13 @@ Observation contracts:
   its solid core represents the target area. Colours encode the area multiplier
   around 1×, while night lights use a dark-earth theme; real coordinates remain
   shareable. Rebuild and acceptance details: `docs/data/reshaped-earth.md`.
+- **Border Hop** — the fewest border crossings between the selected unit and a
+  destination without boats or planes, over land parts of the high-detail
+  boundary view: exclaves and overseas parts do not join landmasses, two
+  reviewed missing borders are added, one water-only lake boundary is dropped, and seven reviewed bridges and tunnels
+  count, never ferries. Without a destination the globe colours every unit by
+  crossings from the start. It says nothing about whether a crossing is open.
+  Contract: `docs/data/land-borders.md`.
 
 Experience requirements: the first screen is the globe; Chinese and English
 agree in meaning; desktop and mobile complete the same loop; keyboard, focus
@@ -141,7 +166,11 @@ Locale and first-use state are local preferences.
 Mode parameters are written only when they differ from the default: Sunline
 `time` (fixed clock), Surname Atlas `surname`, Urban Proximity `alpha`,
 `view=field` and, in the field view, `reach` (one of the seven approved levels;
-invalid values fall back to 4), and Reshaped Earth `metric`. Reshaped Earth
+invalid values fall back to 4), Reshaped Earth `metric`, True Size `country` (a
+1:110m unit id; invalid values fall back to Greenland, `ne-304`), Border Hop
+`to` (a reviewed unit id; anything else is ignored), People in a Circle
+`radius` (whole km, 50–20,000; absent means the half circle) and Literal Names
+`label=local`. Reshaped Earth
 ignores legacy `level` parameters; shape and animation progress stay local.
 Climate Twins (`mode=climate`) writes only `point`; it has no mode parameters.
 
@@ -178,7 +207,7 @@ live smoke against the deployed URL. Live smoke only proves the host serves the
 artifact and renders the lobby; it does not replace the browser suites.
 
 Browser tests live in `tests/e2e/`, one file per area (`shell`, `layout`,
-`globe`, `other-side`, `surnames`, `sunline`, `reshaped`, `climate`) with shared
+`globe`, `other-side`, `surnames`, `sunline`, `reshaped`, `circle`, `names`, `climate`) with shared
 helpers in `helpers.ts`; `@smoke` tags the CI smoke subset. `@resources`
 tags the 20-cycle Reshaped Earth resource regression, which routine runs
 exclude; it runs nightly and on demand in the Resources workflow
