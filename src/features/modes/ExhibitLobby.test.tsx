@@ -23,9 +23,11 @@ describe('ExhibitLobby', () => {
     const onEnter = vi.fn();
     render(<ExhibitLobby locale="en" onEnter={onEnter} />);
     const more = screen.getByRole('list', { name: 'More' });
-    expect(more.querySelectorAll('li')).toHaveLength(1);
+    expect(more.querySelectorAll('li')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Sunline' }));
     expect(onEnter).toHaveBeenCalledWith('sunline');
+    fireEvent.click(screen.getByRole('button', { name: 'Literal Names' }));
+    expect(onEnter).toHaveBeenCalledWith('names');
     fireEvent.click(screen.getByRole('button', { name: /Urban Proximity/u }));
     expect(onEnter).toHaveBeenCalledWith('isolation');
   });

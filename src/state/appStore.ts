@@ -21,6 +21,10 @@ import {
   isCityReachLevel,
   type CityReachLevel,
 } from '../features/isolation/cityReachLevel';
+import {
+  DEFAULT_LITERAL_NAME_LABEL,
+  type LiteralNameLabel,
+} from '../features/names/literalNameWordmark';
 
 export type ReshapedMorphState = 'pending' | 'animating' | 'settled';
 
@@ -52,6 +56,7 @@ interface AppState {
   setReshapedMorphState: (state: ReshapedMorphState) => void;
   setReshapedGraphicsUnavailable: (unavailable: boolean) => void;
   isolationReach: CityReachLevel;
+  namesLabel: LiteralNameLabel;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -75,6 +80,7 @@ interface AppState {
   setReshapedMetric: (metric: ReshapedMetricId) => void;
   setReshapedShape: (shape: 'true' | 'reshaped') => void;
   setIsolationReach: (value: number) => void;
+  setNamesLabel: (label: LiteralNameLabel) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
   setAntipodeCountry: (country: CountryRef | null) => void;
@@ -103,6 +109,7 @@ export const useAppStore = create<AppState>((set) => ({
   surnameDisplayMode:
     initialUrlState.surnameDisplayMode ?? DEFAULT_SURNAME_DISPLAY_MODE,
   isolationAlpha: initialUrlState.isolationAlpha,
+  namesLabel: initialUrlState.namesLabel ?? DEFAULT_LITERAL_NAME_LABEL,
   navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
   antipodeCountry: null,
@@ -166,6 +173,7 @@ export const useAppStore = create<AppState>((set) => ({
       sunlineClockMode: sunlinePlaying ? 'fixed' : state.sunlineClockMode,
     })),
   setSurnameDisplayMode: (surnameDisplayMode) => set({ surnameDisplayMode }),
+  setNamesLabel: (namesLabel) => set({ namesLabel }),
   setIsolationAlpha: (value) => set({ isolationAlpha: clampAlpha(value) }),
   setIsolationView: (isolationView) => set({ isolationView }),
   reshapedShape: 'reshaped',

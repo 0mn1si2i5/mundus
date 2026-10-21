@@ -39,7 +39,6 @@ import {
   getSurnameWordmarkTexturePixelWidth,
   getSurnameWordmarkWorldWidth,
 } from '../surnames/surnameWordmark';
-import type { SurnameDisplayMode } from '../../state/urlState';
 import { ignoreRaycast } from './sceneUtils';
 import { type SurnameLabelEntry } from './surnameLabelLayout';
 
@@ -67,7 +66,7 @@ function configureSurnameTexture(texture: Texture): Texture {
 
 export function SurnameMapLabelLayer({
   entries,
-  displayMode,
+  wordmarkKey,
   selectedCountryId,
   cameraFocusTarget,
   onVisibilityChange,
@@ -78,7 +77,7 @@ export function SurnameMapLabelLayer({
   globeGroupRef,
 }: {
   entries: readonly SurnameLabelEntry[];
-  displayMode: SurnameDisplayMode;
+  wordmarkKey: string;
   selectedCountryId: string | null;
   cameraFocusTarget: GeoPoint | null;
   onVisibilityChange: (visible: boolean) => void;
@@ -408,7 +407,7 @@ export function SurnameMapLabelLayer({
     <>
       {entries.map((entry) => (
         <SurnameMapLabelSurface
-          key={`${entry.label.countryId}:${displayMode}`}
+          key={`${entry.label.countryId}:${wordmarkKey}`}
           entry={entry}
           textureCache={textureCache}
           invalidate={invalidate}

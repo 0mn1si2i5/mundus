@@ -1,0 +1,24 @@
+.result {
+  width: 19rem;
+}
+
+.badge[data-confidence='likely'] {
+  color: var(--color-brass);
+  background: rgb(128 98 31 / 10%);
+}
+
+.badge[data-confidence='disputed'],
+.badge[data-confidence='unknown'] {
+  color: var(--color-subtle);
+  background: var(--color-control);
+}
+
+.local {
+  font-size: 1rem !important;
+}
+
+.prose {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}

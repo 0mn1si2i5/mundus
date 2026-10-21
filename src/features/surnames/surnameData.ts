@@ -75,12 +75,6 @@ export interface SurnameDataset {
   countriesById: ReadonlyMap<string, SurnameCountry>;
 }
 
-export interface SurnameMapLabel {
-  countryId: string;
-  countryName: string;
-  record: SurnameRecord;
-}
-
 export function getSurnameCoverageStatus(
   country: Pick<SurnameCountry, 'records'> | undefined,
 ): SurnameCountry['coverageStatus'] {

@@ -23,6 +23,10 @@ import {
   parseCityReachParam,
   type CityReachLevel,
 } from '../features/isolation/cityReachLevel';
+import {
+  DEFAULT_LITERAL_NAME_LABEL,
+  type LiteralNameLabel,
+} from '../features/names/literalNameWordmark';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
@@ -51,6 +55,7 @@ export interface ShareableState {
   isolationView: IsolationView;
   reshapedMetric?: ReshapedMetricId;
   isolationReach: CityReachLevel;
+  namesLabel?: LiteralNameLabel;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
@@ -61,6 +66,7 @@ const modeSchema = z.enum([
   'surnames',
   'isolation',
   'reshaped',
+  'names',
 ]);
 /** Observations that once shipped; their links open the lobby with a notice. */
 const RETIRED_MODES: ReadonlySet<string> = new Set(['development']);
@@ -131,6 +137,8 @@ export function parseUrlState(
     activeMode === 'isolation' && isolationView === 'field'
       ? parseCityReachParam(params.get('reach'))
       : CITY_REACH_DEFAULT;
+  const namesLabel: LiteralNameLabel =
+    params.get('label') === 'local' ? 'local' : DEFAULT_LITERAL_NAME_LABEL;
 
   return {
     activeMode,
@@ -149,6 +157,7 @@ export function parseUrlState(
     isolationView,
     ...(activeMode === 'reshaped' ? { reshapedMetric } : {}),
     isolationReach,
+    ...(activeMode === 'names' ? { namesLabel } : {}),
   };
 }
 
@@ -215,6 +224,13 @@ export function serializeUrlState(state: ShareableState): string {
       state.isolationReach !== CITY_REACH_DEFAULT
     ) {
       params.set('reach', String(state.isolationReach));
+    }
+    if (
+      state.activeMode === 'names' &&
+      (state.namesLabel ?? DEFAULT_LITERAL_NAME_LABEL) !==
+        DEFAULT_LITERAL_NAME_LABEL
+    ) {
+      params.set('label', state.namesLabel ?? DEFAULT_LITERAL_NAME_LABEL);
     }
     params.set('v', '2');
   }

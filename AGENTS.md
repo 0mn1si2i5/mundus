@@ -21,8 +21,8 @@ observation while keeping the selected place.
 - The bare address opens a neutral lobby. The header switcher offers the four
   primary observations, **Other Side** (`antipodes`), **Surname Atlas**
   (`surnames`), **Urban Proximity** (`isolation`) and **Reshaped Earth**
-  (`reshaped`); **Sunline** (`sunline`)
-  sits under "More observations".
+  (`reshaped`); **Sunline** (`sunline`) and **Literal Names** (`names`)
+  sit under "More observations".
   **Development, Unpacked** was retired in 2026-10: its links
   (`mode=development`) open the lobby with a "retired" notice, and its UNDP
   data, code and attribution were removed.
@@ -46,6 +46,11 @@ Observation contracts:
   approximate sunrise/sunset computed in the browser (NOAA/Meeus-style
   approximations, educational only; never legal, navigational or aviation
   time).
+- **Literal Names** — what each country's name literally says, written by
+  Mundus for every country unit against the public-domain CIA World Factbook
+  etymology field (pinned factbook.json mirror), with per-record sources where
+  Mundus departs from it. Disputed meanings carry a question mark; unknown
+  meanings draw no wordmark. Contract: `docs/data/literal-names.md`.
 - **Urban Proximity** — two views over GHSL 2025 urban centres. The city view
   gives the hierarchical great-circle distance from a centre of at least one
   million people to the nearest centre meeting the visible α population
@@ -135,7 +140,8 @@ Locale and first-use state are local preferences.
 Mode parameters are written only when they differ from the default: Sunline
 `time` (fixed clock), Surname Atlas `surname`, Urban Proximity `alpha`,
 `view=field` and, in the field view, `reach` (one of the seven approved levels;
-invalid values fall back to 4), and Reshaped Earth `metric`. Reshaped Earth
+invalid values fall back to 4), Reshaped Earth `metric`, and Literal Names
+`label=local`. Reshaped Earth
 ignores legacy `level` parameters; shape and animation progress stay local.
 
 ## 4. Data
@@ -171,7 +177,7 @@ live smoke against the deployed URL. Live smoke only proves the host serves the
 artifact and renders the lobby; it does not replace the browser suites.
 
 Browser tests live in `tests/e2e/`, one file per area (`shell`, `layout`,
-`globe`, `other-side`, `surnames`, `sunline`, `reshaped`) with shared
+`globe`, `other-side`, `surnames`, `sunline`, `reshaped`, `names`) with shared
 helpers in `helpers.ts`; `@smoke` tags the CI smoke subset. `@resources`
 tags the 20-cycle Reshaped Earth resource regression, which routine runs
 exclude; it runs nightly and on demand in the Resources workflow

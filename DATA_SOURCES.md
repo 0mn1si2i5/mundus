@@ -281,6 +281,19 @@ applicable. Raw GeoTIFFs, netCDF4/HDF5 files and classification caches remain
 outside the worktree. Every source notice and the method summary appears in
 the About dialog.
 
+## Literal Names
+
+- Source: CIA World Factbook, final edition, "Country name — etymology" field,
+  read through the [factbook.json](https://github.com/factbook/factbook.json)
+  mirror at commit `144d6977b2b01ac1cbd220de754c0a005616760b`.
+- Licence: the Factbook is a US government work in the public domain; the
+  factbook.json mirror is CC0.
+- Use: the backbone that each Mundus-written literal meaning in
+  `src/features/names/literalNames.ts` is checked against. Corrections and
+  additions cite their own sources per record; no CC BY-SA text is reused.
+- Transformation: hand-reviewed, rewritten in Chinese and English; no raw
+  download is committed. Contract: [docs/data/literal-names.md](docs/data/literal-names.md).
+
 ## Solar calculations
 
 - Method source: [NOAA Solar Calculator calculation details](https://gml.noaa.gov/grad/solcalc/calcdetails.html)

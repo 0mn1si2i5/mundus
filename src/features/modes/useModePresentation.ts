@@ -16,10 +16,19 @@ import {
   useSurnameDataset,
   type SurnameLoadState,
 } from '../surnames/useSurnameDataset';
+import { getDisplaySurnameRecord } from '../surnames/surnameData';
+import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
+import type { MapWordmarkLabel } from '../globe/mapWordmark';
+import { COUNTRY_NAMES } from '../globe/countryNames';
 import {
-  getDisplaySurnameRecord,
-  type SurnameMapLabel,
-} from '../surnames/surnameData';
+  useLiteralNames,
+  type LiteralNamesLoadState,
+} from '../names/useLiteralNames';
+import {
+  DEFAULT_LITERAL_NAME_LABEL,
+  resolveLiteralNameWordmark,
+  type LiteralNameLabel,
+} from '../names/literalNameWordmark';
 import type { SurnameDisplayMode } from '../../state/urlState';
 import { DEFAULT_SURNAME_DISPLAY_MODE } from '../../state/urlState';
 import {
@@ -55,8 +64,9 @@ export interface GlobePresentation {
   showAntipodes: boolean;
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
-  surnameMapLabels: readonly SurnameMapLabel[];
-  surnameDisplayMode: SurnameDisplayMode;
+  mapWordmarks: readonly MapWordmarkLabel[];
+  /** Identifies the wordmark text source, so the label layer can reset. */
+  wordmarkKey: string;
   isolation: IsolationGlobePresentation | null;
   reshaped: {
     metric: ReshapedMetricId;
@@ -142,6 +152,12 @@ export type ModePresentation =
       selectedUnit: import('../reshaped/reshapedData').ReshapedUnit | null;
       selectedValue: import('../reshaped/reshapedData').ReshapedValueRow | null;
       ranking: readonly import('../reshaped/reshapedData').ReshapedValueRow[];
+    }
+  | {
+      id: 'names';
+      selectedCountry: CountryRef | null;
+      label: LiteralNameLabel;
+      data: LiteralNamesLoadState;
     };
 
 /**
@@ -162,6 +178,9 @@ export function useModePresentation(
     DEFAULT_SURNAME_DISPLAY_MODE;
   const cityIndex = useGeoNamesCityIndex(activeMode === 'antipodes');
   const surnameData = useSurnameDataset(activeMode === 'surnames');
+  const literalNames = useLiteralNames(activeMode === 'names');
+  const namesLabel =
+    useAppStore((state) => state.namesLabel) ?? DEFAULT_LITERAL_NAME_LABEL;
   const isolationView = useAppStore((state) => state.isolationView);
   const isolationData = useIsolationDataset(
     activeMode === 'isolation' && isolationView === 'city',
@@ -310,6 +329,13 @@ export function useModePresentation(
         ranking,
       };
     }
+    case 'names':
+      return {
+        id: activeMode,
+        selectedCountry,
+        label: namesLabel,
+        data: literalNames,
+      };
     default:
       return assertNever(activeMode);
   }
@@ -327,6 +353,10 @@ export function useGlobePresentation(
   const surnameDisplayMode =
     useAppStore((state) => state.surnameDisplayMode) ??
     DEFAULT_SURNAME_DISPLAY_MODE;
+  const literalNames = useLiteralNames(activeMode === 'names');
+  const namesLabel =
+    useAppStore((state) => state.namesLabel) ?? DEFAULT_LITERAL_NAME_LABEL;
+  const locale = useAppStore((state) => state.locale);
   const isolationView = useAppStore((state) => state.isolationView);
   const isolationData = useIsolationDataset(
     activeMode === 'isolation' && isolationView === 'city',
@@ -355,23 +385,43 @@ export function useGlobePresentation(
     return { subsolarPoint: solarPosition(sunlineTimeMs).subsolarPoint };
   }, [activeMode, sunlineTimeMs]);
 
-  const surnameMapLabels = useMemo(() => {
-    if (activeMode !== 'surnames' || surnameData.status !== 'ready') {
-      return [];
+  const mapWordmarks = useMemo<readonly MapWordmarkLabel[]>(() => {
+    if (activeMode === 'surnames' && surnameData.status === 'ready') {
+      return surnameData.data.countries.flatMap((country) => {
+        const record = getDisplaySurnameRecord(country);
+        return record
+          ? [
+              {
+                countryId: country.countryId,
+                countryName: country.countryIso2,
+                wordmark: resolveSurnameWordmark(record, surnameDisplayMode),
+              },
+            ]
+          : [];
+      });
     }
-    return surnameData.data.countries.flatMap((country) => {
-      const record = getDisplaySurnameRecord(country);
-      return record
-        ? [
-            {
-              countryId: country.countryId,
-              countryName: country.countryIso2,
-              record,
-            },
-          ]
-        : [];
-    });
-  }, [activeMode, surnameData]);
+    if (activeMode === 'names' && literalNames.status === 'ready') {
+      return literalNames.data.records.map((record) => ({
+        countryId: record.id,
+        countryName: COUNTRY_NAMES[record.id]?.en ?? record.id,
+        wordmark: resolveLiteralNameWordmark(record, namesLabel, locale),
+      }));
+    }
+    return [];
+  }, [
+    activeMode,
+    literalNames,
+    locale,
+    namesLabel,
+    surnameData,
+    surnameDisplayMode,
+  ]);
+  const wordmarkKey =
+    activeMode === 'surnames'
+      ? `surnames:${surnameDisplayMode}`
+      : activeMode === 'names'
+        ? `names:${namesLabel}:${locale}`
+        : '';
 
   const antipodeRelation = useMemo(() => {
     if (activeMode !== 'antipodes') return null;
@@ -456,8 +506,8 @@ export function useGlobePresentation(
     showAntipodes: activeMode === 'antipodes',
     sunline,
     antipodeRelation,
-    surnameMapLabels,
-    surnameDisplayMode,
+    mapWordmarks,
+    wordmarkKey,
     isolation,
     reshaped:
       activeMode === 'reshaped'

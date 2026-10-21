@@ -61,9 +61,7 @@ import {
   getCountryLabelAnchorForId,
 } from './countryLabel';
 import { type SurnameLabelHiddenReason } from './surnameLabelLayout';
-import type { SurnameMapLabel } from '../surnames/surnameData';
-import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
-import type { SurnameDisplayMode } from '../../state/urlState';
+import type { MapWordmarkLabel } from './mapWordmark';
 import type { SurnameLabelSlot } from './surnameLabelSlots';
 import {
   CAMERA_FOCUS_DURATION_MS,
@@ -138,8 +136,9 @@ interface GlobeSceneProps {
   dragDiagnosticsEnabled: boolean;
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
-  surnameMapLabels: readonly SurnameMapLabel[];
-  surnameDisplayMode: SurnameDisplayMode;
+  mapWordmarks: readonly MapWordmarkLabel[];
+  /** Changes whenever the wordmark text source changes. */
+  wordmarkKey: string;
   isolation: IsolationGlobePresentation | null;
   reshaped: GlobePresentation['reshaped'];
   onIsolationFieldRendered: (frame: CityReachFrame) => void;
@@ -179,8 +178,8 @@ export function GlobeScene({
   dragDiagnosticsEnabled,
   sunline,
   antipodeRelation,
-  surnameMapLabels,
-  surnameDisplayMode,
+  mapWordmarks,
+  wordmarkKey,
   isolation,
   reshaped,
   onIsolationFieldRendered,
@@ -316,7 +315,7 @@ export function GlobeScene({
           !(gl.getContext() instanceof WebGL2RenderingContext)),
     );
   }, [gl, profile.level, reshaped, setGraphicsUnavailable]);
-  const surnameOverrideKey = `${selectedCountry?.countryId ?? ''}:${surnameDisplayMode}:${size.width}:${size.height}`;
+  const surnameOverrideKey = `${selectedCountry?.countryId ?? ''}:${wordmarkKey}:${size.width}:${size.height}`;
   const clearCameraFocus = useCallback(() => {
     cameraFocusGeneration.current += 1;
     if (focusFrameRef.current !== null) {
@@ -352,17 +351,19 @@ export function GlobeScene({
   const reducedMotion = useReducedMotion();
   const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
   const countries = useMemo(() => getCountryDataset(), []);
-  const surnameRuntime = useSurnameAtlasRuntime(activeMode === 'surnames');
+  // Surname Atlas and Literal Names share the surface wordmark layer.
+  const wordmarkMode = activeMode === 'surnames' || activeMode === 'names';
+  const surnameRuntime = useSurnameAtlasRuntime(wordmarkMode);
   const surnameCountries =
-    activeMode === 'surnames' && surnameRuntime
+    wordmarkMode && surnameRuntime
       ? surnameRuntime.surnameCountries
       : NO_COUNTRIES;
   const selectedSurnameMapLabel = useMemo(
     () =>
-      surnameMapLabels.find(
+      mapWordmarks.find(
         (label) => label.countryId === selectedCountry?.countryId,
       ) ?? null,
-    [selectedCountry?.countryId, surnameMapLabels],
+    [selectedCountry?.countryId, mapWordmarks],
   );
   const surnameAnchor = useMemo(() => {
     if (!selectedSurnameMapLabel) return null;
@@ -395,14 +396,14 @@ export function GlobeScene({
         candidate,
       ]),
     );
-    return surnameMapLabels.flatMap((label) => {
+    return mapWordmarks.flatMap((label) => {
       const country = countriesById.get(label.countryId);
       const anchor = country
         ? (getCountryLabelAnchor(country) ??
           getCountryLabelAnchorForId(label.countryId))
         : getCountryLabelAnchorForId(label.countryId);
       if (!anchor) return [];
-      const wordmark = resolveSurnameWordmark(label.record, surnameDisplayMode);
+      const wordmark = label.wordmark;
       if (!wordmark) return [];
       const slot =
         (surnameSlotOverrides[`${surnameOverrideKey}:${label.countryId}`]
@@ -442,8 +443,7 @@ export function GlobeScene({
     profile.vectorDetail,
     renderedCountriesById,
     surnameCountries,
-    surnameDisplayMode,
-    surnameMapLabels,
+    mapWordmarks,
     surnameRuntime,
     surnameSlotOverrides,
     surnameOverrideKey,
@@ -457,7 +457,7 @@ export function GlobeScene({
     [selectedCountry?.countryId, surnameLabelEntries],
   );
   useEffect(() => {
-    if (activeMode !== 'surnames') {
+    if (!wordmarkMode) {
       surnameFocusKey.current = '';
       surnameFocusAttempt.current = { countryId: '', nextOffsetIndex: 0 };
       surnameScaleAttempt.current = { countryId: '', count: 0 };
@@ -486,7 +486,7 @@ export function GlobeScene({
       ),
     );
   }, [
-    activeMode,
+    wordmarkMode,
     requestCameraFocus,
     selectedSurnameMapLabel,
     selectedSurnameSlot,
@@ -502,7 +502,7 @@ export function GlobeScene({
       userGestureRecentlyEnded;
     if (
       userOwnsCamera &&
-      activeMode === 'surnames' &&
+      wordmarkMode &&
       selectedSurnameMapLabel &&
       selectedSurnameSlot
     ) {
@@ -531,7 +531,7 @@ export function GlobeScene({
       }
     }
     if (
-      activeMode === 'surnames' &&
+      wordmarkMode &&
       selectedSurnameMapLabel &&
       surnameAnchor &&
       selectedSurnameSlot &&
@@ -540,10 +540,7 @@ export function GlobeScene({
         hasMeaningfulInteraction ||
         userGestureRecentlyEnded)
     ) {
-      const selectedWordmark = resolveSurnameWordmark(
-        selectedSurnameMapLabel.record,
-        surnameDisplayMode,
-      );
+      const selectedWordmark = selectedSurnameMapLabel.wordmark;
       const candidate =
         selectedWordmark && surnameRuntime
           ? surnameRuntime.chooseAlternativeSurnameLabelSlot(
@@ -587,7 +584,7 @@ export function GlobeScene({
     // be individually safe yet still land under the same full-width panel.
     if (
       compactViewport &&
-      activeMode === 'surnames' &&
+      wordmarkMode &&
       !manualCameraInteraction.current &&
       !hasMeaningfulInteraction &&
       !userGestureRecentlyEnded &&
@@ -610,7 +607,7 @@ export function GlobeScene({
       }
     }
     if (
-      activeMode !== 'surnames' ||
+      !wordmarkMode ||
       manualCameraInteraction.current ||
       hasMeaningfulInteraction ||
       userGestureRecentlyEnded ||
@@ -632,7 +629,6 @@ export function GlobeScene({
       ),
     );
   }, [
-    activeMode,
     hasMeaningfulInteraction,
     profile.vectorDetail,
     renderedCountriesById,
@@ -644,7 +640,7 @@ export function GlobeScene({
     surnameRuntime,
     setSurnameSlotOverrides,
     surnameAnchor,
-    surnameDisplayMode,
+    wordmarkMode,
   ]);
   const texture = useMemo(
     () => createCountryTexture(countries, profile.textureWidth, maxAnisotropy),
@@ -927,7 +923,7 @@ export function GlobeScene({
       invalidate();
     }
     if (
-      activeMode !== 'surnames' &&
+      !wordmarkMode &&
       activeMode !== 'reshaped' &&
       isolation?.view !== 'field' &&
       !hasInteracted &&
@@ -1240,9 +1236,9 @@ export function GlobeScene({
         )}
         {vectorReady && surnameLabelEntries.length > 0 ? (
           <SurnameMapLabelLayer
-            key={`surname-label-layer:${surnameDisplayMode}`}
+            key={`surname-label-layer:${wordmarkKey}`}
             entries={surnameLabelEntries}
-            displayMode={surnameDisplayMode}
+            wordmarkKey={wordmarkKey}
             selectedCountryId={selectedCountry?.countryId ?? null}
             cameraFocusTarget={cameraTarget}
             onVisibilityChange={onSurnameLabelVisibilityChange}

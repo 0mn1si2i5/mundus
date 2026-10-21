@@ -48,6 +48,14 @@ const COPY = {
         '变形地球',
         `方法采用 2020 年人口、${HAS_GDP ? 'PPP GDP、' : ''}化石燃料与水泥 CO₂ 排放和夜光快照，在等积圆柱网格上离线计算 Gastner–Seguy–More（2018）连续面积变形图。国家值由 Mundus 国家栅格聚合，边界沿用 Mundus 国家视角。海洋、南极和缺失单元用平均密度填充；真实零值使用平均密度 1% 的显示下限。连续变形无法压到应得大小的多余面积画成斜线，实色核心面积表达指标份额。${HAS_GDP ? 'GDP 是以 2021 年国际元计的模型下采样估计；' : ''}夜光是有饱和上限的相对亮度指数。`,
       ],
+      [
+        '国名本义',
+        '每个国家的名字字面上是什么意思，由 Mundus 逐条撰写。英文词源以已停刊的 CIA World Factbook “国名词源”条目（公共领域）为主干核对，凡与其不同或补充之处都列出依据。词源常有多种说法：地球上只写最常见的一种，有争议的加问号，本义未知的不写字面义。中文名按音译、意译、音意合译、本国汉字名和简称分类。',
+      ],
+      [
+        'Literal Names',
+        'What each country’s name literally says, written record by record by Mundus. English etymologies are checked against the country-name etymology entries of the discontinued CIA World Factbook (public domain), and every departure or addition lists its sources. Etymologies often compete: the globe shows the most common reading, marks disputed ones with a question mark and leaves unknown meanings blank. Chinese names are classed as transliterated, translated, mixed, native or abbreviated.',
+      ],
     ] as const,
     credits: [
       {
@@ -182,6 +190,22 @@ const COPY = {
             href: 'https://figshare.com/articles/dataset/9828827/10',
           },
           { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'CIA World Factbook · factbook.json',
+        use: '国名本义 · 国名词源核对主干',
+        notice:
+          'CIA World Factbook 为美国政府作品，属公共领域；通过 factbook.json 镜像（CC0）固定版本读取。字面义与说明由 Mundus 改写，不代表 CIA 观点。',
+        links: [
+          {
+            label: '镜像',
+            href: 'https://github.com/factbook/factbook.json',
+          },
+          {
+            label: 'CC0',
+            href: 'https://creativecommons.org/publicdomain/zero/1.0/',
+          },
         ],
       },
     ] satisfies readonly Credit[],
@@ -353,6 +377,22 @@ const COPY = {
             href: 'https://figshare.com/articles/dataset/9828827/10',
           },
           { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'CIA World Factbook · factbook.json',
+        use: 'Literal Names · etymology backbone',
+        notice:
+          'The CIA World Factbook is a US government work in the public domain, read at a pinned version of the factbook.json mirror (CC0). Literal meanings and notes are rewritten by Mundus and do not represent the CIA.',
+        links: [
+          {
+            label: 'Mirror',
+            href: 'https://github.com/factbook/factbook.json',
+          },
+          {
+            label: 'CC0',
+            href: 'https://creativecommons.org/publicdomain/zero/1.0/',
+          },
         ],
       },
     ] satisfies readonly Credit[],
