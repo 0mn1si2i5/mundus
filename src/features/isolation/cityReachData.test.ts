@@ -12,15 +12,17 @@ import {
 } from './cityReachData';
 import { CITY_REACH_LEVELS } from './cityReachLevel';
 import type {
+  CityReachCity,
   CityReachFrame,
   CityReachTextureAsset,
   CityReachQuality,
   CityReachQualityTier,
 } from './cityReachTypes';
+import { encodeCityTable } from './cityReachTable';
 
 function sourceFixture() {
   const cities = {
-    formatVersion: 1,
+    formatVersion: 2,
     referenceYear: 2025,
     universeMinPopulation: 100_000,
     cities: [
@@ -158,6 +160,13 @@ function sourceFixture() {
   return { cities, manifest };
 }
 
+function table(fixture: ReturnType<typeof sourceFixture>) {
+  return encodeCityTable(
+    fixture.cities,
+    fixture.cities.cities as CityReachCity[],
+  );
+}
+
 async function identity(bytes: Uint8Array) {
   const hash = new Uint8Array(await webcrypto.subtle.digest('SHA-256', bytes));
   return {
@@ -191,7 +200,7 @@ describe('city reach metadata and owner images', () => {
 
   it('loads the raw city source only when asked and rejects altered original UTF8 bytes', async () => {
     const fixture = sourceFixture();
-    const text = `${JSON.stringify(fixture.cities)}\n`;
+    const text = `${JSON.stringify(table(fixture))}\n`;
     fixture.manifest.cityAsset = {
       ...fixture.manifest.cityAsset,
       ...(await identity(new TextEncoder().encode(text))),
@@ -230,7 +239,7 @@ describe('city reach metadata and owner images', () => {
       city.name.zh = null;
       city.nameMatchType = 'none';
     }
-    const metadata = decodeCityReachMetadata(fixture.manifest, fixture.cities);
+    const metadata = decodeCityReachMetadata(fixture.manifest, table(fixture));
     expect(metadata.inspectableCities.map((city) => city.id)).toEqual([
       673, 9001, 42,
     ]);
@@ -247,17 +256,17 @@ describe('city reach metadata and owner images', () => {
   it('rejects unknown parents, duplicate GHSL ids, and missing texture coverage', () => {
     const a = sourceFixture();
     a.cities.cities[0]!.parentId = 5;
-    expect(() => decodeCityReachMetadata(a.manifest, a.cities)).toThrow(
+    expect(() => decodeCityReachMetadata(a.manifest, table(a))).toThrow(
       /parent/,
     );
     const b = sourceFixture();
     b.cities.cities[1]!.id = 673;
-    expect(() => decodeCityReachMetadata(b.manifest, b.cities)).toThrow(
+    expect(() => decodeCityReachMetadata(b.manifest, table(b))).toThrow(
       /identity/,
     );
     const c = sourceFixture();
     c.manifest.ownershipAssets[4]!.low![0]!.width = 1;
-    expect(() => decodeCityReachMetadata(c.manifest, c.cities)).toThrow(
+    expect(() => decodeCityReachMetadata(c.manifest, table(c))).toThrow(
       /Incomplete/,
     );
   });
@@ -378,7 +387,7 @@ describe('city reach metadata and owner images', () => {
         await identity(bytes),
       );
     Object.assign(fixture.manifest.densityAsset, await identity(densityBytes));
-    const metadata = decodeCityReachMetadata(fixture.manifest, fixture.cities);
+    const metadata = decodeCityReachMetadata(fixture.manifest, table(fixture));
     const fetcher = vi.fn(async (url: URL) => {
       const response = url.pathname.endsWith('density-low.png')
         ? densityBytes
@@ -489,7 +498,7 @@ describe('city reach point lookup', () => {
     frame: CityReachFrame;
   } {
     const source = sourceFixture();
-    const metadata = decodeCityReachMetadata(source.manifest, source.cities);
+    const metadata = decodeCityReachMetadata(source.manifest, table(source));
     const frame: CityReachFrame = {
       level: 4,
       quality: 'low',

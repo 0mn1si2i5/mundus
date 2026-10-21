@@ -86,7 +86,7 @@ export async function verifyCountryNames(root = process.cwd()) {
 
   const ghslNames = new Set([
     ...isolation.cities.map((row) => isolation.strings[row[6]]),
-    ...reach.cities.map((city) => city.country.en),
+    ...reach.countries,
   ]);
   for (const name of ghslNames)
     assert.ok(

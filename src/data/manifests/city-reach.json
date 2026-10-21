@@ -58,10 +58,10 @@
   },
   "cityAsset": {
     "path": "src/data/generated/city-reach.json",
-    "sha256": "f650124353aa3b705843af56ca7593a31a18d7fc956fd168541bb20d24568d3c",
-    "rawBytes": 2285107,
-    "gzipBytes": 440441,
-    "formatVersion": 1
+    "sha256": "00f9ffb3fcb99b9adf0ad749664c524e181725310deb29c33f8cfc51d607a34e",
+    "rawBytes": 618468,
+    "gzipBytes": 236832,
+    "formatVersion": 2
   },
   "sourceCapture": {
     "path": "src/data/generated/city-reach-source-summary.json",

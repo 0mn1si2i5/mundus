@@ -12,20 +12,17 @@ import {
 import { POPULATION_SOURCE } from './sources.mjs';
 import { validateGrid } from './grid.mjs';
 import { OPEN_BORDER_RULES, ROUTE_MERGES, ROUTE_UNKNOWN } from './policy.mjs';
+import {
+  CITY_STATUSES,
+  CITY_TABLE_FORMAT_VERSION,
+} from '../../src/features/isolation/cityReachTable.ts';
 
-export const CITY_STATUSES = Object.freeze([
-  'ok',
-  'root',
-  'no_larger_reachable',
-  'merged_at_resolution',
-  'transport_missing',
-  'disputed',
-]);
+export { CITY_STATUSES };
 const hash = (value) =>
   typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 export function validateCityAsset(asset) {
   if (
-    asset?.formatVersion !== 1 ||
+    asset?.formatVersion !== CITY_TABLE_FORMAT_VERSION ||
     asset.referenceYear !== 2025 ||
     asset.universeMinPopulation !== MIN_POPULATION ||
     !Array.isArray(asset.cities) ||

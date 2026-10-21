@@ -210,6 +210,17 @@ reachable city and 65535 means disputed. The city table records the stable
 owner index, GHSL id, names, country, 2025 population, coordinates, threshold,
 parent, state and merge reference.
 
+The city table is columnar (`formatVersion` 2,
+`src/features/isolation/cityReachTable.ts`): one array per field, in owner
+order, so the owner index is the array position plus one. GHSL English country
+names are stored once and referenced by index; Chinese country names are not
+stored and come from the reviewed country table when the browser or verifier
+expands the table, which fails if a country has no reviewed name. Name-match
+type and state are small integer codes whose lists are written in the file.
+City and centre coordinates are rounded to four decimals (at most 0.00005°,
+about 6 m); population and threshold keep full precision. The build expands
+the encoded table and requires it to equal the validated rows before writing.
+
 Ownership tiles are **RGB8 PNG**, with code `R + 256 * G` and B strictly 0.
 A separate shared **RGB8 density PNG** stores quantised density in R, with
 G and B strictly 0. Neither file stores data in alpha: the PNGs have no alpha
@@ -269,7 +280,8 @@ measured:
 The default k=4 owner plus shared density is 614,419 PNG bytes. The schema and
 published-data verifier enforce **3,000,000 bytes maximum for all eight PNGs**;
 this is a total raw compressed-file budget, not a per-level or gzip-only limit.
-These measurements exclude the 2,283,931-byte city table, 27,317-byte source
+These measurements exclude the city table (618,468 bytes, 236,832 gzip, in
+format 2 on 2026-10-22; 2,283,931 bytes in format 1), the 27,317-byte source
 summary and manifest. The final manifest is the authority for published sizes.
 An exhaustive comparison against the previous low-detail assets found zero
 owner-code or density-value changes across all seven levels. The only removed

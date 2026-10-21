@@ -604,7 +604,7 @@ test('city table rejects an ascending-size cycle and verification fails closed o
   assert.throws(
     () =>
       validateCityAsset({
-        formatVersion: 1,
+        formatVersion: 2,
         referenceYear: 2025,
         universeMinPopulation: 100_000,
         cities: [row],
@@ -616,7 +616,7 @@ test('city table rejects an ascending-size cycle and verification fails closed o
     /manifest/,
   );
   const missingCountryAsset = {
-    formatVersion: 1,
+    formatVersion: 2,
     referenceYear: 2025,
     universeMinPopulation: 100_000,
     cities: [
@@ -658,7 +658,7 @@ test('atomic publication preserves a required city without Chinese and rejects b
       {
         ...city(1, 1, 100_000, [0]),
         sourceName: 'A',
-        countryName: 'Country',
+        countryName: 'Guinea',
         point: { latitude: 1 / 60, longitude: 1 / 60 },
         centrePoint: { latitude: 1 / 60, longitude: 1 / 60 },
       },
@@ -667,7 +667,7 @@ test('atomic publication preserves a required city without Chinese and rejects b
       {
         id: 1,
         name: { en: 'A', zh: null },
-        country: { en: 'Country', zh: '国家' },
+        country: { en: 'Guinea', zh: '几内亚' },
       },
     ];
     const capture = {

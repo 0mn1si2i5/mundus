@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Locale } from '../../i18n/messages';
 import type { GeoPoint } from '../globe/geo';
 import { ghslCountryNameZh } from '../globe/countryNames';
+import { CITY_STATUSES, expandCityTable } from './cityReachTable';
 import {
   CITY_REACH_DEFAULT,
   CITY_REACH_LEVELS,
@@ -51,14 +52,7 @@ const citySchema = z.object({
   centrePoint: pointSchema.nullable(),
   threshold: z.number().finite().nonnegative().nullable(),
   parentId: positiveInteger.nullable(),
-  status: z.enum([
-    'ok',
-    'root',
-    'no_larger_reachable',
-    'merged_at_resolution',
-    'transport_missing',
-    'disputed',
-  ]),
+  status: z.enum(CITY_STATUSES),
   mergedIntoId: positiveInteger.nullable(),
 });
 const assetSchema = z.object({
@@ -154,12 +148,12 @@ export function decodeCityReachMetadata(
     throw new Error('Invalid city reach grid coverage');
   const asset = z
     .object({
-      formatVersion: z.literal(1),
+      formatVersion: z.literal(2),
       referenceYear: z.literal(2025),
       universeMinPopulation: z.literal(100_000),
       cities: z.array(citySchema).min(1).max(65534),
     })
-    .parse(rawCities);
+    .parse(expandCityTable(rawCities, ghslCountryNameZh));
   if (asset.cities.length !== manifest.recordCount)
     throw new Error('City reach record count mismatch');
   const cities: readonly CityReachCity[] = asset.cities;
