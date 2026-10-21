@@ -58,6 +58,7 @@ export function ShareDialog({
       trueSizeCountry: state.trueSizeCountry,
       bordersDestination: state.bordersDestination,
       circleRadiusKm: state.circleRadiusKm,
+      namesLabel: state.namesLabel,
     };
     return {
       activeMode: state.activeMode,

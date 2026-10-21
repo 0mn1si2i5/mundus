@@ -3,6 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAppStore } from '../../state/appStore';
 import type { ReshapedDataset } from '../reshaped/reshapedData';
 import {
+  getRankOneSurnameRecord,
+  loadSurnameDataset,
+} from '../surnames/surnameData';
+import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
+import {
   useModePresentation,
   useGlobePresentation,
   useSharedReshapedData,
@@ -34,8 +39,8 @@ describe('useGlobePresentation', () => {
       showAntipodes: false,
       sunline: null,
       antipodeRelation: null,
-      surnameMapLabels: [],
-      surnameDisplayMode: 'local',
+      mapWordmarks: [],
+      wordmarkKey: '',
       isolation: null,
       reshaped: null,
       countryColors: null,
@@ -66,19 +71,41 @@ describe('useGlobePresentation', () => {
     });
     const { result } = renderHook(() => useGlobePresentation());
 
-    await waitFor(() =>
-      expect(result.current.surnameMapLabels).toHaveLength(197),
-    );
+    await waitFor(() => expect(result.current.mapWordmarks).toHaveLength(197));
     expect(
-      result.current.surnameMapLabels.some(
-        (label) => label.countryId === 'ne-300',
-      ),
+      result.current.mapWordmarks.some((label) => label.countryId === 'ne-300'),
     ).toBe(true);
+    const dataset = await loadSurnameDataset();
+    const rankOne = getRankOneSurnameRecord(
+      dataset.countriesById.get('ne-156'),
+    );
+    expect(rankOne?.rank).toBe(1);
     expect(
-      result.current.surnameMapLabels.find(
-        (label) => label.countryId === 'ne-156',
-      )?.record.rank,
-    ).toBe(1);
+      result.current.mapWordmarks.find((label) => label.countryId === 'ne-156')
+        ?.wordmark,
+    ).toEqual(resolveSurnameWordmark(rankOne!, 'local'));
+    expect(result.current.wordmarkKey).toBe('surnames:local');
+  });
+});
+
+describe('Literal Names globe presentation', () => {
+  it('writes a literal wordmark for every country and follows the label', async () => {
+    useAppStore.setState({ activeMode: 'names', locale: 'en' });
+    const { result } = renderHook(() => useGlobePresentation());
+
+    await waitFor(() => expect(result.current.mapWordmarks).toHaveLength(239));
+    expect(result.current.wordmarkKey).toBe('names:literal:en');
+    expect(
+      result.current.mapWordmarks.find((label) => label.countryId === 'ne-352')
+        ?.wordmark?.value,
+    ).toBe('Land of Ice');
+
+    act(() => useAppStore.getState().setNamesLabel('local'));
+    expect(result.current.wordmarkKey).toBe('names:local:en');
+    expect(
+      result.current.mapWordmarks.find((label) => label.countryId === 'ne-352')
+        ?.wordmark?.value,
+    ).toBe('Ísland');
   });
 });
 

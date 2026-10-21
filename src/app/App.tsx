@@ -246,8 +246,8 @@ export function App() {
               showAntipodes={globe.showAntipodes}
               sunline={globe.sunline}
               antipodeRelation={globe.antipodeRelation}
-              surnameMapLabels={globe.surnameMapLabels}
-              surnameDisplayMode={globe.surnameDisplayMode}
+              mapWordmarks={globe.mapWordmarks}
+              wordmarkKey={globe.wordmarkKey}
               isolation={globe.isolation}
               reshaped={globe.reshaped}
               countryColors={globe.countryColors}

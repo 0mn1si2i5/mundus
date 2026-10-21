@@ -60,6 +60,10 @@ const COPY = {
         '半人口圈',
         '把 GHS-POP 2020 年 30 角秒人口栅格按像元中心汇总到 0.25° 网格（赤道处约 28 公里），在浏览器中按球面大圆距离逐公里累加，求出以选中地点为圆心、装下世界一半人口所需的半径；滑块可改为任意半径。格子按中心点计入或不计入圆，所以半径小于约 200 公里时只是粗略结果。“世界最小的半人口圈”由同一网格离线搜索得到（2° 粗筛后在 0.25° 和 0.05° 上细化），只代表这一网格下的结果。人口为模型估计，不是普查数字。',
       ],
+      [
+        '国名本义',
+        '每个国家的名字字面上是什么意思，由 Mundus 逐条撰写。英文词源以已停刊的 CIA World Factbook “国名词源”条目（公共领域）为主干核对，凡与其不同或补充之处都列出依据。词源常有多种说法：地球上只写最常见的一种，有争议的加问号，本义未知的不写字面义。中文名按音译、意译、音意合译、本国汉字名和简称分类。',
+      ],
     ] as const,
     credits: [
       {
@@ -196,6 +200,22 @@ const COPY = {
           { label: 'CC BY 4.0', href: CC_BY_4 },
         ],
       },
+      {
+        name: 'CIA World Factbook · factbook.json',
+        use: '国名本义 · 国名词源核对主干',
+        notice:
+          'CIA World Factbook 为美国政府作品，属公共领域；通过 factbook.json 镜像（CC0）固定版本读取。字面义与说明由 Mundus 改写，不代表 CIA 观点。',
+        links: [
+          {
+            label: '镜像',
+            href: 'https://github.com/factbook/factbook.json',
+          },
+          {
+            label: 'CC0',
+            href: 'https://creativecommons.org/publicdomain/zero/1.0/',
+          },
+        ],
+      },
     ] satisfies readonly Credit[],
   },
   en: {
@@ -241,6 +261,10 @@ const COPY = {
       [
         'People in a Circle',
         "The GHS-POP 2020 30-arcsecond population grid is summed by pixel centre into 0.25° cells (about 28 km at the equator). The browser accumulates people by great-circle distance, kilometre by kilometre, to find the radius around the selected place that holds half the world's population; the slider sets any other radius. Cells count wholly inside or outside by their centre, so radii below about 200 km are only rough. The smallest half-world circle comes from an offline search of the same grid (a 2° screen refined at 0.25° and 0.05°) and holds only for this grid. Population figures are modelled estimates, not census counts.",
+      ],
+      [
+        'Literal Names',
+        'What each country’s name literally says, written record by record by Mundus. English etymologies are checked against the country-name etymology entries of the discontinued CIA World Factbook (public domain), and every departure or addition lists its sources. Etymologies often compete: the globe shows the most common reading, marks disputed ones with a question mark and leaves unknown meanings blank. Chinese names are classed as transliterated, translated, mixed, native or abbreviated.',
       ],
     ] as const,
     credits: [
@@ -377,6 +401,22 @@ const COPY = {
             href: 'https://figshare.com/articles/dataset/9828827/10',
           },
           { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'CIA World Factbook · factbook.json',
+        use: 'Literal Names · etymology backbone',
+        notice:
+          'The CIA World Factbook is a US government work in the public domain, read at a pinned version of the factbook.json mirror (CC0). Literal meanings and notes are rewritten by Mundus and do not represent the CIA.',
+        links: [
+          {
+            label: 'Mirror',
+            href: 'https://github.com/factbook/factbook.json',
+          },
+          {
+            label: 'CC0',
+            href: 'https://creativecommons.org/publicdomain/zero/1.0/',
+          },
         ],
       },
     ] satisfies readonly Credit[],

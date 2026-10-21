@@ -18,6 +18,7 @@ export const MODE_ORDER = [
   'truesize',
   'borders',
   'circle',
+  'names',
 ] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
 
@@ -243,6 +244,31 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         longitude: z.number().min(-180).max(180),
       }),
       radiusKm: z.number().refine(isCircleRadius).nullable(),
+    }),
+  },
+  names: {
+    id: 'names',
+    version: 1,
+    tier: 'more',
+    title: { zh: '国名本义', en: 'Literal Names' },
+    compactTitle: { zh: '国名', en: 'Names' },
+    titlePhrases: { zh: ['国名', '本义'] },
+    question: {
+      zh: '这个国家的名字，字面上是什么意思？',
+      en: 'What does this country’s name literally say?',
+    },
+    summary: {
+      zh: '地球上每个国家写的是国名的字面意思，点开看词源和中文译名的来历。',
+      en: 'Every country is labelled with what its name means; open one for the etymology and its Chinese name.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['mundus-countries', 'surname-label-slots'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
+      label: z.enum(['literal', 'local']),
     }),
   },
 };

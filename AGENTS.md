@@ -22,8 +22,8 @@ observation while keeping the selected place.
   primary observations, **Other Side** (`antipodes`), **Surname Atlas**
   (`surnames`), **Urban Proximity** (`isolation`) and **Reshaped Earth**
   (`reshaped`); **Sunline** (`sunline`), **True Size** (`truesize`),
-  **Border Hop** (`borders`) and **People in a Circle** (`circle`) sit under
-  "More observations".
+  **Border Hop** (`borders`), **People in a Circle** (`circle`) and **Literal
+  Names** (`names`) sit under "More observations".
   **Development, Unpacked** was retired in 2026-10: its links
   (`mode=development`) open the lobby with a "retired" notice, and its UNDP
   data, code and attribution were removed.
@@ -53,6 +53,11 @@ Observation contracts:
   outline at home. Reports spherical area of the simplified outline, the area
   ratio to the country under the point and the Web Mercator enlargement at
   home and here. No new data.
+- **Literal Names** — what each country's name literally says, written by
+  Mundus for every country unit against the public-domain CIA World Factbook
+  etymology field (pinned factbook.json mirror), with per-record sources where
+  Mundus departs from it. Disputed meanings carry a question mark; unknown
+  meanings draw no wordmark. Contract: `docs/data/literal-names.md`.
 - **Urban Proximity** — two views over GHSL 2025 urban centres. The city view
   gives the hierarchical great-circle distance from a centre of at least one
   million people to the nearest centre meeting the visible α population
@@ -156,8 +161,9 @@ Mode parameters are written only when they differ from the default: Sunline
 `view=field` and, in the field view, `reach` (one of the seven approved levels;
 invalid values fall back to 4), Reshaped Earth `metric`, True Size `country` (a
 1:110m unit id; invalid values fall back to Greenland, `ne-304`), Border Hop
-`to` (a reviewed unit id; anything else is ignored) and People in a Circle
-`radius` (whole km, 50–20,000; absent means the half circle). Reshaped Earth
+`to` (a reviewed unit id; anything else is ignored), People in a Circle
+`radius` (whole km, 50–20,000; absent means the half circle) and Literal Names
+`label=local`. Reshaped Earth
 ignores legacy `level` parameters; shape and animation progress stay local.
 
 ## 4. Data
@@ -193,7 +199,7 @@ live smoke against the deployed URL. Live smoke only proves the host serves the
 artifact and renders the lobby; it does not replace the browser suites.
 
 Browser tests live in `tests/e2e/`, one file per area (`shell`, `layout`,
-`globe`, `other-side`, `surnames`, `sunline`, `reshaped`, `circle`) with shared
+`globe`, `other-side`, `surnames`, `sunline`, `reshaped`, `circle`, `names`) with shared
 helpers in `helpers.ts`; `@smoke` tags the CI smoke subset. `@resources`
 tags the 20-cycle Reshaped Earth resource regression, which routine runs
 exclude; it runs nightly and on demand in the Resources workflow

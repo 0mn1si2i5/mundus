@@ -34,6 +34,11 @@ const CircleResult = lazy(() =>
     default: module.CircleResult,
   })),
 );
+const LiteralNameResult = lazy(() =>
+  import('../names/LiteralNameResult').then((module) => ({
+    default: module.LiteralNameResult,
+  })),
+);
 
 export function ModeResult({
   locale,
@@ -314,6 +319,12 @@ export function ModeResult({
       return (
         <Suspense fallback={null}>
           <CircleResult locale={locale} presentation={presentation} />
+        </Suspense>
+      );
+    case 'names':
+      return (
+        <Suspense fallback={null}>
+          <LiteralNameResult locale={locale} presentation={presentation} />
         </Suspense>
       );
     default:

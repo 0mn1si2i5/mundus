@@ -1,11 +1,11 @@
-import type { SurnameMapLabel } from '../surnames/surnameData';
+import type { MapWordmarkLabel } from './mapWordmark';
 import type { SurnameWordmark } from '../surnames/surnameWordmark';
 import type { CountryLabelAnchor } from './countryLabel';
 import type { GeoPoint } from './geo';
 import type { SurnameLabelSlot } from './surnameLabelSlots';
 
 export interface SurnameLabelEntry {
-  label: SurnameMapLabel;
+  label: MapWordmarkLabel;
   anchor: CountryLabelAnchor;
   slot: SurnameLabelSlot;
   wordmark: SurnameWordmark;

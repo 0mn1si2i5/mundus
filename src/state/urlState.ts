@@ -29,6 +29,10 @@ import {
 } from '../features/truesize/trueSize';
 import { COUNTRY_NAMES } from '../features/globe/countryNames';
 import { parseCircleRadiusParam } from '../features/circle/circleRadius';
+import {
+  DEFAULT_LITERAL_NAME_LABEL,
+  type LiteralNameLabel,
+} from '../features/names/literalNameWordmark';
 
 export const DEFAULT_POINT: GeoPoint = {
   latitude: 31.2304,
@@ -63,6 +67,7 @@ export interface ShareableState {
   bordersDestination?: string | null;
   /** People in a Circle: a chosen radius in km; `null` is the half circle. */
   circleRadiusKm?: number | null;
+  namesLabel?: LiteralNameLabel;
 }
 
 export type NavigationNotice = 'unknown-mode' | 'retired-mode';
@@ -76,6 +81,7 @@ const modeSchema = z.enum([
   'truesize',
   'borders',
   'circle',
+  'names',
 ]);
 /** Observations that once shipped; their links open the lobby with a notice. */
 const RETIRED_MODES: ReadonlySet<string> = new Set(['development']);
@@ -151,6 +157,8 @@ export function parseUrlState(
     rawDestination !== null && Object.hasOwn(COUNTRY_NAMES, rawDestination)
       ? rawDestination
       : null;
+  const namesLabel: LiteralNameLabel =
+    params.get('label') === 'local' ? 'local' : DEFAULT_LITERAL_NAME_LABEL;
 
   return {
     activeMode,
@@ -176,6 +184,7 @@ export function parseUrlState(
     ...(activeMode === 'circle'
       ? { circleRadiusKm: parseCircleRadiusParam(params.get('radius')) }
       : {}),
+    ...(activeMode === 'names' ? { namesLabel } : {}),
   };
 }
 
@@ -259,6 +268,13 @@ export function serializeUrlState(state: ShareableState): string {
       state.circleRadiusKm !== undefined
     ) {
       params.set('radius', String(state.circleRadiusKm));
+    }
+    if (
+      state.activeMode === 'names' &&
+      (state.namesLabel ?? DEFAULT_LITERAL_NAME_LABEL) !==
+        DEFAULT_LITERAL_NAME_LABEL
+    ) {
+      params.set('label', state.namesLabel ?? DEFAULT_LITERAL_NAME_LABEL);
     }
     params.set('v', '2');
   }

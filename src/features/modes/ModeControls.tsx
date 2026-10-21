@@ -57,6 +57,9 @@ export function ModeControls({
     case 'surnames':
       // The script toggle lives in the surname result card.
       return null;
+    case 'names':
+      // The label toggle lives in the Literal Names result card.
+      return null;
     case 'isolation':
       controls = (
         <IsolationControls locale={locale} presentation={presentation} />

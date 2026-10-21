@@ -23,7 +23,8 @@ export function useUrlState() {
           state.reshapedMetric === previous.reshapedMetric &&
           state.trueSizeCountry === previous.trueSizeCountry &&
           state.bordersDestination === previous.bordersDestination &&
-          state.circleRadiusKm === previous.circleRadiusKm)
+          state.circleRadiusKm === previous.circleRadiusKm &&
+          state.namesLabel === previous.namesLabel)
       ) {
         return;
       }

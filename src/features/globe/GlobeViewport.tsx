@@ -25,9 +25,7 @@ import type { AntipodeRelation } from '../antipodes/relation';
 import { type VectorGlobeState } from './VectorGlobeLayer';
 import type { VectorGlobeResources } from './vectorGlobe';
 import { type SurnameLabelHiddenReason } from './surnameLabelLayout';
-import type { SurnameMapLabel } from '../surnames/surnameData';
-import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
-import type { SurnameDisplayMode } from '../../state/urlState';
+import type { MapWordmarkLabel } from './mapWordmark';
 import type { IsolationGlobePresentation } from '../modes/useModePresentation';
 import type { GlobePresentation } from '../modes/useModePresentation';
 import { messages } from '../../i18n/messages';
@@ -65,8 +63,8 @@ interface GlobeViewportProps {
   showAntipodes: boolean;
   sunline: SunlineRenderState | null;
   antipodeRelation: AntipodeRelation | null;
-  surnameMapLabels: readonly SurnameMapLabel[];
-  surnameDisplayMode: SurnameDisplayMode;
+  mapWordmarks: readonly MapWordmarkLabel[];
+  wordmarkKey: string;
   isolation: IsolationGlobePresentation | null;
   reshaped: GlobePresentation['reshaped'];
   countryColors: GlobePresentation['countryColors'];
@@ -92,8 +90,8 @@ export function GlobeViewport({
   showAntipodes,
   sunline,
   antipodeRelation,
-  surnameMapLabels,
-  surnameDisplayMode,
+  mapWordmarks,
+  wordmarkKey,
   isolation,
   reshaped,
   countryColors,
@@ -157,10 +155,10 @@ export function GlobeViewport({
   const selectedCountry = useAppStore((state) => state.selectedCountry);
   const selectedSurnameMapLabel = useMemo(
     () =>
-      surnameMapLabels.find(
+      mapWordmarks.find(
         (label) => label.countryId === selectedCountry?.countryId,
       ) ?? null,
-    [selectedCountry?.countryId, surnameMapLabels],
+    [selectedCountry?.countryId, mapWordmarks],
   );
   const antipodeDragVisible = showAntipodes && antipodeDragActive;
   const fieldStatus =
@@ -466,7 +464,7 @@ export function GlobeViewport({
       }
       data-surname-map-label={
         selectedSurnameMapLabel
-          ? `${selectedSurnameMapLabel.countryId}:${resolveSurnameWordmark(selectedSurnameMapLabel.record, surnameDisplayMode)?.value ?? ''}`
+          ? `${selectedSurnameMapLabel.countryId}:${selectedSurnameMapLabel.wordmark?.value ?? ''}`
           : undefined
       }
       data-surname-map-label-country={
@@ -476,22 +474,20 @@ export function GlobeViewport({
         selectedSurnameMapLabel ? String(surnameLabelVisible) : undefined
       }
       data-surname-map-label-count={
-        surnameMapLabels.length > 0
-          ? String(surnameMapLabels.length)
-          : undefined
+        mapWordmarks.length > 0 ? String(mapWordmarks.length) : undefined
       }
       data-surname-map-label-entry-count={
-        surnameMapLabels.length > 0
+        mapWordmarks.length > 0
           ? String(surnameLabelLayout.entryCount)
           : undefined
       }
       data-surname-map-label-visible-count={
-        surnameMapLabels.length > 0
+        mapWordmarks.length > 0
           ? String(surnameLabelLayout.visibleCount)
           : undefined
       }
       data-surname-map-label-collision-count={
-        surnameMapLabels.length > 0
+        mapWordmarks.length > 0
           ? String(surnameLabelLayout.collisionCount)
           : undefined
       }
@@ -501,12 +497,12 @@ export function GlobeViewport({
           : undefined
       }
       data-surname-map-label-min-corner-radius={
-        surnameMapLabels.length > 0
+        mapWordmarks.length > 0
           ? String(surnameLabelLayout.minimumCornerRadius)
           : undefined
       }
       data-surname-map-label-visible-rectangles={
-        surnameMapLabels.length > 0
+        mapWordmarks.length > 0
           ? surnameLabelLayout.visibleRectangles
           : undefined
       }
@@ -606,8 +602,8 @@ export function GlobeViewport({
           dragDiagnosticsEnabled={dragDiagnosticsEnabled}
           sunline={sunline}
           antipodeRelation={antipodeRelation}
-          surnameMapLabels={surnameMapLabels}
-          surnameDisplayMode={surnameDisplayMode}
+          mapWordmarks={mapWordmarks}
+          wordmarkKey={wordmarkKey}
           isolation={isolation}
           reshaped={reshaped}
           countryColors={countryColors}

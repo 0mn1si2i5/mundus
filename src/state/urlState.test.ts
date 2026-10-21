@@ -578,4 +578,57 @@ describe('URL state codec', () => {
       ).not.toContain('country');
     });
   });
+
+  describe('Literal Names label', () => {
+    it('opens Literal Names with the default label unless the link asks for local names', () => {
+      expect(parseUrlState('?v=2&mode=names', nowMs)).toMatchObject({
+        activeMode: 'names',
+        namesLabel: 'literal',
+      });
+      expect(
+        parseUrlState('?v=2&mode=names&label=local', nowMs).namesLabel,
+      ).toBe('local');
+      expect(
+        parseUrlState('?v=2&mode=names&label=other', nowMs).namesLabel,
+      ).toBe('literal');
+      expect(parseNavigationNotice('?v=2&mode=names')).toBeNull();
+    });
+
+    it('ignores the label outside Literal Names', () => {
+      for (const query of [
+        '?v=2&mode=surnames&label=local',
+        '?v=2&label=local',
+        '?point=12.3457%2C-98.7654&label=local',
+      ]) {
+        expect(parseUrlState(query, nowMs)).not.toHaveProperty('namesLabel');
+      }
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'surnames',
+          namesLabel: 'local',
+        }),
+      ).toBe('?mode=surnames&v=2');
+    });
+
+    it('writes the label only when it differs from the default', () => {
+      expect(
+        serializeUrlState({
+          ...lobby,
+          activeMode: 'names',
+          namesLabel: 'literal',
+        }),
+      ).toBe('?mode=names&v=2');
+      const query = serializeUrlState({
+        ...lobby,
+        activeMode: 'names',
+        namesLabel: 'local',
+      });
+      expect(query).toBe('?mode=names&label=local&v=2');
+      expect(parseUrlState(query, nowMs)).toMatchObject({
+        activeMode: 'names',
+        namesLabel: 'local',
+      });
+    });
+  });
 });

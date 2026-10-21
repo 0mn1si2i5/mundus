@@ -26,6 +26,10 @@ import {
   type CityReachLevel,
 } from '../features/isolation/cityReachLevel';
 import { isCircleRadius } from '../features/circle/circleRadius';
+import {
+  DEFAULT_LITERAL_NAME_LABEL,
+  type LiteralNameLabel,
+} from '../features/names/literalNameWordmark';
 
 export type ReshapedMorphState = 'pending' | 'animating' | 'settled';
 
@@ -66,6 +70,7 @@ interface AppState {
   setCircleRadiusKm: (value: number | null) => void;
   /** Moves the circle and returns it to the half circle in one history entry. */
   selectCircleHalfAt: (point: GeoPoint) => void;
+  namesLabel: LiteralNameLabel;
   selectedCountry: CountryRef | null;
   antipodeCountry: CountryRef | null;
   hoveredCountry: CountryRef | null;
@@ -90,6 +95,7 @@ interface AppState {
   setReshapedShape: (shape: 'true' | 'reshaped') => void;
   setIsolationReach: (value: number) => void;
   setTrueSizeCountry: (countryId: string) => void;
+  setNamesLabel: (label: LiteralNameLabel) => void;
   setLocale: (locale: Locale) => void;
   setSelectedCountry: (country: CountryRef | null) => void;
   setAntipodeCountry: (country: CountryRef | null) => void;
@@ -121,6 +127,7 @@ export const useAppStore = create<AppState>((set) => ({
   isolationAlpha: initialUrlState.isolationAlpha,
   bordersDestination: initialUrlState.bordersDestination ?? null,
   circleRadiusKm: initialUrlState.circleRadiusKm ?? null,
+  namesLabel: initialUrlState.namesLabel ?? DEFAULT_LITERAL_NAME_LABEL,
   navigationNotice: parseNavigationNotice(initialSearch),
   selectedCountry: null,
   antipodeCountry: null,
@@ -184,6 +191,7 @@ export const useAppStore = create<AppState>((set) => ({
       sunlineClockMode: sunlinePlaying ? 'fixed' : state.sunlineClockMode,
     })),
   setSurnameDisplayMode: (surnameDisplayMode) => set({ surnameDisplayMode }),
+  setNamesLabel: (namesLabel) => set({ namesLabel }),
   setIsolationAlpha: (value) => set({ isolationAlpha: clampAlpha(value) }),
   setIsolationView: (isolationView) => set({ isolationView }),
   reshapedShape: 'reshaped',

@@ -1,0 +1,8 @@
+.segmented {
+  composes: segmented from '../surnames/SurnameScriptToggle.module.css';
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.option {
+  composes: option from '../surnames/SurnameScriptToggle.module.css';
+}
