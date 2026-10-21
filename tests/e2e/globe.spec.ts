@@ -623,7 +623,7 @@ test('keeps country semantics when WebGL2 is unavailable', async ({ page }) => {
   });
   await page.goto('./?point=31.2304%2C121.4737&v=1');
   await expect(page.getByText(/无法启用 WebGL2/)).toBeVisible();
-  await expect(page.getByText('China', { exact: true })).toBeVisible();
+  await expect(page.getByText('中国', { exact: true })).toBeVisible();
 });
 
 test('explains the opaque through-Earth cross-section in both languages', async ({

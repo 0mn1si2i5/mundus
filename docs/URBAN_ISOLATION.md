@@ -202,13 +202,15 @@ download URL, SHA-256, licence, citation/DOI, epoch and both thresholds.
 - Only exact matches and reviewed overrides enter the asset. The build fails
   if the same Chinese city name is assigned to different GHSL ids unless both
   assignments are reviewed overrides.
-- Country names are assigned from the GHSL English country field using the
-  complete reviewed table in `isolationCountryNames.ts`; city GeoNames country
-  rows are not used. The table must cover every country represented in the
-  asset, and uses `刚果民主共和国` for Democratic Republic of the Congo and
-  `巴勒斯坦` for Palestine. The owner-approved display labels are
+- Country names come from the GHSL English country field through
+  `GHSL_COUNTRY_AREAS` in the reviewed Mundus country table
+  (`src/features/globe/countryNames.ts`), which every observation shares; city
+  GeoNames country rows are not used. The table must cover every country
+  represented in the asset. The owner-approved display labels are
   `塞尔维亚（科索沃）` for Kosovo and `塞浦路斯（北部）` for Northern Cyprus,
   consistent with the map's drawing-country view; routing uses separate labels.
+  The Chinese UI reads the table at display time, so a published asset built
+  before the table still shows the reviewed names.
 - The executor never invents translations. With no reviewed Chinese city name,
   the Chinese UI shows the English name. A missing Chinese name is a recorded
   state, not an error. A centre with an empty GHSL main name remains in the

@@ -11,6 +11,7 @@ import {
 import { SurnameScriptToggle } from '../surnames/SurnameScriptToggle';
 import type { SurnameRecord } from '../surnames/surnameData';
 import { IsolationResult } from '../isolation/IsolationResult';
+import { displayCountryName } from '../globe/countryNames';
 import { lazy, Suspense } from 'react';
 const ReshapedResult = lazy(() =>
   import('../reshaped/ReshapedResult').then((module) => ({
@@ -45,7 +46,11 @@ export function ModeResult({
         >
           <RelationSide
             exactLabel={t.selectedPoint}
-            country={presentation.selectedCountry?.name ?? t.openOcean}
+            country={
+              presentation.selectedCountry
+                ? displayCountryName(presentation.selectedCountry, locale)
+                : t.openOcean
+            }
             point={relation.origin.exactPoint}
             cityLabel={t.originMajorCity}
             side={relation.origin}
@@ -83,7 +88,11 @@ export function ModeResult({
           </dl>
           <RelationSide
             exactLabel={t.antipode}
-            country={presentation.antipodeCountry?.name ?? t.openOcean}
+            country={
+              presentation.antipodeCountry
+                ? displayCountryName(presentation.antipodeCountry, locale)
+                : t.openOcean
+            }
             point={relation.antipode.exactPoint}
             cityLabel={t.antipodeMajorCity}
             side={relation.antipode}
@@ -114,7 +123,9 @@ export function ModeResult({
           <div className={styles.endpoint}>
             <span className={styles.label}>{t.selectedPoint}</span>
             <em className={styles.place}>
-              {presentation.selectedCountry?.name ?? t.openOcean}
+              {presentation.selectedCountry
+                ? displayCountryName(presentation.selectedCountry, locale)
+                : t.openOcean}
             </em>
             <span className={styles.coords}>
               {presentation.point.latitude.toFixed(2)}°,{' '}
@@ -192,7 +203,9 @@ export function ModeResult({
           <div className={styles.endpoint}>
             <span className={styles.label}>{t.selectedCountryLabel}</span>
             <em className={styles.place}>
-              {country?.name ?? t.surnameChooseCountry}
+              {country
+                ? displayCountryName(country, locale)
+                : t.surnameChooseCountry}
             </em>
           </div>
           {wordmark ? (

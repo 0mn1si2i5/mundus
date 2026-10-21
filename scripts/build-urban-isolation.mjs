@@ -355,9 +355,16 @@ async function buildOffline(
     const correctedName = overrides[city.id]?.nameEn;
     if (correctedName) city.name = correctedName;
   }
-  countryNames ??= (
-    await import('../src/features/isolation/isolationCountryNames.ts')
-  ).ISOLATION_COUNTRY_NAMES;
+  if (countryNames === undefined) {
+    const { GHSL_COUNTRY_AREAS, ghslCountryNameZh } =
+      await import('../src/features/globe/countryNames.ts');
+    countryNames = Object.fromEntries(
+      Object.keys(GHSL_COUNTRY_AREAS).map((name) => [
+        name,
+        ghslCountryNameZh(name),
+      ]),
+    );
+  }
   const missingCountries = [
     ...new Set([...referenced].map((index) => cities[index].countryName)),
   ].filter((country) => !countryNames[country]);

@@ -422,7 +422,7 @@ test('traffic regions distinguish global roots, disputed land and unreachable la
   await expectSampledOwner(page, assets, unreachableLand);
   await expect(reachResult(page).locator('em')).toHaveCount(0);
   await switchMode(page, '地球另一端');
-  await expect(page.getByText('Greenland', { exact: true })).toBeVisible();
+  await expect(page.getByText('格陵兰', { exact: true })).toBeVisible();
 });
 
 for (const assetKind of ['owner', 'density'] as const) {

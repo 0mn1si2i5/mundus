@@ -33,7 +33,7 @@ test('Surname Atlas preserves local, Latin, Chinese, and missing states', async 
   );
   await expect(globe).toHaveAttribute('data-surname-map-label-visible', 'true');
   const result = page.getByTestId('surname-result');
-  await expect(result).toContainText('China');
+  await expect(result).toContainText('中国');
   await expect(result).toContainText('王');
   await expect(result).toContainText('Wáng');
   await expect(result).toContainText('中文');

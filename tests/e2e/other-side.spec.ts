@@ -199,7 +199,7 @@ test('selects a major city and validates coordinate input', async ({
   const tokyo = localizedCityOption(page, '东京');
   expect((await tokyo.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   await tokyo.click();
-  await expect(page.getByText('Japan', { exact: true })).toBeVisible();
+  await expect(page.getByText('日本', { exact: true })).toBeVisible();
   await expect(page).toHaveURL(/point=35.6895%2C139.6917/);
 
   if (testInfo.project.name === 'mobile') {
@@ -492,4 +492,18 @@ test('gives a major-city relation hover and active feedback without layout shift
   expect(active).not.toBe(hovered);
   expect(await place.boundingBox()).toEqual(before);
   await page.mouse.up();
+});
+
+test('Chinese results use reviewed country names on both sides', async ({
+  page,
+}) => {
+  await page.goto('./?mode=antipodes&v=2&point=25.033%2C121.5654');
+  await expectAntipodeRelationReady(page);
+  const result = page.getByRole('complementary', { name: '位置结果' });
+  await expect(result).toContainText('台湾');
+  await expect(result).toContainText('巴拉圭');
+  await expect(result).not.toContainText('Taiwan');
+  await expect(result).not.toContainText('Paraguay');
+  // The admin-1 label that repeats the country is not shown.
+  await expect(result).not.toContainText('台湾省');
 });

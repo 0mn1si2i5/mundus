@@ -11,7 +11,7 @@ const smaller: CityReachCity = {
   id: 1,
   ownerIndex: 1,
   name: { en: 'Small', zh: '小城' },
-  country: { en: 'Country', zh: '国家' },
+  country: { en: 'Chile', zh: '智利' },
   nameMatchType: 'override',
   population: 100_000,
   point: { latitude: 0, longitude: 0 },
@@ -115,9 +115,9 @@ describe('city reach result meaning', () => {
     expect(
       screen.getByRole('complementary').querySelector('em'),
     ).toHaveTextContent('Small');
-    expect(screen.getByText('Large · 国家', { selector: 'dd' })).toBeVisible();
+    expect(screen.getByText('Large · 智利', { selector: 'dd' })).toBeVisible();
     expect(
-      screen.getByRole('option', { name: 'Small · 国家' }),
+      screen.getByRole('option', { name: 'Small · 智利' }),
     ).toBeInTheDocument();
   });
   it('keeps sampled point ownership while inspecting another city and includes the parent country', () => {
@@ -139,7 +139,7 @@ describe('city reach result meaning', () => {
       name: '城市邻近性结果',
     });
     expect(result).toHaveAttribute('data-city-reach-owner-id', '1');
-    expect(screen.getByText('大城 · 国家', { selector: 'dd' })).toBeVisible();
+    expect(screen.getByText('大城 · 智利', { selector: 'dd' })).toBeVisible();
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '2' } });
     expect(result).toHaveAttribute('data-city-reach-owner-id', '1');
     expect(result.querySelector('em')).toHaveTextContent('小城');

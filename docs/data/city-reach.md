@@ -181,7 +181,8 @@ The parenthetical qualification matters: closed borders can split a landmass,
 and approved coarse-waterway connections can join nearby islands.
 
 Names reuse the owner-reviewed `isolationNameOverrides.ts`, GeoNames exact
-matching and `isolationCountryNames.ts`. Proximity suggestions are report-only.
+matching and the reviewed Mundus country table `countryNames.ts`. Proximity
+suggestions are report-only.
 Reviewed `nameEn` always wins; a GHSL raw label appears only in the review
 report's **GHSL name** column. Every city that owns any published territory,
 is a parent, or is a component root must have a nonempty English display name.
