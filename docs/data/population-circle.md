@@ -56,8 +56,10 @@ result is labelled rough. Radii are shown to 10 km (5 km below 100 km).
 
 The smallest half circle is found offline: a 2° candidate lattice between
 59°S and 79°N is ranked on a 2° coarse grid, the 24 best are refined on the
-published grid at 0.25° (±2°), and the best is refined again at 0.05°. It is the
-smallest circle for this grid and method, not a unique geographic truth.
+published grid at 0.25° (±2°), and the best is refined again at 0.05°. This is a
+heuristic search, not an exhaustive optimisation: it reports the smallest circle
+this grid and method found, not a proven global minimum or a unique geographic
+truth.
 
 ## URL and display
 
