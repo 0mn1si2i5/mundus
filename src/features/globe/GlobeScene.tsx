@@ -932,6 +932,7 @@ export function GlobeScene({
     if (
       activeMode !== 'surnames' &&
       activeMode !== 'reshaped' &&
+      activeMode !== 'climate' &&
       isolation?.view !== 'field' &&
       !hasInteracted &&
       !manualCameraInteraction.current &&

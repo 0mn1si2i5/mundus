@@ -7,9 +7,9 @@ different scientific lenses. It is designed as a small digital museum exhibit:
 direct enough to explore, explicit about its methods, and careful about the
 limits of its data.
 
-The current implementation includes five observation modes. Other Side, Surname
-Atlas, Urban Proximity and Reshaped Earth are the primary observations; Sunline remains under
-More observations:
+The current implementation includes six observation modes. Other Side, Surname
+Atlas, Urban Proximity and Reshaped Earth are the primary observations; Sunline
+and Climate Twins sit under More observations:
 
 - **Other Side** calculates exact antipodal endpoints and shows the nearest
   eligible major city to each endpoint in the bundled GeoNames snapshot. These
@@ -36,6 +36,11 @@ More observations:
   and ferries are not modelled.
 - **Sunline** visualizes the day-night boundary and estimates solar position,
   sunrise, and sunset in UTC for educational use.
+- **Climate Twins** shows the Köppen-Geiger climate class of the selected
+  point (Beck et al. 2023, 1991–2020 average), lights up land with the same
+  class, and lists large cities on the same latitude with a different climate
+  and distant cities with the same climate. See the
+  [method notes](docs/data/koppen-geiger.md).
 - **Reshaped Earth** changes country areas to compare 2020 population, PPP GDP,
   fossil CO₂ and night lights. Hatched padding marks excess area that continuous
   reshaping could not remove; the solid core represents the target area. Shared

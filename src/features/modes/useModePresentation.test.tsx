@@ -38,6 +38,7 @@ describe('useGlobePresentation', () => {
       surnameDisplayMode: 'local',
       isolation: null,
       reshaped: null,
+      climate: null,
     });
     expect(loadReshapedData).not.toHaveBeenCalled();
   });

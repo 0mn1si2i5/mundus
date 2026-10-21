@@ -48,6 +48,10 @@ const COPY = {
         '变形地球',
         `方法采用 2020 年人口、${HAS_GDP ? 'PPP GDP、' : ''}化石燃料与水泥 CO₂ 排放和夜光快照，在等积圆柱网格上离线计算 Gastner–Seguy–More（2018）连续面积变形图。国家值由 Mundus 国家栅格聚合，边界沿用 Mundus 国家视角。海洋、南极和缺失单元用平均密度填充；真实零值使用平均密度 1% 的显示下限。连续变形无法压到应得大小的多余面积画成斜线，实色核心面积表达指标份额。${HAS_GDP ? 'GDP 是以 2021 年国际元计的模型下采样估计；' : ''}夜光是有饱和上限的相对亮度指数。`,
       ],
+      [
+        '气候孪生',
+        'Köppen-Geiger 分类取自 Beck 等（2023）1991–2020 年气候平均图，0.1° 网格原样使用，不重新分类；地图只在 Natural Earth 陆地上着色，图例颜色沿用数据集。选点或城市落在水面格子时，采用两格内最近的陆地格。同纬度和远方同气候的城市只在 GeoNames 主要城市快照中比较，按人口排序，同纬度每种气候只列一座、远方每个国家只列一座。这是气候平均类型，不是天气，也不代表某一年。',
+      ],
     ] as const,
     credits: [
       {
@@ -184,6 +188,20 @@ const COPY = {
           { label: 'CC BY 4.0', href: CC_BY_4 },
         ],
       },
+      {
+        name: 'Köppen-Geiger（Beck 等 2023）',
+        use: '气候孪生',
+        notice:
+          'Beck, H.E. 等（2023）High-resolution (1 km) Köppen-Geiger maps for 1901–2099 based on constrained CMIP6 projections, Scientific Data 10, 724 · 数据版本 V2 · CC BY 4.0。',
+        links: [
+          {
+            label: '数据集',
+            href: 'https://doi.org/10.6084/m9.figshare.21789074',
+          },
+          { label: '论文', href: 'https://doi.org/10.1038/s41597-023-02549-6' },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
     ] satisfies readonly Credit[],
   },
   en: {
@@ -217,6 +235,10 @@ const COPY = {
       [
         'Reshaped Earth',
         `The method uses 2020 population, ${HAS_GDP ? 'PPP GDP, ' : ''}fossil-fuel and cement CO₂ emissions, and night-light snapshots for an offline Gastner–Seguy–More (2018) contiguous area cartogram on a cylindrical equal-area grid. Country values are aggregated against the Mundus country raster, following Mundus country boundaries. Oceans, Antarctica and missing units receive mean density; real zero values use a display floor of 1% of mean density. Hatching marks excess area the continuous reshaping could not remove; the solid core represents the country's share of the measure. ${HAS_GDP ? 'GDP is a modelled downscaled estimate in 2021 international dollars; ' : ''}night lights are a relative brightness index with sensor saturation.`,
+      ],
+      [
+        'Climate Twins',
+        'Köppen-Geiger classes come from the Beck et al. (2023) map of the 1991–2020 climate average, used unchanged on its 0.1° grid; the map is coloured only on Natural Earth land, with the dataset’s legend colours. A point or city on a water cell takes the nearest land cell within two cells. Same-latitude and distant same-climate cities are compared only within the GeoNames major-city snapshot, ordered by population, with one city per climate on the same latitude and one per country among distant twins. These are average climate types, not weather or any single year.',
       ],
     ] as const,
     credits: [
@@ -351,6 +373,23 @@ const COPY = {
           {
             label: 'Dataset',
             href: 'https://figshare.com/articles/dataset/9828827/10',
+          },
+          { label: 'CC BY 4.0', href: CC_BY_4 },
+        ],
+      },
+      {
+        name: 'Köppen-Geiger (Beck et al. 2023)',
+        use: 'Climate Twins',
+        notice:
+          'Beck, H.E. et al. (2023), High-resolution (1 km) Köppen-Geiger maps for 1901–2099 based on constrained CMIP6 projections, Scientific Data 10, 724 · dataset version 2 · CC BY 4.0.',
+        links: [
+          {
+            label: 'Dataset',
+            href: 'https://doi.org/10.6084/m9.figshare.21789074',
+          },
+          {
+            label: 'Paper',
+            href: 'https://doi.org/10.1038/s41597-023-02549-6',
           },
           { label: 'CC BY 4.0', href: CC_BY_4 },
         ],

@@ -15,12 +15,6 @@ import styles from './ClimateResult.module.css';
 
 const GROUPS: readonly KoppenGroup[] = ['A', 'B', 'C', 'D', 'E'];
 
-export function formatLandShare(share: number, locale: Locale): string {
-  if (share > 0 && share < 0.001)
-    return locale === 'zh' ? '不到 0.1%' : '<0.1%';
-  return `${(share * 100).toFixed(1)}%`;
-}
-
 export function ClimateResult({
   locale,
   presentation,

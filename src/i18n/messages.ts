@@ -7,7 +7,8 @@ export const messages = {
     about: '关于',
     moreModes: '更多观察',
     moreModesCompact: '更多',
-    creditLine: '数据：Natural Earth · GeoNames · 社区姓氏数据 · GHSL · MAP',
+    creditLine:
+      '数据：Natural Earth · GeoNames · 社区姓氏数据 · GHSL · MAP · Köppen-Geiger',
     creditMore: '来源与许可',
     share: '分享',
     changeLanguage: '切换为英文',
@@ -186,7 +187,7 @@ export const messages = {
     moreModes: 'More',
     moreModesCompact: 'More',
     creditLine:
-      'Data: Natural Earth · GeoNames · community surname data · GHSL · MAP',
+      'Data: Natural Earth · GeoNames · community surname data · GHSL · MAP · Köppen-Geiger',
     creditMore: 'Sources and licenses',
     share: 'Share',
     changeLanguage: 'Switch to Chinese',

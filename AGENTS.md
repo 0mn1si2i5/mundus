@@ -21,8 +21,8 @@ observation while keeping the selected place.
 - The bare address opens a neutral lobby. The header switcher offers the four
   primary observations, **Other Side** (`antipodes`), **Surname Atlas**
   (`surnames`), **Urban Proximity** (`isolation`) and **Reshaped Earth**
-  (`reshaped`); **Sunline** (`sunline`)
-  sits under "More observations".
+  (`reshaped`); **Sunline** (`sunline`) and **Climate Twins** (`climate`)
+  sit under "More observations".
   **Development, Unpacked** was retired in 2026-10: its links
   (`mode=development`) open the lobby with a "retired" notice, and its UNDP
   data, code and attribution were removed.
@@ -58,6 +58,12 @@ Observation contracts:
   both without an owner. It does not show commuting, healthcare or
   administrative reach. Contracts:
   `docs/URBAN_ISOLATION.md` and `docs/data/city-reach.md`.
+- **Climate Twins** — Köppen-Geiger class of the selected point from Beck et
+  al. (2023), 1991–2020 average, 0.1° grid used unchanged; same-class land is
+  lit and a latitude circle drawn; the card lists GeoNames major cities on the
+  same latitude (±1°) with a different class and same-class cities at least
+  3,000 km away, with explicit empty and ocean states. Historical average
+  only. Contract: `docs/data/koppen-geiger.md`.
 - **Reshaped Earth** — offline country-level cartograms for 2020 population,
   PPP GDP (2021 international dollars), fossil CO₂ and relative nightlight DN.
   Excess area that continuous reshaping cannot remove is hatched as padding;
@@ -171,7 +177,7 @@ live smoke against the deployed URL. Live smoke only proves the host serves the
 artifact and renders the lobby; it does not replace the browser suites.
 
 Browser tests live in `tests/e2e/`, one file per area (`shell`, `layout`,
-`globe`, `other-side`, `surnames`, `sunline`, `reshaped`) with shared
+`globe`, `other-side`, `surnames`, `sunline`, `reshaped`, `climate`) with shared
 helpers in `helpers.ts`; `@smoke` tags the CI smoke subset. `@resources`
 tags the 20-cycle Reshaped Earth resource regression, which routine runs
 exclude; it runs nightly and on demand in the Resources workflow
