@@ -289,6 +289,13 @@ test('area legend, dark-earth theme and small GDP results are readable', async (
 
 async function ready(page: Page) {
   await expect(result(page)).toBeVisible();
+  // Loading and drawing the requested map, then the 1.6 s morph, each get the
+  // default budget. On CI's software renderer a desktop frame can take over
+  // 1.5 s, so one budget for both phases ran out during the morph.
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-morph-state',
+    /^(?:animating|settled)$/u,
+  );
   await expect(globeRegion(page)).toHaveAttribute(
     'data-morph-state',
     'settled',
