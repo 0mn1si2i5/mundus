@@ -22,6 +22,11 @@ const ReshapedControls = lazy(() =>
     default: module.ReshapedControls,
   })),
 );
+const TrueSizeControls = lazy(() =>
+  import('../truesize/TrueSizeControls').then((module) => ({
+    default: module.TrueSizeControls,
+  })),
+);
 export function ModeControls({
   locale,
   presentation,
@@ -50,6 +55,11 @@ export function ModeControls({
     case 'reshaped':
       controls = (
         <ReshapedControls locale={locale} presentation={presentation} />
+      );
+      break;
+    case 'truesize':
+      controls = (
+        <TrueSizeControls locale={locale} presentation={presentation} />
       );
       break;
     default:

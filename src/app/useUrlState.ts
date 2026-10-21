@@ -20,7 +20,8 @@ export function useUrlState() {
           state.isolationAlpha === previous.isolationAlpha &&
           state.isolationView === previous.isolationView &&
           state.isolationReach === previous.isolationReach &&
-          state.reshapedMetric === previous.reshapedMetric)
+          state.reshapedMetric === previous.reshapedMetric &&
+          state.trueSizeCountry === previous.trueSizeCountry)
       ) {
         return;
       }

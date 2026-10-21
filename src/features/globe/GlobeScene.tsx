@@ -101,6 +101,7 @@ const ReshapedLayer = lazy(() =>
     default: module.ReshapedLayer,
   })),
 );
+const TrueSizeLayer = lazy(() => import('./TrueSizeLayer'));
 
 export interface GlobeKeyboardController {
   rotateHorizontal: (radians: number) => void;
@@ -1400,6 +1401,11 @@ export function GlobeScene({
           </>
         ) : null}
         {isolation ? <IsolationLayer isolation={isolation} /> : null}
+        {activeMode === 'truesize' ? (
+          <Suspense fallback={null}>
+            <TrueSizeLayer profile={profile} />
+          </Suspense>
+        ) : null}
         {isolation?.view === 'field' &&
         isolation.field.metadata &&
         vectorResources ? (

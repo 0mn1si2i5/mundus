@@ -18,6 +18,11 @@ const ReshapedResult = lazy(() =>
     default: module.ReshapedResult,
   })),
 );
+const TrueSizeResult = lazy(() =>
+  import('../truesize/TrueSizeResult').then((module) => ({
+    default: module.TrueSizeResult,
+  })),
+);
 
 export function ModeResult({
   locale,
@@ -280,6 +285,12 @@ export function ModeResult({
       return (
         <Suspense fallback={null}>
           <ReshapedResult locale={locale} presentation={presentation} />
+        </Suspense>
+      );
+    case 'truesize':
+      return (
+        <Suspense fallback={null}>
+          <TrueSizeResult locale={locale} presentation={presentation} />
         </Suspense>
       );
     default:

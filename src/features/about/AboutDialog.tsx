@@ -48,11 +48,15 @@ const COPY = {
         '变形地球',
         `方法采用 2020 年人口、${HAS_GDP ? 'PPP GDP、' : ''}化石燃料与水泥 CO₂ 排放和夜光快照，在等积圆柱网格上离线计算 Gastner–Seguy–More（2018）连续面积变形图。国家值由 Mundus 国家栅格聚合，边界沿用 Mundus 国家视角。海洋、南极和缺失单元用平均密度填充；真实零值使用平均密度 1% 的显示下限。连续变形无法压到应得大小的多余面积画成斜线，实色核心面积表达指标份额。${HAS_GDP ? 'GDP 是以 2021 年国际元计的模型下采样估计；' : ''}夜光是有饱和上限的相对亮度指数。`,
       ],
+      [
+        '真实大小',
+        '国家轮廓取自 Natural Earth 1:110m，先绕地轴平移经度，再沿经线移到选中点，整体转动保持形状和面积。国家最大一块陆地的中心落在选中点上。面积由简化轮廓在球面上算出，与官方面积会有差别。“网络地图放大”是轮廓在 Web 墨卡托地图上的面积与真实面积之比，地图只画到约南北纬 85°。',
+      ],
     ] as const,
     credits: [
       {
         name: 'Natural Earth',
-        use: '国家边界与地球矢量底图。边界采用 Natural Earth 中国视角数据，台湾单独显示；地图边界不构成对领土地位的法律认定。',
+        use: '国家边界与地球矢量底图，也是真实大小的国家轮廓。边界采用 Natural Earth 中国视角数据，台湾单独显示；地图边界不构成对领土地位的法律认定。',
         notice: 'Made with Natural Earth · 公共领域数据',
         links: [
           { label: '来源', href: 'https://www.naturalearthdata.com/' },
@@ -218,11 +222,15 @@ const COPY = {
         'Reshaped Earth',
         `The method uses 2020 population, ${HAS_GDP ? 'PPP GDP, ' : ''}fossil-fuel and cement CO₂ emissions, and night-light snapshots for an offline Gastner–Seguy–More (2018) contiguous area cartogram on a cylindrical equal-area grid. Country values are aggregated against the Mundus country raster, following Mundus country boundaries. Oceans, Antarctica and missing units receive mean density; real zero values use a display floor of 1% of mean density. Hatching marks excess area the continuous reshaping could not remove; the solid core represents the country's share of the measure. ${HAS_GDP ? 'GDP is a modelled downscaled estimate in 2021 international dollars; ' : ''}night lights are a relative brightness index with sensor saturation.`,
       ],
+      [
+        'True Size',
+        'Country outlines come from Natural Earth 1:110m. Each outline turns about the polar axis to shift longitude, then slides along the meridian to the selected point; turning as a whole keeps shape and area. The centre of the country’s largest landmass sits on the selected point. Area is measured on the sphere from the simplified outline and differs from official figures. “Web map enlargement” is the outline’s area on a Web Mercator map divided by its true area; the map stops at about 85° north and south.',
+      ],
     ] as const,
     credits: [
       {
         name: 'Natural Earth',
-        use: 'Country borders and the vector globe. Boundaries follow the Natural Earth China point-of-view layer, with Taiwan shown separately. Map boundaries are not a legal statement on territorial status.',
+        use: 'Country borders, the vector globe and the True Size outlines. Boundaries follow the Natural Earth China point-of-view layer, with Taiwan shown separately. Map boundaries are not a legal statement on territorial status.',
         notice: 'Made with Natural Earth · public domain data',
         links: [
           { label: 'Source', href: 'https://www.naturalearthdata.com/' },

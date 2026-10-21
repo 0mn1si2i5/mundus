@@ -6,6 +6,7 @@ import {
   CITY_REACH_DEFAULT,
   isCityReachLevel,
 } from '../isolation/cityReachLevel';
+import { isTrueSizeCountry } from '../truesize/trueSize';
 
 export const MODE_ORDER = [
   'antipodes',
@@ -13,6 +14,7 @@ export const MODE_ORDER = [
   'isolation',
   'reshaped',
   'sunline',
+  'truesize',
 ] as const;
 export type ModeId = (typeof MODE_ORDER)[number];
 
@@ -165,6 +167,30 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
         .min(SUNLINE_MIN_TIME_MS)
         .max(SUNLINE_MAX_TIME_MS),
       clockMode: z.enum(['live', 'fixed']),
+    }),
+  },
+  truesize: {
+    id: 'truesize',
+    version: 1,
+    tier: 'more',
+    title: { zh: '真实大小', en: 'True Size' },
+    titlePhrases: { zh: ['真实大小'] },
+    question: {
+      zh: '把一个国家搬到这里，它到底有多大？',
+      en: 'How big is a country, really, once you move it here?',
+    },
+    summary: {
+      zh: '把国家轮廓搬到选中的地点，形状和面积在球面上保持不变。',
+      en: 'Carry a country outline to the selected place; its shape and area stay true on the sphere.',
+    },
+    cameraPolicy: 'preserve',
+    resources: ['mundus-countries'],
+    stateSchema: z.object({
+      point: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+      }),
+      country: z.string().refine(isTrueSizeCountry),
     }),
   },
 };
