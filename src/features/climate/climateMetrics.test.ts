@@ -4,6 +4,7 @@ import {
   climateGrid,
   cityClimateClasses,
   findClimateTwins,
+  fitClimateTexture,
   sampleClimate,
   type ClimateDataset,
 } from './climateMetrics';
@@ -178,5 +179,28 @@ describe('findClimateTwins', () => {
     expect(() =>
       climateGrid({ width: 100, height: 50, west: -180, north: 90, step: 1 }),
     ).toThrow(/grid/);
+  });
+});
+
+describe('fitClimateTexture', () => {
+  it('keeps the full grid when it fits the GPU limit', () => {
+    const data = dataset();
+    expect(fitClimateTexture(data, 4096).classes).toBe(data.classes);
+  });
+
+  it('halves a grid wider than the limit using block centres', () => {
+    const data = dataset();
+    const fitted = fitClimateTexture(data, 200);
+    expect(fitted).toMatchObject({ width: 180, height: 90, step: 2 });
+    // Block (x, y) samples cell (2x + 1, 2y + 1) of the source grid.
+    for (const [x, y] of [
+      [140, 25],
+      [100, 30],
+      [0, 0],
+    ] as const)
+      expect(fitted.classes[y * 180 + x]).toBe(
+        data.classes[(2 * y + 1) * 360 + 2 * x + 1],
+      );
+    expect(fitted.classes.some((value) => value === 14)).toBe(true);
   });
 });

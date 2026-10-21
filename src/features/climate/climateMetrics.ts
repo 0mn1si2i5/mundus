@@ -183,3 +183,33 @@ export function formatLandShare(share: number, locale: Locale): string {
     return locale === 'zh' ? '不到 0.1%' : '<0.1%';
   return `${(share * 100).toFixed(1)}%`;
 }
+
+/**
+ * Fit the class grid to a GPU texture limit by keeping the centre cell of
+ * each `stride × stride` block. WebGL2 only guarantees 2048-texel textures;
+ * selections still read the full-resolution grid.
+ */
+export function fitClimateTexture(
+  { grid, classes }: Pick<ClimateDataset, 'grid' | 'classes'>,
+  maxTextureSize: number,
+): { width: number; height: number; step: number; classes: Uint8Array } {
+  const stride = Math.max(
+    1,
+    Math.ceil(grid.width / maxTextureSize),
+    Math.ceil(grid.height / maxTextureSize),
+  );
+  if (stride === 1)
+    return { width: grid.width, height: grid.height, step: grid.step, classes };
+  const width = Math.ceil(grid.width / stride);
+  const height = Math.ceil(grid.height / stride);
+  const fitted = new Uint8Array(width * height);
+  const offset = Math.floor(stride / 2);
+  for (let y = 0; y < height; y += 1) {
+    const row = Math.min(grid.height - 1, y * stride + offset);
+    for (let x = 0; x < width; x += 1) {
+      const column = Math.min(grid.width - 1, x * stride + offset);
+      fitted[y * width + x] = classes[row * grid.width + column]!;
+    }
+  }
+  return { width, height, step: grid.step * stride, classes: fitted };
+}

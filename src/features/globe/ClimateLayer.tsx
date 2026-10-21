@@ -11,7 +11,10 @@ import {
   UnsignedByteType,
   type BufferGeometry,
 } from 'three';
-import type { ClimateDataset } from '../climate/climateMetrics';
+import {
+  fitClimateTexture,
+  type ClimateDataset,
+} from '../climate/climateMetrics';
 import { KOPPEN_CLASSES } from '../climate/koppenClasses';
 import { geoToVector3 } from './geo';
 import { ignoreRaycast } from './sceneUtils';
@@ -80,14 +83,18 @@ export function ClimateLayer({
   latitude: number;
 }) {
   const invalidate = useThree((state) => state.invalidate);
+  const maxTextureSize = useThree(
+    (state) => state.gl.capabilities.maxTextureSize,
+  );
   const materialRef = useRef<ShaderMaterial | null>(null);
   const material = useMemo(() => {
     const { grid } = dataset;
+    const fitted = fitClimateTexture(dataset, maxTextureSize);
     const classes = nearestTexture(
       new DataTexture(
-        dataset.classes,
-        grid.width,
-        grid.height,
+        fitted.classes,
+        fitted.width,
+        fitted.height,
         RedFormat,
         UnsignedByteType,
       ),
@@ -106,10 +113,10 @@ export function ClimateLayer({
       uniforms: {
         uClasses: { value: classes },
         uPalette: { value: palette },
-        uSize: { value: [grid.width, grid.height] },
+        uSize: { value: [fitted.width, fitted.height] },
         uWest: { value: grid.west },
         uNorth: { value: grid.north },
-        uStep: { value: grid.step },
+        uStep: { value: fitted.step },
         uSelected: { value: 0 },
       },
       vertexShader: VERTEX_SHADER,
@@ -117,7 +124,7 @@ export function ClimateLayer({
       depthTest: true,
       depthWrite: false,
     });
-  }, [dataset]);
+  }, [dataset, maxTextureSize]);
   useEffect(() => {
     materialRef.current = material;
     return () => {
