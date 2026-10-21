@@ -23,7 +23,7 @@ export function CircleControls({
   presentation: Extract<ModePresentation, { id: 'circle' }>;
 }) {
   const setRadius = useAppStore((state) => state.setCircleRadiusKm);
-  const selectPoint = useAppStore((state) => state.selectPoint);
+  const selectCircleHalfAt = useAppStore((state) => state.selectCircleHalfAt);
   const copy = CIRCLE_COPY[locale];
   const { selection, data } = presentation;
   const radiusKm = selection?.radiusKm ?? presentation.radiusKm;
@@ -74,8 +74,7 @@ export function CircleControls({
           disabled={!smallest}
           onClick={() => {
             if (!smallest) return;
-            setRadius(null);
-            selectPoint(smallest.point);
+            selectCircleHalfAt(smallest.point);
           }}
         >
           {copy.goSmallest}

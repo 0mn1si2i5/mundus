@@ -19,16 +19,33 @@ export interface CircleSelection {
   timesSmallest: number;
 }
 
+export type CircleProfile = ReturnType<typeof populationProfile>;
+
+/** One pass over the populated cells; reuse it while only the radius changes. */
+export function circleProfileAt(
+  dataset: CircleDataset,
+  point: GeoPoint,
+): CircleProfile {
+  return populationProfile(dataset.cells, point.latitude, point.longitude);
+}
+
 export function computeCircleSelection(
   dataset: CircleDataset,
   point: GeoPoint,
   chosenRadiusKm: number | null,
 ): CircleSelection {
-  const profile = populationProfile(
-    dataset.cells,
-    point.latitude,
-    point.longitude,
+  return selectionFromProfile(
+    dataset,
+    circleProfileAt(dataset, point),
+    chosenRadiusKm,
   );
+}
+
+export function selectionFromProfile(
+  dataset: CircleDataset,
+  profile: CircleProfile,
+  chosenRadiusKm: number | null,
+): CircleSelection {
   const halfRadiusKm = radiusForShare(profile, 0.5);
   const radiusKm = chosenRadiusKm ?? halfRadiusKm;
   const population =

@@ -68,10 +68,16 @@ test('the slider counts people within a radius and the half circle comes back', 
 test('jumps to the smallest half-world circle and shares it', async ({
   page,
 }, testInfo) => {
-  await page.goto('./?mode=circle&point=-23.55%2C-46.63&v=2');
+  await page.goto('./?mode=circle&point=-23.55%2C-46.63&radius=1500&v=2');
   await expect(page.getByTestId('circle-finding')).toBeVisible();
   await openControls(page, testInfo);
   await page.getByRole('button', { name: '跳到世界最小的半人口圈' }).click();
+  await expect(page).toHaveURL(/point=28\.65%2C100\.6/);
+  await expect(page).not.toHaveURL(/radius=/);
+  // The jump is one history entry: Back returns to the chosen radius.
+  await page.goBack();
+  await expect(page).toHaveURL(/point=-23\.55%2C-46\.63&radius=1500/);
+  await page.goForward();
   await expect(page).toHaveURL(/point=28\.65%2C100\.6/);
   await expect(page.getByTestId('circle-result')).toContainText(
     '这里就是最小的半人口圈',

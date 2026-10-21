@@ -71,9 +71,11 @@ import {
   type CircleLoadState,
 } from '../circle/useCircleDataset';
 import {
-  computeCircleSelection,
+  circleProfileAt,
+  selectionFromProfile,
   type CircleSelection,
 } from '../circle/circleSelection';
+import { radiusForShare } from '../circle/circleProfile.mjs';
 
 export interface GlobePresentation {
   showAntipodes: boolean;
@@ -248,12 +250,20 @@ export function useModePresentation(
   );
   const circleRadiusKm = useAppStore((state) => state.circleRadiusKm);
   const circleData = useCircleDataset(activeMode === 'circle');
-  const circleSelection = useMemo(
+  // The profile depends only on the place; slider ticks reuse it.
+  const circleProfile = useMemo(
     () =>
       activeMode === 'circle' && circleData.status === 'ready'
-        ? computeCircleSelection(circleData.data, point, circleRadiusKm)
+        ? circleProfileAt(circleData.data, point)
         : null,
-    [activeMode, circleData, circleRadiusKm, point],
+    [activeMode, circleData, point],
+  );
+  const circleSelection = useMemo(
+    () =>
+      circleProfile && circleData.status === 'ready'
+        ? selectionFromProfile(circleData.data, circleProfile, circleRadiusKm)
+        : null,
+    [circleData, circleProfile, circleRadiusKm],
   );
 
   const relation = useMemo(
@@ -493,19 +503,26 @@ export function useGlobePresentation(
   );
   const circleRadiusKm = useAppStore((state) => state.circleRadiusKm);
   const circleData = useCircleDataset(activeMode === 'circle');
+  // A chosen radius is drawn as is; only the default half circle needs the
+  // population profile, which changes with the place, not the slider.
+  const circleHalfRadiusKm = useMemo(
+    () =>
+      activeMode === 'circle' && circleData.status === 'ready'
+        ? radiusForShare(circleProfileAt(circleData.data, point), 0.5)
+        : null,
+    [activeMode, circleData, point],
+  );
   const circle = useMemo<CircleGlobePresentation | null>(() => {
     if (activeMode !== 'circle') return null;
     const dataset = circleData.status === 'ready' ? circleData.data : null;
     return {
       centre: point,
-      radiusKm: dataset
-        ? computeCircleSelection(dataset, point, circleRadiusKm).radiusKm
-        : null,
+      radiusKm: dataset ? (circleRadiusKm ?? circleHalfRadiusKm) : null,
       displayDensity: dataset?.displayDensity ?? null,
       gridWidth: dataset?.width ?? 0,
       gridHeight: dataset?.height ?? 0,
     };
-  }, [activeMode, circleData, circleRadiusKm, point]);
+  }, [activeMode, circleData, circleHalfRadiusKm, circleRadiusKm, point]);
 
   const sunline = useMemo(() => {
     if (activeMode !== 'sunline') return null;
