@@ -299,6 +299,10 @@ export function serializeUrlState(state: ShareableState): string {
   return query ? `?${query}` : '';
 }
 
+export function sameUrlPoint(left: GeoPoint, right: GeoPoint): boolean {
+  return formatPoint(left) === formatPoint(right);
+}
+
 function formatPoint(point: GeoPoint): string {
   return `${formatCoordinate(point.latitude)},${formatCoordinate(point.longitude)}`;
 }

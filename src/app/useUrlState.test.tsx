@@ -75,6 +75,23 @@ describe('Reshaped Earth browser history', () => {
 });
 
 describe('shared point camera restoration', () => {
+  it('does not refocus a full-precision pick during parameter-only history', () => {
+    useAppStore.setState({
+      activeMode: 'truesize',
+      point: { latitude: 31.230412345, longitude: 121.473712345 },
+    });
+    renderHook(useUrlState);
+    act(() => {
+      window.history.replaceState(
+        {},
+        '',
+        '/exhibit?v=2&mode=truesize&point=31.2304%2C121.4737&country=156',
+      );
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(useAppStore.getState().cameraFocusIntent.target).toBeNull();
+  });
+
   it.each(['truesize', 'circle', 'climate', 'reshaped'] as const)(
     'focuses changed history points in %s once, but not parameter-only navigation',
     (activeMode) => {

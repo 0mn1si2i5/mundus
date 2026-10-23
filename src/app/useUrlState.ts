@@ -4,6 +4,7 @@ import {
   parseNavigationNotice,
   parseUrlState,
   sharedPointFocus,
+  sameUrlPoint,
   serializeUrlState,
 } from '../state/urlState';
 
@@ -80,9 +81,7 @@ export function useUrlState() {
       applyingHistory = true;
       const parsed = parseUrlState(window.location.search);
       const previousPoint = useAppStore.getState().point;
-      const pointChanged =
-        previousPoint.latitude !== parsed.point.latitude ||
-        previousPoint.longitude !== parsed.point.longitude;
+      const pointChanged = !sameUrlPoint(previousPoint, parsed.point);
       const focus = pointChanged
         ? sharedPointFocus(window.location.search)
         : null;
