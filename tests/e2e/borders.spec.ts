@@ -147,10 +147,8 @@ test('explains a detached departure beside the shared result', async ({
   await expect(
     page.getByTestId('borders-route').locator('li').first(),
   ).toContainText('Starts in a detached territory');
-  await test
-    .info()
-    .attach('detached-territory-result', {
-      body: await page.screenshot(),
-      contentType: 'image/png',
-    });
+  await test.info().attach('detached-territory-result', {
+    body: await page.screenshot(),
+    contentType: 'image/png',
+  });
 });
