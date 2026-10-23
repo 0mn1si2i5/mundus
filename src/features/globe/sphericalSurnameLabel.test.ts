@@ -1,3 +1,18 @@
+import { geoContains } from 'd3-geo';
+import { Vector3 } from 'three';
+import detailedAtlas from '../../data/generated/mundus-countries-50m.json';
+import { countryFeaturesFromTopology } from './countryData';
+import { LITERAL_NAMES } from '../names/literalNames';
+import { resolveLiteralNameWordmark } from '../names/literalNameWordmark';
+import {
+  getSurnameWordmarkAngularFootprintDegrees,
+  getSurnameWordmarkWorldWidth,
+  getSurnameWordmarkHeightRatio,
+} from '../surnames/surnameWordmark';
+import { chooseSurnameLabelSlot } from './surnameLabelSlots';
+import { getCountryLabelAnchorForId } from './countryLabel';
+import { shrinkBlockedWordmarkSlot } from './mapWordmark';
+import { vector3ToGeo } from './geo';
 import { describe, expect, it } from 'vitest';
 import {
   createSphericalSurnameLabelGeometry,
@@ -85,4 +100,56 @@ describe('spherical surname label geometry', () => {
       );
     }
   });
+});
+
+describe('compiled microstate meshes', () => {
+  const countries = countryFeaturesFromTopology(detailedAtlas);
+  it.each([
+    ['ne-674', 'ne-380'],
+    ['ne-336', 'ne-380'],
+    ['ne-492', 'ne-250'],
+  ])(
+    'keeps %s rendered vertices out of its neighbour %s before and after obstacle shrink',
+    (id, neighborId) => {
+      const record = LITERAL_NAMES.find((record) => record.id === id)!;
+      const wordmark = resolveLiteralNameWordmark(record, 'local', 'en')!;
+      let slot = chooseSurnameLabelSlot(
+        id,
+        getCountryLabelAnchorForId(id)!,
+        wordmark,
+        [],
+      )!;
+      const neighbor = countries.find(
+        (country) => country.properties.countryId === neighborId,
+      )!;
+      for (let attempt = 0; attempt <= 4; attempt++) {
+        const geometry = createSphericalSurnameLabelGeometry({
+          center: slot.center,
+          angularRadiusDegrees: getSurnameWordmarkAngularFootprintDegrees(
+            getSurnameWordmarkWorldWidth(slot.maxAngularDegrees, wordmark),
+            wordmark,
+          ),
+          aspectRatio: getSurnameWordmarkHeightRatio(wordmark),
+          rotationDegrees: slot.rotationDegrees,
+        });
+        try {
+          const positions = geometry.getAttribute('position');
+          for (let index = 0; index < positions.count; index++) {
+            const point = vector3ToGeo(
+              new Vector3().fromBufferAttribute(positions, index),
+            );
+            expect(
+              geoContains(neighbor, [point.longitude, point.latitude]),
+              `${id}: attempt ${attempt}, vertex ${index}`,
+            ).toBe(false);
+          }
+        } finally {
+          geometry.dispose();
+        }
+        const smaller = shrinkBlockedWordmarkSlot(slot);
+        expect(smaller.maxAngularDegrees).toBeLessThan(slot.maxAngularDegrees);
+        slot = smaller;
+      }
+    },
+  );
 });

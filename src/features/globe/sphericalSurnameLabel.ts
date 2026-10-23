@@ -83,10 +83,9 @@ export function createSphericalSurnameLabelPoints(
   const along = options.segmentsAlong ?? SURNAME_LABEL_SURFACE_SEGMENTS.along;
   const across =
     options.segmentsAcross ?? SURNAME_LABEL_SURFACE_SEGMENTS.across;
-  const radius = Math.max(
-    0.001,
-    (Math.max(0, options.angularRadiusDegrees) * Math.PI) / 180,
-  );
+  // Compiled microstate envelopes can be smaller than 0.001 radians.
+  // Rendering may shrink a footprint, but must never enlarge its safe bound.
+  const radius = (Math.max(0, options.angularRadiusDegrees) * Math.PI) / 180;
   const aspect = Math.max(0.05, options.aspectRatio);
   const halfWidth = radius / Math.sqrt(1 + aspect ** 2);
   const halfHeight = halfWidth * aspect;

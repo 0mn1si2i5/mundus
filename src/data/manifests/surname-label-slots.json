@@ -32,9 +32,9 @@
   "boundaryPolicy": "Ordinary candidates remain inside their own country. Isolated-country candidates may extend into ocean within an area-scaled cap, but are rejected when their aspect-specific spherical glyph envelope approaches another country's land geometry.",
   "wordmarkLayouts": {
     "path": "src/data/generated/wordmark-layouts.json",
-    "sha256": "723970725eae75f021a08d295a2cdc49754c6d29c385b2f6ac820d0e173c952c",
-    "rawBytes": 143527,
-    "gzipBytes": 35948,
+    "sha256": "9f9553bab113df81e6a61f235bba0ab7996fc6634d744c33f92b33c0e9ddc3b8",
+    "rawBytes": 143640,
+    "gzipBytes": 36004,
     "wordCount": 1131
   }
 }

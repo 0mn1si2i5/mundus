@@ -35,6 +35,7 @@ try {
     'src/features/surnames/surnameWordmark.ts',
     'src/features/globe/surnameLabelSlots.ts',
     'src/features/globe/geo.ts',
+    'src/features/globe/sphericalSurnameLabel.ts',
     'src/features/antipodes/geography.ts',
     'scripts/build-wordmark-layouts.mjs',
     'pnpm-lock.yaml',

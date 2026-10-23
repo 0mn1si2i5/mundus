@@ -259,3 +259,10 @@ Unknown text returns no slot; it never starts a runtime polygon search. Run the
 full builder after boundary/anchor changes, or the second stage after text or
 layout-code changes. `WORDMARK_LAYOUT_OUTPUT` writes a comparison build without
 updating the manifest. Neither builder downloads new inputs.
+
+Rendered mesh radii and screen-obstacle shrink overrides must not impose a
+minimum larger than the compiled envelope. Microstate labels can be smaller
+than the former 0.001-radian rendering floor; their result cards remain the
+readable alternative. Mesh provenance is hashed, and acceptance tests inspect
+actual Float32 vertices before and after all four shrink attempts against
+neighbouring land.

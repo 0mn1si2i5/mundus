@@ -59,7 +59,10 @@ import { VectorGlobeLayer, type VectorGlobeState } from './VectorGlobeLayer';
 import type { VectorGlobeResources } from './vectorGlobe';
 import { getCountryLabelAnchorForId } from './countryLabel';
 import { type SurnameLabelHiddenReason } from './surnameLabelLayout';
-import type { MapWordmarkLabel } from './mapWordmark';
+import {
+  shrinkBlockedWordmarkSlot,
+  type MapWordmarkLabel,
+} from './mapWordmark';
 import type { SurnameLabelSlot } from './surnameLabelSlots';
 import {
   CAMERA_FOCUS_DURATION_MS,
@@ -507,17 +510,8 @@ export function GlobeScene({
         scaleAttempt.count += 1;
         setSurnameSlotOverrides((current) => ({
           ...current,
-          [`${surnameOverrideKey}:${selectedSurnameMapLabel.countryId}`]: {
-            ...selectedSurnameSlot,
-            maxAngularDegrees: Math.max(
-              0.18,
-              selectedSurnameSlot.maxAngularDegrees * 0.68,
-            ),
-            squareMax:
-              selectedSurnameSlot.squareMax === undefined
-                ? undefined
-                : Math.max(0.18, selectedSurnameSlot.squareMax * 0.68),
-          },
+          [`${surnameOverrideKey}:${selectedSurnameMapLabel.countryId}`]:
+            shrinkBlockedWordmarkSlot(selectedSurnameSlot),
         }));
         return;
       }
