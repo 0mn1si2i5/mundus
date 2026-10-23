@@ -65,7 +65,7 @@ test('patch selection is deterministic and uses only published area ratios', () 
   const classification = {
     countries: [
       { id: 'a', paletteIndex: 1, areaKm2: 100, excluded: false },
-      { id: 'b', paletteIndex: 2, areaKm2: 20_000, excluded: false },
+      { id: 'b', paletteIndex: 2, areaKm2: 200_000, excluded: false },
       { id: 'c', paletteIndex: 3, areaKm2: 99, excluded: false },
     ],
   };
@@ -475,4 +475,16 @@ test('64-block limit is checked after clustering, rather than on country selecti
     buildPatchAtlas(optionsFor(remote)),
     /S9: reshaped ID patch count 65\/64/,
   );
+});
+
+test('enlarged medium-sized countries remain eligible for budgeted detail patches', () => {
+  const country = feature('expanded', 0, 0, 1, 1);
+  const options = optionsFor([country]);
+  options.classification.countries[0].areaKm2 = 36_000;
+  assert.deepEqual(
+    selectPatchCountries(options).map((entry) => entry.countryId),
+    ['expanded'],
+  );
+  options.classification.countries[0].excluded = true;
+  assert.deepEqual(selectPatchCountries(options), []);
 });

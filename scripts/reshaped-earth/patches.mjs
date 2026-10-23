@@ -263,7 +263,7 @@ function selectPatchCountries({
   publishedMetrics = METRICS,
 }) {
   return classification.countries
-    .filter((country) => country.areaKm2 < 20_000 && !country.excluded)
+    .filter((country) => country.areaKm2 < 200_000 && !country.excluded)
     .map((country) => {
       const ratios = Object.fromEntries(
         publishedMetrics.map((metric) => [
