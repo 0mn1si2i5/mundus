@@ -116,6 +116,9 @@ stretch no longer broadens country ink or selection rings. Flat/quantized cells
 use a finite UV-footprint fallback; saturated interiors still draw no border.
 The antialias transition scales with the actual framebuffer pixel ratio.
 Classification and CPU picking retain the same four-texel distance scores.
+Selected boundaries also carry the emphasis colour, so selection stays visible
+when a local distance field saturates before the wider inner ring at small
+screen sizes.
 
 | Measure      | ≤0.1×     | ≤0.25×    | ≤0.5×     | around 1× | ≥2×       | ≥4×       | ≥10×      |
 | ------------ | --------- | --------- | --------- | --------- | --------- | --------- | --------- |

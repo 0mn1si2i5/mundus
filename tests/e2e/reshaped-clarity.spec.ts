@@ -2,6 +2,14 @@ import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { globeRegion } from './helpers';
 import { RESHAPED_DETAIL_CASES } from './reshaped-clarity-cases';
+import { decodePngRgb } from '../../src/features/reshaped/pngCore.mjs';
+import {
+  sampleReshapedLabel,
+  type DecodedIdRaster,
+} from '../../src/features/reshaped/labelSampling.mjs';
+import { sampleReshapedPatchLabel } from '../../src/features/reshaped/patchSampling.mjs';
+import type { ReshapedPatchAtlas } from '../../src/features/reshaped/reshapedData';
+import { readGpuLabels } from './reshaped-gpu-harness';
 
 // Compile the production shading path against a straight horizontal border.
 // Stretching along that border must not widen it in the perpendicular direction.
@@ -53,10 +61,10 @@ test('country ink keeps its screen width under tangential cartogram stretching',
       `#version 300 es
       precision highp float; precision highp int;
       ${source}
-      uniform float stretch; uniform float angle;
+      uniform float stretch; uniform float angle; uniform float normalScale;
       void main(){
-        vec2 dx=vec2(stretch*cos(angle),0.25*sin(angle))/32.0/uPixelRatio;
-        vec2 dy=vec2(-stretch*sin(angle),0.25*cos(angle))/32.0/uPixelRatio;
+        vec2 dx=vec2(stretch*cos(angle),normalScale*sin(angle))/32.0/uPixelRatio;
+        vec2 dy=vec2(-stretch*sin(angle),normalScale*cos(angle))/32.0/uPixelRatio;
         vec2 uv=vec2(0.5,0.5)+(gl_FragCoord.x-32.0)*dx+(gl_FragCoord.y-64.0)*dy;
         gl_FragColor=vec4(shadeAt(uv,vec3(0.0),dx,dy,abs(dx)+abs(dy),0.01).rgb,1.0);
       }`,
@@ -148,6 +156,7 @@ test('country ink keeps its screen width under tangential cartogram stretching',
     const bins = new Uint32Array(64);
     for (let i = 0; i < 64; i += 2) bins[i] = 1;
     gl.uniform2uiv(gl.getUniformLocation(program, 'uPatchBins[0]'), bins);
+    gl.uniform1f(gl.getUniformLocation(program, 'normalScale'), 0.25);
     const output = [];
     for (const patch of [0, 1])
       for (const angle of [0, Math.PI / 4])
@@ -170,18 +179,35 @@ test('country ink keeps its screen width under tangential cartogram stretching',
               width: (ink / dpr) * Math.cos(angle),
             });
           }
+    // A fine atlas viewed from far away saturates before the wide inner ring.
+    // The boundary itself must still identify the selected country.
+    gl.uniform1i(gl.getUniformLocation(program, 'uSelected'), 1);
+    gl.uniform3f(gl.getUniformLocation(program, 'uSelection'), 1, 0, 1);
+    gl.uniform1f(gl.getUniformLocation(program, 'normalScale'), 4);
+    gl.uniform1f(gl.getUniformLocation(program, 'angle'), 0);
+    gl.uniform1f(gl.getUniformLocation(program, 'uPixelRatio'), 1);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    const selected = new Uint8Array(128 * 4);
+    gl.readPixels(32, 0, 1, 128, gl.RGBA, gl.UNSIGNED_BYTE, selected);
+    let emphasis = 0;
+    for (let y = 0; y < 128; y++)
+      emphasis += (selected[y * 4 + 2]! - selected[y * 4 + 1]!) / 255;
     for (const texture of textures) gl.deleteTexture(texture);
     gl.deleteProgram(program);
     gl.deleteShader(vertex);
     gl.deleteShader(fragment);
     gl.getExtension('WEBGL_lose_context')?.loseContext();
-    return output;
+    return { output, emphasis };
   }, source);
   await testInfo.attach('edge-widths', {
-    body: JSON.stringify(widths, null, 2),
+    body: JSON.stringify(widths.output, null, 2),
     contentType: 'application/json',
   });
-  for (const row of widths)
+  expect(
+    widths.emphasis,
+    'selected ink at a saturated local distance',
+  ).toBeGreaterThan(0.1);
+  for (const row of widths.output)
     expect(row.width, JSON.stringify(row)).toBeCloseTo(1, 0);
 });
 
@@ -216,3 +242,100 @@ for (const detail of RESHAPED_DETAIL_CASES) {
     });
   });
 }
+
+test('published detail atlas agrees with CPU ownership along every transition band', async ({
+  page,
+}, testInfo) => {
+  await page.goto('about:blank');
+  const shader = await readFile('src/features/globe/ReshapedLayer.tsx', 'utf8');
+  const label = shader.match(
+    /export const RESHAPED_LABEL_GLSL = `([\s\S]*?)`;/u,
+  )?.[1];
+  const patch = shader
+    .match(/export const RESHAPED_PATCH_GLSL = `([\s\S]*?)`;/u)?.[1]
+    .replace('${360 / 4096.0}', String(360 / 4096))
+    .replace('${180 / 2048.0}', String(180 / 2048));
+  if (!label || !patch) throw new Error('Production classifier missing');
+  const source = `${label}\nfloat wrapLongitude(float x){return mod(x+180.0,360.0)-180.0;}\n${patch}`;
+  const decode = async (
+    name: string,
+    sample: 1 | 2,
+  ): Promise<DecodedIdRaster> => {
+    const bytes = await readFile(`src/data/generated/reshaped-earth/${name}`);
+    const packed = await decodePngRgb(
+      bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+      { sample },
+    );
+    const raster = {
+      width: packed.width,
+      height: packed.height,
+      ids: new Uint32Array(packed.ids.length),
+      padding: new Uint8Array(packed.ids.length),
+      distance: new Uint8Array(packed.ids.length),
+      distanceCap: Math.round(255 / sample),
+    };
+    for (let i = 0; i < packed.ids.length; i++) {
+      raster.ids[i] = packed.ids[i]! >>> 16;
+      raster.padding[i] = (packed.ids[i]! >>> 8) & 255;
+      raster.distance[i] = Math.round((packed.ids[i]! & 255) / sample);
+    }
+    return raster;
+  };
+  const descriptor = JSON.parse(
+    await readFile(
+      'src/data/generated/reshaped-earth/ids-patches.json',
+      'utf8',
+    ),
+  );
+  const atlas: ReshapedPatchAtlas = {
+    ...descriptor,
+    raster: await decode('ids-patches.png', 1),
+  };
+  const queries: number[][] = [];
+  for (const entry of atlas.patches) {
+    const [w, s, e, n] = entry.bbox;
+    // Both sides of the CPU/GPU half-weight switch, full atlas, and outside.
+    for (const offset of [-0.1, 0.5, 0.99, 1, 1.01, 1.5, 2.1])
+      for (const f of [0.15, 0.35, 0.5, 0.65, 0.85]) {
+        const dx = (offset * 360) / 4096,
+          dy = (offset * 180) / 2048;
+        for (const [lon, lat] of [
+          [w + dx, s + (n - s) * f],
+          [e - dx, s + (n - s) * f],
+          [w + (e - w) * f, s + dy],
+          [w + (e - w) * f, n - dy],
+        ])
+          queries.push([
+            Math.fround((lon! + 180) / 360),
+            Math.fround((90 - lat!) / 180),
+          ]);
+      }
+  }
+  for (const sample of [1, 2] as const) {
+    const base = await decode('ids-country.png', sample);
+    const gpu = await readGpuLabels(page, base, source, queries, atlas);
+    for (const [i, uv] of queries.entries()) {
+      const longitude = uv[0]! * 360 - 180,
+        latitude = 90 - uv[1]! * 180;
+      const cpu =
+        sampleReshapedPatchLabel(atlas, latitude, longitude) ??
+        sampleReshapedLabel(base, latitude, longitude);
+      expect(
+        gpu[i * 4],
+        `sample${sample} country ${longitude},${latitude}`,
+      ).toBe(cpu.id);
+      expect(
+        gpu[i * 4 + 2],
+        `sample${sample} padding ${longitude},${latitude}`,
+      ).toBe(cpu.padding);
+    }
+  }
+  await testInfo.attach('published-atlas-samples', {
+    body: JSON.stringify({
+      blocks: atlas.patches.length,
+      queries: queries.length,
+      qualities: 2,
+    }),
+    contentType: 'application/json',
+  });
+});

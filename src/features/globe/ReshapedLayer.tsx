@@ -268,6 +268,9 @@ vec4 shadeLabel(vec4 label, vec3 p, float footprint, float edgeWidth, float stri
   color=mix(color,uCasing,casing*uCasingOpacity);
   color=mix(color,uBorder,border);
   if(id!=0 && id==uSelected && label.w<0.5) {
+    // A fine local distance field can saturate before the wide inner ring
+    // when zoomed out. Keep selection visible on the boundary itself too.
+    color=mix(color,uSelection,border);
     float ring=smoothstep(1.25-aa,1.25+aa,px)*(1.0-smoothstep(4.25-aa,4.25+aa,px));
     color=mix(color,uSelection,ring);
     float outerCasing=smoothstep(4.25-aa,4.25+aa,px)*(1.0-smoothstep(6.0-aa,6.0+aa,px));
