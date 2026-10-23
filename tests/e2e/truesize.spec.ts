@@ -89,11 +89,21 @@ test('reads in English and keeps 44px targets on phones', async ({
   }
 });
 
-for (const mode of ['truesize', 'circle', 'climate', 'reshaped']) {
-  test(`shared ${mode} point is on the visible, unobscured globe`, async ({
+const sharedPoints = [
+  ...['truesize', 'circle', 'climate', 'reshaped'].map((mode) => ({
+    mode,
+    point: '31.2304,121.4737',
+  })),
+  ...['90,0', '-85.1234,179.9999', '0,180', '0,-180'].map((point) => ({
+    mode: 'truesize',
+    point,
+  })),
+];
+for (const { mode, point } of sharedPoints) {
+  test(`shared ${mode} point ${point} is on the visible, unobscured globe`, async ({
     page,
   }) => {
-    await page.goto(`./?v=2&mode=${mode}&point=31.2304%2C121.4737`);
+    await page.goto(`./?v=2&mode=${mode}&point=${encodeURIComponent(point)}`);
     const globe = globeRegion(page);
     if (mode === 'reshaped') {
       await expect(globe).toHaveAttribute(
@@ -109,9 +119,7 @@ for (const mode of ['truesize', 'circle', 'climate', 'reshaped']) {
       await expect(globe).toHaveAttribute('data-vector-state', 'ready');
     }
     await expect(globe).toHaveAttribute('data-camera-focus-state', 'complete');
-    expect(new URL(page.url()).searchParams.get('point')).toBe(
-      '31.2304,121.4737',
-    );
+    expect(new URL(page.url()).searchParams.get('point')).toBe(point);
     const canvas = globe.locator('canvas');
     const box = (await canvas.boundingBox())!;
     const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
@@ -136,8 +144,23 @@ for (const mode of ['truesize', 'circle', 'climate', 'reshaped']) {
       .get('point')!
       .split(',')
       .map(Number);
-    expect(Math.abs(picked[0]! - 31.2304)).toBeLessThan(0.1);
-    expect(Math.abs(picked[1]! - 121.4737)).toBeLessThan(0.1);
+    if (point === '31.2304,121.4737') {
+      expect(Math.abs(picked[0]! - 31.2304)).toBeLessThan(0.1);
+      expect(Math.abs(picked[1]! - 121.4737)).toBeLessThan(0.1);
+    } else {
+      // Longitude is undefined at the pole; +/-180 identify the same meridian.
+      // Compare physical great-circle separation for those boundary cases.
+      const [latitude, longitude] = point.split(',').map(Number);
+      const radians = Math.PI / 180;
+      const cosine =
+        Math.sin(latitude! * radians) * Math.sin(picked[0]! * radians) +
+        Math.cos(latitude! * radians) *
+          Math.cos(picked[0]! * radians) *
+          Math.cos((longitude! - picked[1]!) * radians);
+      expect(
+        Math.acos(Math.max(-1, Math.min(1, cosine))) / radians,
+      ).toBeLessThan(0.1);
+    }
     await test.info().attach(`${mode}-shared-point`, {
       body: await page.screenshot(),
       contentType: 'image/png',
