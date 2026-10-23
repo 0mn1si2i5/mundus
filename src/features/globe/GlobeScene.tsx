@@ -57,12 +57,12 @@ import {
 } from './AntipodeRelationLayer';
 import { VectorGlobeLayer, type VectorGlobeState } from './VectorGlobeLayer';
 import type { VectorGlobeResources } from './vectorGlobe';
-import {
-  getCountryLabelAnchor,
-  getCountryLabelAnchorForId,
-} from './countryLabel';
+import { getCountryLabelAnchorForId } from './countryLabel';
 import { type SurnameLabelHiddenReason } from './surnameLabelLayout';
-import type { MapWordmarkLabel } from './mapWordmark';
+import {
+  shrinkBlockedWordmarkSlot,
+  type MapWordmarkLabel,
+} from './mapWordmark';
 import type { SurnameLabelSlot } from './surnameLabelSlots';
 import {
   CAMERA_FOCUS_DURATION_MS,
@@ -364,10 +364,6 @@ export function GlobeScene({
   // Surname Atlas and Literal Names share the surface wordmark layer.
   const wordmarkMode = activeMode === 'surnames' || activeMode === 'names';
   const surnameRuntime = useSurnameAtlasRuntime(wordmarkMode);
-  const surnameCountries =
-    wordmarkMode && surnameRuntime
-      ? surnameRuntime.surnameCountries
-      : NO_COUNTRIES;
   const selectedSurnameMapLabel = useMemo(
     () =>
       mapWordmarks.find(
@@ -375,16 +371,13 @@ export function GlobeScene({
       ) ?? null,
     [selectedCountry?.countryId, mapWordmarks],
   );
-  const surnameAnchor = useMemo(() => {
-    if (!selectedSurnameMapLabel) return null;
-    const country = surnameCountries.find(
-      (candidate) =>
-        candidate.properties.countryId === selectedSurnameMapLabel.countryId,
-    );
-    return country
-      ? getCountryLabelAnchor(country)
-      : getCountryLabelAnchorForId(selectedSurnameMapLabel.countryId);
-  }, [selectedSurnameMapLabel, surnameCountries]);
+  const surnameAnchor = useMemo(
+    () =>
+      selectedSurnameMapLabel
+        ? getCountryLabelAnchorForId(selectedSurnameMapLabel.countryId)
+        : null,
+    [selectedSurnameMapLabel],
+  );
   const renderedCountriesById = useMemo(
     () =>
       new Map(
@@ -400,18 +393,14 @@ export function GlobeScene({
     // labels are mounted only after the vector surface is ready, so computing
     // them before that point only delays the ready signal.
     if (!vectorReady || !surnameRuntime) return [];
-    const countriesById = new Map(
-      surnameCountries.map((candidate) => [
-        candidate.properties.countryId,
-        candidate,
-      ]),
-    );
     return mapWordmarks.flatMap((label) => {
-      const country = countriesById.get(label.countryId);
-      const anchor = country
-        ? (getCountryLabelAnchor(country) ??
-          getCountryLabelAnchorForId(label.countryId))
-        : getCountryLabelAnchorForId(label.countryId);
+      // A country absent from the coarse surface cannot carry a land label.
+      if (
+        profile.vectorDetail === '110m' &&
+        !renderedCountriesById.has(label.countryId)
+      )
+        return [];
+      const anchor = getCountryLabelAnchorForId(label.countryId);
       if (!anchor) return [];
       const wordmark = label.wordmark;
       if (!wordmark) return [];
@@ -424,7 +413,7 @@ export function GlobeScene({
           label.countryId,
           anchor,
           wordmark,
-          surnameCountries,
+          NO_COUNTRIES,
         );
       if (
         !slot ||
@@ -439,10 +428,7 @@ export function GlobeScene({
       }
       return [
         {
-          label: {
-            ...label,
-            countryName: country?.properties.name ?? label.countryName,
-          },
+          label,
           anchor,
           slot,
           wordmark,
@@ -452,7 +438,6 @@ export function GlobeScene({
   }, [
     profile.vectorDetail,
     renderedCountriesById,
-    surnameCountries,
     mapWordmarks,
     surnameRuntime,
     surnameSlotOverrides,
@@ -525,17 +510,8 @@ export function GlobeScene({
         scaleAttempt.count += 1;
         setSurnameSlotOverrides((current) => ({
           ...current,
-          [`${surnameOverrideKey}:${selectedSurnameMapLabel.countryId}`]: {
-            ...selectedSurnameSlot,
-            maxAngularDegrees: Math.max(
-              0.18,
-              selectedSurnameSlot.maxAngularDegrees * 0.68,
-            ),
-            squareMax:
-              selectedSurnameSlot.squareMax === undefined
-                ? undefined
-                : Math.max(0.18, selectedSurnameSlot.squareMax * 0.68),
-          },
+          [`${surnameOverrideKey}:${selectedSurnameMapLabel.countryId}`]:
+            shrinkBlockedWordmarkSlot(selectedSurnameSlot),
         }));
         return;
       }
@@ -557,7 +533,7 @@ export function GlobeScene({
               selectedSurnameMapLabel.countryId,
               surnameAnchor,
               selectedWordmark,
-              surnameCountries,
+              NO_COUNTRIES,
               selectedSurnameSlot,
             )
           : null;
@@ -645,7 +621,6 @@ export function GlobeScene({
     requestCameraFocus,
     selectedSurnameMapLabel,
     selectedSurnameSlot,
-    surnameCountries,
     surnameOverrideKey,
     surnameRuntime,
     setSurnameSlotOverrides,

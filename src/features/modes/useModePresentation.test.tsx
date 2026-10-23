@@ -50,6 +50,28 @@ describe('useGlobePresentation', () => {
     expect(loadReshapedData).not.toHaveBeenCalled();
   });
 
+  it.each(['names', 'surnames'] as const)(
+    'preserves %s wordmarks across unrelated renders and selection changes',
+    async (activeMode) => {
+      useAppStore.setState({ activeMode, locale: 'en' });
+      const { result, rerender } = renderHook(() => useGlobePresentation());
+      await waitFor(() =>
+        expect(result.current.mapWordmarks.length).toBeGreaterThan(190),
+      );
+      const labels = result.current.mapWordmarks;
+      rerender();
+      expect(result.current.mapWordmarks).toBe(labels);
+      act(() =>
+        useAppStore.setState({
+          point: { latitude: 0, longitude: 0 },
+          selectedCountry: { countryId: 'ne-352', name: 'Iceland' },
+        }),
+      );
+      expect(result.current.mapWordmarks).toBe(labels);
+      expect(result.current.mapWordmarks[0]).toBe(labels[0]);
+    },
+  );
+
   it('turns on the antipode presentation only in Other Side', () => {
     useAppStore.setState({ activeMode: 'antipodes' });
     const { result } = renderHook(() => useGlobePresentation());

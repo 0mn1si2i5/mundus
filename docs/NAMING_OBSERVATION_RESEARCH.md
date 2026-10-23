@@ -219,10 +219,50 @@ The app preserves alternate local and romanized forms within a source group
 and does not infer a statistical year from the 2023 collection snapshot.
 
 Every country with a record receives one straight wordmark from the slot
-table `src/data/generated/surname-label-slots.json` (schema 8). Wordmarks
+table `src/data/generated/surname-label-slots.json` (builder schema 9, asset schema 4). Wordmarks
 stay inside their own country, prefer its visual centre unless that costs
 much size, follow the local parallel by default, and
 rotate along the principal axis only for elongated countries when that makes
-the word materially larger. The slot table and the 50m geometry it is built
-on load only with the Surname Atlas. Countries without a usable slot keep
+the word materially larger. The slot table loads only with a wordmark observation. The browser does not
+load the 50m topology for wordmark placement or search country polygons. Countries without a usable slot keep
 their record in the side result but have no map wordmark.
+
+### Offline wordmark placement
+
+`pnpm data:label-slots` uses the pinned boundary topology and hash-checked
+anchors for all 239 units, including units without surname records. Tiny
+units below 0.00005 steradians use a 0.0001-degree search minimum: the old
+0.05-degree minimum incorrectly rejected their entire candidate pools.
+Geographic containment queries skip polygon parts outside their spherical
+bounds; this changes build cost, not the containment predicate.
+
+Both initial placement and screen-obstacle alternatives choose only among
+at most 12 precomputed slots. An unavailable candidate carries
+`unavailableReason: no-safe-envelope`, and the full result card remains
+available. Coarse 110m rendering still requires a label centre on rendered
+land; absent units are rejected before placement. Static slot metadata is
+limited to 90 KiB gzip. Full generation updates its manifest; filtered builds
+must write to a separate `SURNAME_SLOT_OUTPUT` and do not update the manifest.
+
+The second build stage, `pnpm data:wordmark-layouts`, validates each actual
+literal/local name in both languages and each displayable surname form against
+the pinned 50m topology. It stores only candidate indices and safe radii in
+`wordmark-layouts.json`, keyed by country, layout and exact text. Three generic
+aspect classes alone cannot guarantee the fit of an actual coastal wordmark.
+The compiler shrinks unsafe envelopes offline and rejects missing coverage.
+The exact-text table has a 45 KiB gzip budget; the position table has a 90 KiB
+budget. Together these replace the former roughly 470 kB gzip topology runtime.
+
+The asset records hashes of its topology, positions, source records and layout
+code. `pnpm data:verify` fails if these inputs change without regeneration.
+Unknown text returns no slot; it never starts a runtime polygon search. Run the
+full builder after boundary/anchor changes, or the second stage after text or
+layout-code changes. `WORDMARK_LAYOUT_OUTPUT` writes a comparison build without
+updating the manifest. Neither builder downloads new inputs.
+
+Rendered mesh radii and screen-obstacle shrink overrides must not impose a
+minimum larger than the compiled envelope. Microstate labels can be smaller
+than the former 0.001-radian rendering floor; their result cards remain the
+readable alternative. Mesh provenance is hashed, and acceptance tests inspect
+actual Float32 vertices before and after all four shrink attempts against
+neighbouring land.

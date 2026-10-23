@@ -1,16 +1,7 @@
-import detailedAtlas from '../../data/generated/mundus-countries-50m.json';
-import { countryFeaturesFromTopology } from './countryData';
-
-/**
- * Surname-only runtime, loaded lazily when the Surname Atlas opens. The 50m
- * topology and the generated slot table are large and no other observation
- * needs them, so they stay out of the always-loaded globe chunks.
- *
- * The slot table is generated against the Mundus 50m country geometry; runtime
- * land tests use the same geometry instead of the coarser 110m picking set.
+/** Compact precomputed slots, loaded only for the two wordmark observations.
+ * Geographic search is performed by the offline builder; no 50m topology is
+ * needed to choose or reposition a label in the browser.
  */
-export const surnameCountries = countryFeaturesFromTopology(detailedAtlas);
-
 export {
   chooseAlternativeSurnameLabelSlot,
   chooseSurnameLabelSlot,

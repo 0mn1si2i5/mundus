@@ -13,7 +13,7 @@
     "data:countries": "node scripts/build-mundus-countries.mjs",
     "data:vector-globe": "node scripts/build-natural-earth-vector-globe.mjs",
     "data:label-anchors": "node --experimental-strip-types scripts/build-country-label-anchors.mjs",
-    "data:label-slots": "node scripts/build-surname-label-slots.mjs",
+    "data:label-slots": "node scripts/build-surname-label-slots.mjs && node scripts/build-wordmark-layouts.mjs",
     "data:surname-coverage": "node scripts/build-surname-coverage.mjs",
     "data:cities": "node scripts/build-geonames-major-cities.mjs",
     "data:cities:capture": "node scripts/build-geonames-major-cities.mjs --capture",
@@ -56,7 +56,8 @@
     "test:e2e:smoke": "node scripts/run-playwright-e2e.mjs --project=chromium --grep @smoke",
     "test:e2e:resources": "MUNDUS_E2E_RESOURCES=1 node scripts/run-playwright-e2e.mjs --grep @resources",
     "check:source": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm data:verify && pnpm test:data-countries && pnpm test:data-land-borders && pnpm test:data-cities && pnpm test:data-isolation && pnpm test:data-city-reach && pnpm test:data-reshaped && pnpm test:data-population-circle && pnpm test:data-koppen && pnpm test:toolchain && pnpm test:performance && pnpm test && pnpm test:release && pnpm test:previews",
-    "check": "pnpm check:source && pnpm test:data-vector-globe && pnpm build && pnpm release:verify"
+    "check": "pnpm check:source && pnpm test:data-vector-globe && pnpm build && pnpm release:verify",
+    "data:wordmark-layouts": "node scripts/build-wordmark-layouts.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

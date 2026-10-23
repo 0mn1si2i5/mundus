@@ -9,6 +9,7 @@ import {
   getSurnameWordmarkWorldWidth,
   type SurnameWordmark,
 } from '../surnames/surnameWordmark';
+import generatedWordmarks from '../../data/generated/wordmark-layouts.json' with { type: 'json' };
 import generatedSlots from '../../data/generated/surname-label-slots.json' with { type: 'json' };
 
 export type SurnameLabelSlotLayout = 'straight' | 'arched';
@@ -63,7 +64,6 @@ const MIN_SEARCH_ANGULAR_DEGREES = 0.02;
 // ocean, which is the useful peninsula/island case without drifting offshore.
 const MAX_SEARCH_ANGULAR_DEGREES = 20;
 const SEARCH_STEPS = 12;
-const MAX_CENTER_OFFSET_DEGREES = 6;
 const POLE_SAFE_COSINE = 0.12;
 const POLE_SAFE_LONGITUDE_SPAN = Math.PI * 0.75;
 
@@ -275,7 +275,7 @@ export function sampleSurnameLabelEnvelope(
   wordmark?: SurnameWordmark,
   samples: readonly number[] = [-1, -0.5, 0, 0.5, 1],
 ): readonly GeoPoint[] {
-  const radius = (Math.max(0.005, angularDegrees) * Math.PI) / 180;
+  const radius = (Math.max(0.0001, angularDegrees) * Math.PI) / 180;
   const heightRatio = wordmark ? getSurnameWordmarkHeightRatio(wordmark) : 0.42;
   const halfWidth = radius / Math.sqrt(1 + heightRatio ** 2);
   const halfHeight = halfWidth * heightRatio;
@@ -367,98 +367,49 @@ export function chooseSurnameLabelSlot(
   countryId: string,
   anchor: { point: GeoPoint; clearanceDegrees: number },
   wordmark: SurnameWordmark,
-  countries: readonly CountryFeature[],
+  _countries: readonly CountryFeature[],
 ): SurnameLabelSlot | null {
-  const candidatePool = getSurnameLabelCandidatePool(
-    countryId,
-    anchor,
-    wordmark,
-    countries,
-  );
+  void _countries; // Retained for callers; layout never examines polygons.
+  const candidatePool = getSurnameLabelCandidatePool(countryId, wordmark);
   return chooseLargestSurnameLabelSlot(candidatePool, anchor.point);
 }
 
-/**
- * Returns the next safe world-space candidate after the current one has been
- * covered by a desktop/mobile shell obstacle. This keeps the camera under
- * user control while still giving a selected country another readable place
- * on the globe.
- */
+/** Chooses a bounded precomputed alternative after screen-space occlusion. */
 export function chooseAlternativeSurnameLabelSlot(
   countryId: string,
   anchor: { point: GeoPoint; clearanceDegrees: number },
   wordmark: SurnameWordmark,
-  countries: readonly CountryFeature[],
+  _countries: readonly CountryFeature[],
   current: SurnameLabelSlot,
 ): SurnameLabelSlot | null {
+  void _countries;
   const currentKey = surnameLabelSlotKey(current);
-  const candidatePool = getSurnameLabelCandidatePool(
-    countryId,
-    anchor,
-    wordmark,
-    countries,
-  ).filter((candidate) => surnameLabelSlotKey(candidate) !== currentKey);
-  return chooseLargestSurnameLabelSlot(candidatePool, anchor.point);
+  return chooseLargestSurnameLabelSlot(
+    getSurnameLabelCandidatePool(countryId, wordmark).filter(
+      (candidate) => surnameLabelSlotKey(candidate) !== currentKey,
+    ),
+    anchor.point,
+  );
 }
 
 function getSurnameLabelCandidatePool(
   countryId: string,
-  anchor: { point: GeoPoint; clearanceDegrees: number },
   wordmark: SurnameWordmark,
-  countries: readonly CountryFeature[],
 ): readonly SurnameLabelSlot[] {
-  const mayRotate = allowsRotatedWordmark(wordmark);
-  const generatedCandidates = GENERATED_SLOTS[countryId]?.filter(
-    (slot) =>
-      slot.layout === wordmark.layout &&
-      (mayRotate || Math.abs(slot.rotationDegrees) < 1e-6) &&
-      slot.maxAngularDegrees > 0,
-  );
-  // Keep the full generated pool when its safety pass found no candidate. The
-  // smaller runtime envelope fallback below can still be safe for compact or
-  // densely bordered countries, while an empty filtered array could not be
-  // recovered with nullish coalescing.
-  const candidates =
-    generatedCandidates && generatedCandidates.length > 0
-      ? generatedCandidates
-      : createSurnameLabelSlotCandidates(
-          anchor.point,
-          anchor.clearanceDegrees,
-          wordmark.layout,
-        );
-  const safeCandidates = candidates.filter((slot) => slot.landSafe);
-  const candidateSource =
-    safeCandidates.length > 0 ? safeCandidates : candidates;
-  const rankedCandidates = [...candidates].sort(
-    (a, b) =>
-      Number(Boolean(b.landSafe)) - Number(Boolean(a.landSafe)) ||
-      b.maxAngularDegrees - a.maxAngularDegrees ||
-      Math.abs(a.rotationDegrees) - Math.abs(b.rotationDegrees),
-  );
-  const evaluatedCandidates =
-    safeCandidates.length > 0
-      ? candidateSource
-      : expandCandidateCenters(rankedCandidates, anchor.point);
-  const candidatePool = evaluatedCandidates
-    .map((slot) => {
-      if (slot.landSafe && slot.squareMax !== undefined) {
-        return {
-          ...slot,
-          maxAngularDegrees: getWordmarkSlotRadius(slot, wordmark),
-        };
-      }
-      return maximizeSurnameLabelSlot(slot, countryId, countries, wordmark);
-    })
-    .filter((slot): slot is SurnameLabelSlot => slot !== null);
-  return candidatePool;
-}
-
-/**
- * Rotated slots exist only for elongated countries. A square word (for
- * example a single CJK character) always stays upright on its parallel.
- */
-function allowsRotatedWordmark(wordmark: SurnameWordmark): boolean {
-  return getSurnameWordmarkHeightRatio(wordmark) < SQUARE_WORDMARK_HEIGHT_RATIO;
+  const layouts = generatedWordmarks.layouts as Record<
+    string,
+    readonly (readonly number[])[]
+  >;
+  const candidates = GENERATED_SLOTS[countryId] ?? [];
+  return (
+    layouts[`${countryId}:${wordmark.layout}:${wordmark.value}`] ?? []
+  ).flatMap(([index, radius]) => {
+    if (index === undefined || radius === undefined) return [];
+    const slot = candidates[index];
+    return slot?.landSafe && slot.layout === wordmark.layout && radius > 0
+      ? [{ ...slot, maxAngularDegrees: radius }]
+      : [];
+  });
 }
 
 // Horizontal is the cartographic default; a rotated slot must make this
@@ -518,20 +469,6 @@ function chooseLargestSurnameLabelSlot(
     : horizontal;
 }
 
-function getWordmarkSlotRadius(
-  slot: SurnameLabelSlot,
-  wordmark: SurnameWordmark,
-): number {
-  const heightRatio = getSurnameWordmarkHeightRatio(wordmark);
-  if (heightRatio >= SQUARE_WORDMARK_HEIGHT_RATIO) {
-    return slot.squareMax ?? slot.maxAngularDegrees;
-  }
-  if (heightRatio >= LONG_WORDMARK_HEIGHT_RATIO) {
-    return slot.mediumMax ?? slot.maxAngularDegrees;
-  }
-  return slot.maxAngularDegrees;
-}
-
 function getStrictSlotRadius(
   slot: SurnameLabelSlot,
   wordmark?: SurnameWordmark,
@@ -559,80 +496,11 @@ function surnameLabelSlotKey(slot: SurnameLabelSlot): string {
   return `${slot.layout}:${slot.rotationDegrees}:${slot.center.latitude.toFixed(5)}:${slot.center.longitude.toFixed(5)}`;
 }
 
-function expandCandidateCenters(
-  candidates: readonly SurnameLabelSlot[],
-  anchor: GeoPoint,
-): readonly SurnameLabelSlot[] {
-  const expanded = candidates.flatMap((slot) => {
-    const direction = DIRECTIONS.find(
-      (candidate) => candidate.name === slot.oceanDirection,
-    );
-    if (!direction || slot.oceanDirection === 'none') return [slot];
-    // The old candidates only moved a fraction of the anchor clearance. That
-    // works for an interior card, but it prevents a peninsula/island wordmark
-    // from using the open ocean that the product explicitly allows. Sample a
-    // wider, still bounded set of centers along the requested ocean bearing.
-    const scales = [0, 0.75, 1.5, 2.5];
-    const bearingDegrees =
-      direction.name === 'north'
-        ? 0
-        : direction.name === 'east'
-          ? 90
-          : direction.name === 'south'
-            ? 180
-            : 270;
-    // Diagonal bearings matter for tapered peninsulas such as Italy, where a
-    // purely north/south shift can remain trapped beside the coastline.
-    return [-45, 0, 45].flatMap((bearingOffset) =>
-      scales.map((scale) => ({
-        ...slot,
-        center: destinationPoint(
-          anchor,
-          Math.min(MAX_CENTER_OFFSET_DEGREES, slot.maxAngularDegrees * scale),
-          bearingDegrees + bearingOffset,
-        ),
-      })),
-    );
-  });
-  const seen = new Set<string>();
-  return expanded.filter((slot) => {
-    const key = `${slot.layout}:${slot.rotationDegrees}:${slot.oceanDirection}:${slot.center.latitude.toFixed(5)}:${slot.center.longitude.toFixed(5)}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function destinationPoint(
-  point: GeoPoint,
-  distanceDegrees: number,
-  bearingDegrees: number,
-): GeoPoint {
-  const latitude = (point.latitude * Math.PI) / 180;
-  const longitude = (point.longitude * Math.PI) / 180;
-  const distance = (distanceDegrees * Math.PI) / 180;
-  const bearing = (bearingDegrees * Math.PI) / 180;
-  const nextLatitude = Math.asin(
-    Math.sin(latitude) * Math.cos(distance) +
-      Math.cos(latitude) * Math.sin(distance) * Math.cos(bearing),
-  );
-  const nextLongitude =
-    longitude +
-    Math.atan2(
-      Math.sin(bearing) * Math.sin(distance) * Math.cos(latitude),
-      Math.cos(distance) - Math.sin(latitude) * Math.sin(nextLatitude),
-    );
-  return {
-    latitude: clampLatitude((nextLatitude * 180) / Math.PI),
-    longitude: normalizeLongitude((nextLongitude * 180) / Math.PI),
-  };
-}
-
 /**
  * Expands a candidate until its actual SVG envelope reaches neighbouring land.
  * The previous build used one conservative anchor clearance for every word;
  * that made wide countries render labels far below their available area. The
- * search is deterministic and bounded, so runtime work stays tiny while the
+ * search is deterministic and bounded, for the offline compiler, while the
  * selected word receives the largest safe footprint for its own aspect ratio.
  */
 export function maximizeSurnameLabelSlot(

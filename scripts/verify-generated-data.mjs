@@ -103,6 +103,11 @@ const assets = [
     hashField: 'derivedAssetSha256',
   },
   {
+    manifest: 'src/data/manifests/surname-label-slots.json',
+    asset: 'src/data/generated/wordmark-layouts.json',
+    hashField: 'wordmarkLayouts.sha256',
+  },
+  {
     manifest: 'src/data/manifests/surname-coverage.json',
     asset: 'src/data/generated/surname-coverage.json',
     hashField: 'derivedAssetSha256',
@@ -196,6 +201,53 @@ for (const entry of assets) {
       console.error(
         `${entry.asset}: expected ${entry.expectedGzipBytes} gzip bytes, received ${actualGzipBytes}`,
       );
+    }
+  }
+  if (entry.asset === 'src/data/generated/surname-label-slots.json') {
+    const table = JSON.parse(assetBytes.toString('utf8'));
+    const candidates = Object.values(table.slots).flat();
+    const gzipBytes = gzipSync(assetBytes, { level: 9 }).byteLength;
+    if (
+      Object.keys(table.slots).length !== 239 ||
+      candidates.length !== manifest.recordCount ||
+      assetBytes.byteLength !== manifest.rawBytes ||
+      gzipBytes !== manifest.gzipBytes ||
+      gzipBytes > 90 * 1024 ||
+      candidates.some(
+        (slot) =>
+          !slot.landSafe && slot.unavailableReason !== 'no-safe-envelope',
+      )
+    ) {
+      failed = true;
+      console.error(
+        `${entry.asset}: wordmark coverage, metadata, or 90 KiB gzip budget mismatch`,
+      );
+    }
+  }
+  if (entry.asset === 'src/data/generated/wordmark-layouts.json') {
+    const table = JSON.parse(assetBytes.toString('utf8'));
+    const metadata = manifest.wordmarkLayouts;
+    const gzipBytes = gzipSync(assetBytes, { level: 9 }).byteLength;
+    if (
+      table.schemaVersion !== 1 ||
+      Object.keys(table.layouts).length !== metadata.wordCount ||
+      assetBytes.byteLength !== metadata.rawBytes ||
+      gzipBytes !== metadata.gzipBytes ||
+      gzipBytes > 45 * 1024
+    ) {
+      failed = true;
+      console.error(
+        `${entry.asset}: coverage, metadata, or 45 KiB gzip budget mismatch`,
+      );
+    }
+    for (const [path, hash] of Object.entries(table.inputs)) {
+      const bytes = await readFile(path);
+      if (createHash('sha256').update(bytes).digest('hex') !== hash) {
+        failed = true;
+        console.error(
+          `${entry.asset}: stale layout input ${path}; run pnpm data:wordmark-layouts`,
+        );
+      }
     }
   }
   if (entry.budgets) {
