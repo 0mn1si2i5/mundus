@@ -205,8 +205,8 @@ export const MODE_DEFINITIONS: Record<ModeId, ModeDefinition> = {
     title: { zh: '陆路接力', en: 'Border Hop' },
     titlePhrases: { zh: ['陆路接力'] },
     question: {
-      zh: '不坐船、不乘飞机，从这里到另一个国家要跨越几条边界？',
-      en: 'Without boats or planes, how many borders lie between here and another country?',
+      zh: '不坐船、不乘飞机，从所选国家或地区到另一个国家要跨越几条边界？',
+      en: 'Without boats or planes, how many borders lie between the selected country or territory and another country?',
     },
     summary: {
       zh: '沿陆地边界一国接一国走，找出最少要跨越几条边界。',

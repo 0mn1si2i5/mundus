@@ -55,6 +55,13 @@ Mundus China-view boundary policy and are not a statement on territorial
 status. The model says nothing about whether a crossing is open, legal or
 passable.
 
+The result card states this country/territory scope beside the finding. It
+identifies a detached departure or arrival separately from a detached part
+used midway. France–Brazil, Spain–Morocco and Russia–Poland each take one
+crossing through French Guiana, Ceuta/Melilla and Kaliningrad respectively;
+these are not routes from Paris, Madrid or Moscow, or from the clicked point.
+Swapping endpoints preserves the count and reverses the departure/arrival notes.
+
 ## Runtime
 
 The asset (about 11 KB) loads only when Border Hop is entered. Globe picking

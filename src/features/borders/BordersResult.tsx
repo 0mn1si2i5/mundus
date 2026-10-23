@@ -81,6 +81,9 @@ export function BordersResult({
       <p className={styles.finding} aria-live="polite">
         {finding}
       </p>
+      {data.status === 'ready' && selectedCountry ? (
+        <p className={modeStyles.note}>{copy.scope}</p>
+      ) : null}
       {data.status === 'error' ? (
         <button className={modeStyles.retry} type="button" onClick={data.retry}>
           {copy.retry}
@@ -96,7 +99,15 @@ export function BordersResult({
                 ...step.linksWithin.map((link) =>
                   fill(copy.via, { link: linkName(link) }),
                 ),
-                ...(step.detached ? [copy.detached] : []),
+                ...(step.detached
+                  ? [
+                      index === 0
+                        ? copy.detachedStart
+                        : index === route.steps.length - 1
+                          ? copy.detachedEnd
+                          : copy.detached,
+                    ]
+                  : []),
               ];
               return (
                 <li
