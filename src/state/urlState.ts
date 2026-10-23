@@ -300,7 +300,15 @@ export function serializeUrlState(state: ShareableState): string {
 }
 
 export function sameUrlPoint(left: GeoPoint, right: GeoPoint): boolean {
-  return formatPoint(left) === formatPoint(right);
+  // URL parsing canonicalizes the rounded date-line longitude to -180.
+  const longitudeKey = (point: GeoPoint) =>
+    formatCoordinate(
+      normalizeLongitude(Number(formatCoordinate(point.longitude))),
+    );
+  return (
+    formatCoordinate(left.latitude) === formatCoordinate(right.latitude) &&
+    longitudeKey(left) === longitudeKey(right)
+  );
 }
 
 function formatPoint(point: GeoPoint): string {
