@@ -6,6 +6,7 @@ import { antipodeOf, type GeoPoint } from '../features/antipodes/geography';
 import {
   parseNavigationNotice,
   parseUrlState,
+  sharedPointFocus,
   DEFAULT_SURNAME_DISPLAY_MODE,
   type NavigationNotice,
   type SurnameDisplayMode,
@@ -36,6 +37,8 @@ export type ReshapedMorphState = 'pending' | 'animating' | 'settled';
 export interface CameraFocusIntent {
   side: 'origin' | 'antipode' | 'free' | 'major-city';
   target: GeoPoint | null;
+  /** One-time navigation request; may wait for the cartogram mapping. */
+  source?: 'shared';
 }
 
 interface AppState {
@@ -116,6 +119,7 @@ function preferredLocale(): Locale {
 const initialSearch =
   typeof window === 'undefined' ? '' : window.location.search;
 const initialUrlState = parseUrlState(initialSearch);
+const initialFocus = sharedPointFocus(initialSearch);
 
 export const useAppStore = create<AppState>((set) => ({
   locale: preferredLocale(),
@@ -132,8 +136,12 @@ export const useAppStore = create<AppState>((set) => ({
   selectedCountry: null,
   antipodeCountry: null,
   hoveredCountry: null,
-  cameraFocusIntent: { side: 'origin', target: null },
-  hasInteracted: false,
+  cameraFocusIntent: {
+    side: 'origin',
+    target: initialFocus,
+    ...(initialFocus ? { source: 'shared' as const } : {}),
+  },
+  hasInteracted: Boolean(initialFocus),
   hasMeaningfulInteraction: false,
   sunlinePlaying: false,
   selectMode: (activeMode) =>
@@ -146,11 +154,14 @@ export const useAppStore = create<AppState>((set) => ({
       };
     }),
   exitMode: () =>
-    set({
+    set((state) => ({
       activeMode: null,
+      ...(state.cameraFocusIntent.source === 'shared'
+        ? { cameraFocusIntent: { side: 'free' as const, target: null } }
+        : {}),
       hoveredCountry: null,
       sunlinePlaying: false,
-    }),
+    })),
   dismissNavigationNotice: () => set({ navigationNotice: null }),
   selectPoint: (point) =>
     set({
@@ -306,5 +317,11 @@ export const useAppStore = create<AppState>((set) => ({
     set({ cameraFocusIntent: { side: 'free', target: null } }),
   markInteraction: () => set({ hasInteracted: true }),
   markMeaningfulInteraction: () =>
-    set({ hasInteracted: true, hasMeaningfulInteraction: true }),
+    set((state) => ({
+      hasInteracted: true,
+      hasMeaningfulInteraction: true,
+      ...(state.cameraFocusIntent.source === 'shared'
+        ? { cameraFocusIntent: { side: 'free' as const, target: null } }
+        : {}),
+    })),
 }));

@@ -257,3 +257,24 @@ describe('shell mode state', () => {
     });
   });
 });
+
+describe('pending shared camera focus', () => {
+  it.each([
+    'markMeaningfulInteraction',
+    'exitMode',
+    'setCameraFocusFree',
+  ] as const)('cancels a delayed shared focus on %s', (action) => {
+    const before = useAppStore.getState();
+    useAppStore.setState({
+      activeMode: 'reshaped',
+      cameraFocusIntent: {
+        side: 'origin',
+        target: { latitude: 31.2304, longitude: 121.4737 },
+        source: 'shared',
+      },
+    });
+    useAppStore.getState()[action]();
+    expect(useAppStore.getState().cameraFocusIntent.target).toBeNull();
+    useAppStore.setState(before, true);
+  });
+});

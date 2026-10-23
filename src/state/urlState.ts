@@ -96,6 +96,21 @@ const coordinateSchema = z
       Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180,
   );
 
+/** A valid explicitly shared point, never the parser's default selection. */
+export function sharedPointFocus(search: string): GeoPoint | null {
+  const state = parseUrlState(search);
+  if (
+    !['truesize', 'circle', 'climate', 'reshaped'].includes(
+      state.activeMode ?? '',
+    )
+  )
+    return null;
+  const coordinate = coordinateSchema.safeParse(
+    new URLSearchParams(search).get('point'),
+  );
+  return coordinate.success ? state.point : null;
+}
+
 const LEGACY_STATE_KEYS = [
   'mode',
   'point',
@@ -282,6 +297,18 @@ export function serializeUrlState(state: ShareableState): string {
 
   const query = params.toString();
   return query ? `?${query}` : '';
+}
+
+export function sameUrlPoint(left: GeoPoint, right: GeoPoint): boolean {
+  // URL parsing canonicalizes the rounded date-line longitude to -180.
+  const longitudeKey = (point: GeoPoint) =>
+    formatCoordinate(
+      normalizeLongitude(Number(formatCoordinate(point.longitude))),
+    );
+  return (
+    formatCoordinate(left.latitude) === formatCoordinate(right.latitude) &&
+    longitudeKey(left) === longitudeKey(right)
+  );
 }
 
 function formatPoint(point: GeoPoint): string {
