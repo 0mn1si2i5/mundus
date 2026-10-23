@@ -51,6 +51,8 @@ uniform sampler2D uDensity;
 uniform vec2 uPaletteSize;
 uniform vec2 uSourceSize;
 uniform vec2 uDisplaySize;
+uniform vec2 uDensitySize;
+uniform float uDensityStride;
 uniform float uWest;
 uniform float uNorth;
 uniform float uStep;
@@ -84,7 +86,8 @@ void main() {
   } else {
     vec2 paletteCell = vec2(mod(owner, uPaletteSize.x), floor(owner / uPaletteSize.x));
     color = texture2D(uPalette, (paletteCell + 0.5) / uPaletteSize).rgb;
-    float densityByte = floor(texture2D(uDensity, (cell + 0.5) / uDisplaySize).r * 255.0 + 0.5);
+    vec2 densityCell = floor(sourceCell / uDensityStride);
+    float densityByte = floor(texture2D(uDensity, (densityCell + 0.5) / uDensitySize).r * 255.0 + 0.5);
     float brightness = densityByte > 254.5 ? 0.65 : 0.35 + 0.65 * densityByte / 254.0;
     color *= brightness;
     if (abs(owner - uSelected) < 0.5) color = mix(color, vec3(0.88, 0.67, 0.38), 0.45);
@@ -146,6 +149,8 @@ function prepareFrame(
     const uniforms: ShaderMaterial['uniforms'] = {
       uSourceSize: { value: [frame.grid.width, frame.grid.height] },
       uDisplaySize: { value: [frame.width, frame.height] },
+      uDensitySize: { value: [frame.density.width, frame.density.height] },
+      uDensityStride: { value: frame.densityStride },
       uWest: { value: frame.grid.west },
       uNorth: { value: frame.grid.north },
       uStep: { value: frame.grid.step },

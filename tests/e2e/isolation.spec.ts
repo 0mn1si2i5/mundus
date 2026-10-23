@@ -9,6 +9,8 @@ import type {
   CityReachManifest,
   CityReachTextureAsset,
 } from '../../src/features/isolation/cityReachTypes';
+import { expandCityTable } from '../../src/features/isolation/cityReachTable';
+import { ghslCountryNameZh } from '../../src/features/globe/countryNames';
 import {
   globeRegion,
   globeCenter,
@@ -38,12 +40,15 @@ function readReachAssets(level: ReachLevel = 4): ReachAssets {
       'utf8',
     ),
   ) as CityReachManifest;
-  const { cities } = JSON.parse(
-    readFileSync(
-      new URL(`../../${manifest.cityAsset.path}`, import.meta.url),
-      'utf8',
+  const { cities }: { cities: CityReachCity[] } = expandCityTable(
+    JSON.parse(
+      readFileSync(
+        new URL(`../../${manifest.cityAsset.path}`, import.meta.url),
+        'utf8',
+      ),
     ),
-  ) as { cities: CityReachCity[] };
+    ghslCountryNameZh,
+  );
   const tiles = manifest.ownershipAssets[level].low.map((asset) => {
     // Independent Node PNG parser, not the browser's decoder or selection code.
     const decoded = decodeOwnerPng(
@@ -59,9 +64,20 @@ function readReachAssets(level: ReachLevel = 4): ReachAssets {
     const density = decodeDensityPng(
       readFileSync(new URL(`../../${densityAsset.path}`, import.meta.url)),
     );
-    expect(density.width).toBe(asset.width);
-    expect(density.height).toBe(asset.height);
-    return { ...asset, owners: decoded.owners, density: density.density };
+    expect(density.width).toBe(densityAsset.width);
+    expect(density.height).toBe(densityAsset.height);
+    // Density blocks cover a whole number of owner pixels.
+    const { stride, densityStride } = manifest.qualityTiers.low;
+    const ratio = densityStride / stride;
+    expect(Number.isInteger(ratio)).toBe(true);
+    const ownerDensity = Uint8Array.from(decoded.owners, (_, index) => {
+      const row = asset.y + Math.floor(index / asset.width);
+      const column = asset.x + (index % asset.width);
+      return density.density[
+        Math.floor(row / ratio) * density.width + Math.floor(column / ratio)
+      ]!;
+    });
+    return { ...asset, owners: decoded.owners, density: ownerDensity };
   });
   expect(cities).toHaveLength(manifest.recordCount);
   return { manifest, cities, level, tiles };

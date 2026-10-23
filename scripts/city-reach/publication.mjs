@@ -1,6 +1,7 @@
 import { mkdir, readdir, rm } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import { isDeepStrictEqual } from 'node:util';
 import { format } from 'prettier';
 import { publishAssetSet } from '../publish-asset-set.mjs';
 import {
@@ -19,6 +20,19 @@ import { archiveAndSummarizeCapture } from './source-capture.mjs';
 import { sha256 } from './friction.mjs';
 import { validateCityAsset, validateCityReachManifest } from './schema.mjs';
 import { requireReviewedNames } from './names.mjs';
+import {
+  CITY_TABLE_FORMAT_VERSION,
+  encodeCityTable,
+  expandCityTable,
+  roundCoordinate,
+} from '../../src/features/isolation/cityReachTable.ts';
+import { ghslCountryNameZh } from '../../src/features/globe/countryNames.ts';
+
+const roundPoint = (point) =>
+  point && {
+    latitude: roundCoordinate(point.latitude),
+    longitude: roundCoordinate(point.longitude),
+  };
 
 export function bytesIdentity(path, bytes) {
   return {
@@ -44,7 +58,7 @@ export async function publishCityReach({
 }) {
   const nameById = new Map(names.map((city) => [city.id, city]));
   const cityAsset = validateCityAsset({
-    formatVersion: 1,
+    formatVersion: CITY_TABLE_FORMAT_VERSION,
     referenceYear: 2025,
     universeMinPopulation: MIN_POPULATION,
     cities: cities.map((city) => {
@@ -62,8 +76,8 @@ export async function publishCityReach({
           (!named.name.zh ? 'none' : named.hasOverride ? 'override' : 'exact'),
         country: named.country,
         population: city.population,
-        point: city.point,
-        centrePoint: city.centrePoint,
+        point: roundPoint(city.point),
+        centrePoint: roundPoint(city.centrePoint),
         threshold: status === 'ok' ? threshold.threshold : null,
         parentId: status === 'ok' ? threshold.parentId : null,
         status,
@@ -72,7 +86,12 @@ export async function publishCityReach({
       };
     }),
   });
-  const cityBytes = Buffer.from(`${JSON.stringify(cityAsset)}\n`);
+  const cityTable = encodeCityTable(cityAsset, cityAsset.cities);
+  if (
+    !isDeepStrictEqual(expandCityTable(cityTable, ghslCountryNameZh), cityAsset)
+  )
+    throw new Error('City-reach columnar table does not round-trip');
+  const cityBytes = Buffer.from(`${JSON.stringify(cityTable)}\n`);
 
   const entries = [
     { path: 'src/data/generated/city-reach.json', bytes: cityBytes },
@@ -114,9 +133,11 @@ export async function publishCityReach({
         width: output.width,
         height: output.height,
         gpuBytes: output.width * output.height * 4,
-        densityGpuBytes: output.width * output.height * 4,
+        densityGpuBytes: densityOutput.width * densityOutput.height * 4,
         cpuOwnerBytes: output.width * output.height * 2,
-        transitionGpuBytes: output.width * output.height * 12,
+        transitionGpuBytes:
+          output.width * output.height * 8 +
+          densityOutput.width * densityOutput.height * 4,
       };
       ownershipAssets[level][quality] = output.tiles.map((tile) => {
         const path = `public/data/city-reach/population-${level}-${quality}-${tile.tileRow}-${tile.tileColumn}.png`;
@@ -193,7 +214,7 @@ export async function publishCityReach({
     densityAsset,
     cityAsset: {
       ...bytesIdentity(entries[0].path, cityBytes),
-      formatVersion: 1,
+      formatVersion: CITY_TABLE_FORMAT_VERSION,
     },
     sourceCapture: bytesIdentity(sourceSummaryPath, captureBytes),
     sourceAssets: {

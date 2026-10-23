@@ -8,6 +8,8 @@ import { DISPUTED_OWNER, MAX_TEXTURE_BYTES } from './config.mjs';
 import { validateSourceSummary } from './source-capture.mjs';
 export { validateSourceCapture } from './source-capture.mjs';
 import { summarizeNameReview } from './names.mjs';
+import { expandCityTable } from '../../src/features/isolation/cityReachTable.ts';
+import { ghslCountryNameZh } from '../../src/features/globe/countryNames.ts';
 
 export function validateRequiredNames(cityAsset, required) {
   const seen = new Map();
@@ -73,7 +75,9 @@ export async function verifyCityReach(root = process.cwd()) {
   }
 
   const cityBytes = await readFile(resolve(root, manifest.cityAsset.path));
-  const cityAsset = validateCityAsset(JSON.parse(cityBytes.toString('utf8')));
+  const cityAsset = validateCityAsset(
+    expandCityTable(JSON.parse(cityBytes.toString('utf8')), ghslCountryNameZh),
+  );
   if (manifest.recordCount !== cityAsset.cities.length)
     throw new Error('City-reach manifest record count mismatch');
   const summary = validateSourceSummary(

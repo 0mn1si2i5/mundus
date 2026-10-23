@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Locale } from '../../i18n/messages';
 import type { GeoPoint } from '../globe/geo';
 import { ghslCountryNameZh } from '../globe/countryNames';
+import { CITY_STATUSES, expandCityTable } from './cityReachTable';
 import {
   CITY_REACH_DEFAULT,
   CITY_REACH_LEVELS,
@@ -51,14 +52,7 @@ const citySchema = z.object({
   centrePoint: pointSchema.nullable(),
   threshold: z.number().finite().nonnegative().nullable(),
   parentId: positiveInteger.nullable(),
-  status: z.enum([
-    'ok',
-    'root',
-    'no_larger_reachable',
-    'merged_at_resolution',
-    'transport_missing',
-    'disputed',
-  ]),
+  status: z.enum(CITY_STATUSES),
   mergedIntoId: positiveInteger.nullable(),
 });
 const assetSchema = z.object({
@@ -78,6 +72,7 @@ const tierSchema = z.object({
   width: positiveInteger,
   height: positiveInteger,
   gpuBytes: positiveInteger,
+  densityStride: positiveInteger,
   densityGpuBytes: positiveInteger,
   cpuOwnerBytes: positiveInteger,
   transitionGpuBytes: positiveInteger,
@@ -154,12 +149,12 @@ export function decodeCityReachMetadata(
     throw new Error('Invalid city reach grid coverage');
   const asset = z
     .object({
-      formatVersion: z.literal(1),
+      formatVersion: z.literal(2),
       referenceYear: z.literal(2025),
       universeMinPopulation: z.literal(100_000),
       cities: z.array(citySchema).min(1).max(65534),
     })
-    .parse(rawCities);
+    .parse(expandCityTable(rawCities, ghslCountryNameZh));
   if (asset.cities.length !== manifest.recordCount)
     throw new Error('City reach record count mismatch');
   const cities: readonly CityReachCity[] = asset.cities;
@@ -213,9 +208,13 @@ export function decodeCityReachMetadata(
       tier.width !== Math.ceil(grid.width / stride) ||
       tier.height !== Math.ceil(grid.height / stride) ||
       tier.gpuBytes !== tier.width * tier.height * 4 ||
-      tier.densityGpuBytes !== tier.gpuBytes ||
+      tier.densityStride !== stride * 2 ||
+      tier.densityGpuBytes !==
+        Math.ceil(grid.width / tier.densityStride) *
+          Math.ceil(grid.height / tier.densityStride) *
+          4 ||
       tier.cpuOwnerBytes !== tier.width * tier.height * 2 ||
-      tier.transitionGpuBytes !== tier.gpuBytes * 3
+      tier.transitionGpuBytes !== tier.gpuBytes * 2 + tier.densityGpuBytes
     )
       throw new Error('Invalid city reach quality budget');
     const density = manifest.densityAsset;
@@ -223,8 +222,8 @@ export function decodeCityReachMetadata(
       !/^public\/data\/city-reach\/[a-zA-Z0-9_.-]+\.png$/.test(density.path) ||
       density.x !== 0 ||
       density.y !== 0 ||
-      density.width !== tier.width ||
-      density.height !== tier.height
+      density.width !== Math.ceil(grid.width / tier.densityStride) ||
+      density.height !== Math.ceil(grid.height / tier.densityStride)
     )
       throw new Error('Invalid city reach shared density texture');
     for (const level of CITY_REACH_LEVELS) {
@@ -501,14 +500,18 @@ export async function loadCityReachFrame(
       metadata.manifest.densityAsset,
       signal,
     ));
-  if (density.width !== tier.width || density.height !== tier.height)
-    throw new Error('City reach density dimensions disagree with owners');
+  if (
+    density.width !== metadata.manifest.densityAsset.width ||
+    density.height !== metadata.manifest.densityAsset.height
+  )
+    throw new Error('City reach density dimensions disagree with the manifest');
   throwIfAborted(signal);
   return {
     level,
     quality,
     grid: metadata.manifest.grid,
     stride: tier.stride,
+    densityStride: tier.densityStride,
     width: tier.width,
     height: tier.height,
     tiles,
@@ -543,8 +546,10 @@ export function cityReachPointSelection(
   if (!tile) throw new Error('City reach frame has a missing sample tile');
   const index = (sampleRow - tile.y) * tile.width + sampleColumn - tile.x;
   const owner = tile.owners[index]!;
+  const densityRow = Math.floor(row / frame.densityStride);
+  const densityColumn = Math.floor(column / frame.densityStride);
   const rawDensity =
-    frame.density.rgba[(sampleRow * frame.width + sampleColumn) * 4]!;
+    frame.density.rgba[(densityRow * frame.density.width + densityColumn) * 4]!;
   const sampled = {
     row: sampleRow,
     column: sampleColumn,

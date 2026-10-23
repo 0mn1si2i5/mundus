@@ -210,6 +210,17 @@ reachable city and 65535 means disputed. The city table records the stable
 owner index, GHSL id, names, country, 2025 population, coordinates, threshold,
 parent, state and merge reference.
 
+The city table is columnar (`formatVersion` 2,
+`src/features/isolation/cityReachTable.ts`): one array per field, in owner
+order, so the owner index is the array position plus one. GHSL English country
+names are stored once and referenced by index; Chinese country names are not
+stored and come from the reviewed country table when the browser or verifier
+expands the table, which fails if a country has no reviewed name. Name-match
+type and state are small integer codes whose lists are written in the file.
+City and centre coordinates are rounded to four decimals (at most 0.00005°,
+about 6 m); population and threshold keep full precision. The build expands
+the encoded table and requires it to equal the validated rows before writing.
+
 Ownership tiles are **RGB8 PNG**, with code `R + 256 * G` and B strictly 0.
 A separate shared **RGB8 density PNG** stores quantised density in R, with
 G and B strictly 0. Neither file stores data in alpha: the PNGs have no alpha
@@ -222,6 +233,13 @@ grid, divided by spherical cell area, then quantised by
 including zero; 255 marks a coarse cell with no valid population source pixel.
 Density controls brightness only, never ownership or competition strength.
 All seven k levels reference the same single density asset.
+
+The owner decided on **2026-10-22** to publish density at half the owner
+display resolution: `densityStride` 8, 1,350 by 544 pixels, each pixel
+sampling the central source cell of its eight-cell block (the last partial
+block clips to the last row or column). One density pixel covers exactly two
+by two owner pixels; the shader and CPU lookup both map a source cell to
+density by integer division by 8. Owner codes and borders are unaffected.
 
 The owner decided on **2026-10-12** to publish only the roughly **15 km**
 display precision. This supersedes proposal **D5**'s original 1/30° display
@@ -241,9 +259,9 @@ categorical code is allowed. Each PNG is below the 4,096 texture-edge limit.
 | Allocation                                               | Bytes      |
 | -------------------------------------------------------- | ---------- |
 | One owner RGBA texture                                   | 11,750,400 |
-| Shared density RGBA texture                              | 11,750,400 |
+| Shared density RGBA texture                              | 2,937,600  |
 | One Uint16 CPU owner array                               | 5,875,200  |
-| Two owner textures plus shared density during transition | 35,251,200 |
+| Two owner textures plus shared density during transition | 26,438,400 |
 
 Decoder buffers, the colour palette, CPU density bytes and other renderer
 resources are additional to these allocations. Only the active owner level
@@ -252,24 +270,26 @@ owner texture. Exiting releases decoded and GPU resources. Both phones and
 desktops use this same display precision.
 
 Re-encoding the completed 5,944-city computational result on 2026-10-12
-measured:
+measured the owner PNGs below; the shared density PNG is the half-resolution
+re-encoding of 2026-10-22 (530,915 bytes at full resolution):
 
-| PNG                | Bytes         |
-| ------------------ | ------------- |
-| Ownership k=0.25   | 130,199       |
-| Ownership k=0.5    | 124,272       |
-| Ownership k=1      | 114,119       |
-| Ownership k=2      | 100,034       |
-| Ownership k=4      | 83,504        |
-| Ownership k=8      | 70,160        |
-| Ownership k=16     | 59,429        |
-| Shared density     | 530,915       |
-| **All eight PNGs** | **1,212,632** |
+| PNG                | Bytes       |
+| ------------------ | ----------- |
+| Ownership k=0.25   | 130,199     |
+| Ownership k=0.5    | 124,272     |
+| Ownership k=1      | 114,119     |
+| Ownership k=2      | 100,034     |
+| Ownership k=4      | 83,504      |
+| Ownership k=8      | 70,160      |
+| Ownership k=16     | 59,429      |
+| Shared density     | 137,657     |
+| **All eight PNGs** | **819,374** |
 
-The default k=4 owner plus shared density is 614,419 PNG bytes. The schema and
+The default k=4 owner plus shared density is 221,161 PNG bytes. The schema and
 published-data verifier enforce **3,000,000 bytes maximum for all eight PNGs**;
 this is a total raw compressed-file budget, not a per-level or gzip-only limit.
-These measurements exclude the 2,283,931-byte city table, 27,317-byte source
+These measurements exclude the city table (618,468 bytes, 236,832 gzip, in
+format 2 on 2026-10-22; 2,283,931 bytes in format 1), the 27,317-byte source
 summary and manifest. The final manifest is the authority for published sizes.
 An exhaustive comparison against the previous low-detail assets found zero
 owner-code or density-value changes across all seven levels. The only removed

@@ -12,15 +12,17 @@ import {
 } from './cityReachData';
 import { CITY_REACH_LEVELS } from './cityReachLevel';
 import type {
+  CityReachCity,
   CityReachFrame,
   CityReachTextureAsset,
   CityReachQuality,
   CityReachQualityTier,
 } from './cityReachTypes';
+import { encodeCityTable } from './cityReachTable';
 
 function sourceFixture() {
   const cities = {
-    formatVersion: 1,
+    formatVersion: 2,
     referenceYear: 2025,
     universeMinPopulation: 100_000,
     cities: [
@@ -81,16 +83,22 @@ function sourceFixture() {
       const stride = Number(rawStride);
       const width = Math.ceil(grid.width / stride);
       const height = Math.ceil(grid.height / stride);
+      const densityStride = stride * 2;
+      const densityGpuBytes =
+        Math.ceil(grid.width / densityStride) *
+        Math.ceil(grid.height / densityStride) *
+        4;
       return [
         quality,
         {
           stride,
+          densityStride,
           width,
           height,
           gpuBytes: width * height * 4,
-          densityGpuBytes: width * height * 4,
+          densityGpuBytes,
           cpuOwnerBytes: width * height * 2,
-          transitionGpuBytes: width * height * 12,
+          transitionGpuBytes: width * height * 8 + densityGpuBytes,
         },
       ];
     }),
@@ -138,7 +146,7 @@ function sourceFixture() {
       path: 'public/data/city-reach/density-low.png',
       x: 0,
       y: 0,
-      width: 2,
+      width: 1,
       height: 1,
       sha256: '0'.repeat(64),
       rawBytes: 1,
@@ -156,6 +164,13 @@ function sourceFixture() {
     },
   };
   return { cities, manifest };
+}
+
+function table(fixture: ReturnType<typeof sourceFixture>) {
+  return encodeCityTable(
+    fixture.cities,
+    fixture.cities.cities as CityReachCity[],
+  );
 }
 
 async function identity(bytes: Uint8Array) {
@@ -191,7 +206,7 @@ describe('city reach metadata and owner images', () => {
 
   it('loads the raw city source only when asked and rejects altered original UTF8 bytes', async () => {
     const fixture = sourceFixture();
-    const text = `${JSON.stringify(fixture.cities)}\n`;
+    const text = `${JSON.stringify(table(fixture))}\n`;
     fixture.manifest.cityAsset = {
       ...fixture.manifest.cityAsset,
       ...(await identity(new TextEncoder().encode(text))),
@@ -230,7 +245,7 @@ describe('city reach metadata and owner images', () => {
       city.name.zh = null;
       city.nameMatchType = 'none';
     }
-    const metadata = decodeCityReachMetadata(fixture.manifest, fixture.cities);
+    const metadata = decodeCityReachMetadata(fixture.manifest, table(fixture));
     expect(metadata.inspectableCities.map((city) => city.id)).toEqual([
       673, 9001, 42,
     ]);
@@ -247,17 +262,17 @@ describe('city reach metadata and owner images', () => {
   it('rejects unknown parents, duplicate GHSL ids, and missing texture coverage', () => {
     const a = sourceFixture();
     a.cities.cities[0]!.parentId = 5;
-    expect(() => decodeCityReachMetadata(a.manifest, a.cities)).toThrow(
+    expect(() => decodeCityReachMetadata(a.manifest, table(a))).toThrow(
       /parent/,
     );
     const b = sourceFixture();
     b.cities.cities[1]!.id = 673;
-    expect(() => decodeCityReachMetadata(b.manifest, b.cities)).toThrow(
+    expect(() => decodeCityReachMetadata(b.manifest, table(b))).toThrow(
       /identity/,
     );
     const c = sourceFixture();
     c.manifest.ownershipAssets[4]!.low![0]!.width = 1;
-    expect(() => decodeCityReachMetadata(c.manifest, c.cities)).toThrow(
+    expect(() => decodeCityReachMetadata(c.manifest, table(c))).toThrow(
       /Incomplete/,
     );
   });
@@ -368,9 +383,9 @@ describe('city reach metadata and owner images', () => {
     );
     const encoder = await import(/* @vite-ignore */ encoderUrl.href);
     const densityBytes = encoder.encodeDensityPng(
-      2,
       1,
-      new Uint8Array([0, 255]),
+      1,
+      new Uint8Array([255]),
     ) as Uint8Array;
     for (const level of [4, 8] as const)
       Object.assign(
@@ -378,7 +393,7 @@ describe('city reach metadata and owner images', () => {
         await identity(bytes),
       );
     Object.assign(fixture.manifest.densityAsset, await identity(densityBytes));
-    const metadata = decodeCityReachMetadata(fixture.manifest, fixture.cities);
+    const metadata = decodeCityReachMetadata(fixture.manifest, table(fixture));
     const fetcher = vi.fn(async (url: URL) => {
       const response = url.pathname.endsWith('density-low.png')
         ? densityBytes
@@ -394,10 +409,14 @@ describe('city reach metadata and owner images', () => {
     const close = vi.fn();
     vi.stubGlobal(
       'createImageBitmap',
-      vi.fn(async () => ({ width: 2, height: 1, close })),
+      vi
+        .fn()
+        .mockResolvedValueOnce({ width: 2, height: 1, close })
+        .mockResolvedValueOnce({ width: 1, height: 1, close })
+        .mockResolvedValue({ width: 2, height: 1, close }),
     );
     const ownerRgba = new Uint8ClampedArray([1, 0, 0, 255, 2, 0, 0, 255]);
-    const densityRgba = new Uint8ClampedArray([0, 0, 0, 255, 255, 0, 0, 255]);
+    const densityRgba = new Uint8ClampedArray([255, 0, 0, 255]);
     const getImageData = vi
       .fn()
       .mockReturnValueOnce({ data: ownerRgba })
@@ -489,7 +508,7 @@ describe('city reach point lookup', () => {
     frame: CityReachFrame;
   } {
     const source = sourceFixture();
-    const metadata = decodeCityReachMetadata(source.manifest, source.cities);
+    const metadata = decodeCityReachMetadata(source.manifest, table(source));
     const frame: CityReachFrame = {
       level: 4,
       quality: 'low',
@@ -502,6 +521,7 @@ describe('city reach point lookup', () => {
         wrapLongitude: false,
       },
       stride: 1,
+      densityStride: 1,
       width: 4,
       height: 2,
       ownerIds: new Set([1, 2]),
@@ -607,10 +627,14 @@ describe('city reach point lookup', () => {
     owners[500 * 2] = 2;
     owners[1087 * 2 + 1] = 2;
     frame.tiles = [{ x: 0, y: 0, width: 2, height: 1088, owners, rgba }];
-    frame.density = { width: 2, height: 1088, rgba: new Uint8Array(2176 * 4) };
+    // Density uses eight-cell blocks: source row 2000 reads density row 250.
+    frame.densityStride = 8;
+    frame.density = { width: 1, height: 544, rgba: new Uint8Array(544 * 4) };
+    frame.density.rgba[250 * 4] = 77;
     const point = { latitude: 85 - 2000.1 / 30, longitude: 0.01 };
     expect(cityReachPointSelection(point, metadata, frame)).toMatchObject({
       row: 500,
+      density: 77,
       status: 'owned',
       city: { id: 9001 },
     });
@@ -654,7 +678,8 @@ describe('city reach point lookup', () => {
         rgba: new Uint8Array(8),
       },
     ];
-    frame.density = { width: 2, height: 1, rgba: new Uint8Array(8) };
+    frame.densityStride = 8;
+    frame.density = { width: 1, height: 1, rgba: new Uint8Array(4) };
     for (const longitude of [-180, 180])
       expect(
         cityReachPointSelection({ latitude: 60, longitude }, metadata, frame),

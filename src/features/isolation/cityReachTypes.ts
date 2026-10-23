@@ -53,6 +53,7 @@ export interface CityReachQualityTier {
   width: number;
   height: number;
   gpuBytes: number;
+  densityStride: number;
   densityGpuBytes: number;
   cpuOwnerBytes: number;
   transitionGpuBytes: number;
@@ -106,6 +107,7 @@ export interface CityReachFrame {
   quality: CityReachQuality;
   grid: CityReachGrid;
   stride: number;
+  densityStride: number;
   width: number;
   height: number;
   tiles: readonly DecodedOwnerTile[];

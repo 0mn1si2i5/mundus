@@ -12,20 +12,17 @@ import {
 import { POPULATION_SOURCE } from './sources.mjs';
 import { validateGrid } from './grid.mjs';
 import { OPEN_BORDER_RULES, ROUTE_MERGES, ROUTE_UNKNOWN } from './policy.mjs';
+import {
+  CITY_STATUSES,
+  CITY_TABLE_FORMAT_VERSION,
+} from '../../src/features/isolation/cityReachTable.ts';
 
-export const CITY_STATUSES = Object.freeze([
-  'ok',
-  'root',
-  'no_larger_reachable',
-  'merged_at_resolution',
-  'transport_missing',
-  'disputed',
-]);
+export { CITY_STATUSES };
 const hash = (value) =>
   typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 export function validateCityAsset(asset) {
   if (
-    asset?.formatVersion !== 1 ||
+    asset?.formatVersion !== CITY_TABLE_FORMAT_VERSION ||
     asset.referenceYear !== 2025 ||
     asset.universeMinPopulation !== MIN_POPULATION ||
     !Array.isArray(asset.cities) ||
@@ -220,19 +217,23 @@ export function validateCityReachManifest(manifest) {
     if (
       !tier ||
       tier.stride !== expectedTier.stride ||
+      tier.densityStride !== expectedTier.densityStride ||
       tier.width !== Math.ceil(manifest.grid.width / expectedTier.stride) ||
       tier.height !== Math.ceil(manifest.grid.height / expectedTier.stride) ||
       tier.gpuBytes !== tier.width * tier.height * 4 ||
-      tier.densityGpuBytes !== tier.width * tier.height * 4 ||
+      tier.densityGpuBytes !==
+        manifest.densityAsset.width * manifest.densityAsset.height * 4 ||
       tier.cpuOwnerBytes !== tier.width * tier.height * 2 ||
-      tier.transitionGpuBytes !== tier.width * tier.height * 12
+      tier.transitionGpuBytes !== tier.gpuBytes * 2 + tier.densityGpuBytes
     )
       throw new Error(`Invalid city-reach quality budget ${quality}`);
     if (
       manifest.densityAsset.x !== 0 ||
       manifest.densityAsset.y !== 0 ||
-      manifest.densityAsset.width !== tier.width ||
-      manifest.densityAsset.height !== tier.height ||
+      manifest.densityAsset.width !==
+        Math.ceil(manifest.grid.width / tier.densityStride) ||
+      manifest.densityAsset.height !==
+        Math.ceil(manifest.grid.height / tier.densityStride) ||
       tier.width > 4096 ||
       tier.height > 4096
     )
