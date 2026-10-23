@@ -40,6 +40,39 @@ function presentation(
 }
 
 describe('BordersResult', () => {
+  it.each([
+    ['ne-250', 'France', 'ne-076'],
+    ['ne-724', 'Spain', 'ne-504'],
+    ['ne-643', 'Russia', 'ne-616'],
+  ])(
+    'identifies detached departure and arrival for %s',
+    (countryId, name, destination) => {
+      const trip = presentation({ countryId, name }, destination!);
+      expect(trip.route).toMatchObject({ status: 'route', crossings: 1 });
+      const { rerender } = render(
+        <BordersResult locale="en" presentation={trip} />,
+      );
+      expect(
+        screen.getByTestId('borders-route').querySelector('li'),
+      ).toHaveTextContent('Starts in a detached territory');
+      expect(screen.getByTestId('borders-result')).toHaveTextContent(
+        'not a route from the clicked coordinates',
+      );
+      rerender(<BordersResult locale="zh" presentation={trip} />);
+      expect(
+        screen.getByTestId('borders-route').querySelector('li'),
+      ).toHaveTextContent('从其分离领土出发');
+      const reverse = presentation(
+        { countryId: destination!, name: destination! },
+        countryId!,
+      );
+      rerender(<BordersResult locale="en" presentation={reverse} />);
+      expect(
+        screen.getByTestId('borders-route').querySelector('li:last-child'),
+      ).toHaveTextContent('Ends in a detached territory');
+    },
+  );
+
   it('summarizes reach and turns a neighbour into the destination', () => {
     render(
       <BordersResult
