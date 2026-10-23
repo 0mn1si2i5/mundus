@@ -607,9 +607,15 @@ export function useGlobePresentation(
     return { subsolarPoint: solarPosition(sunlineTimeMs).subsolarPoint };
   }, [activeMode, sunlineTimeMs]);
 
-  const mapWordmarks = useMemo<readonly MapWordmarkLabel[]>(() => {
-    if (activeMode === 'surnames' && surnameData.status === 'ready') {
-      return surnameData.data.countries.flatMap((country) => {
+  // Depend on the loaded data, not the resource snapshot wrappers. Disabled
+  // resources may publish fresh idle snapshots during unrelated UI renders.
+  const surnameDataset =
+    surnameData.status === 'ready' ? surnameData.data : null;
+  const literalDataset =
+    literalNames.status === 'ready' ? literalNames.data : null;
+  const surnameWordmarks = useMemo<readonly MapWordmarkLabel[]>(
+    () =>
+      surnameDataset?.countries.flatMap((country) => {
         const record = getDisplaySurnameRecord(country);
         return record
           ? [
@@ -620,24 +626,27 @@ export function useGlobePresentation(
               },
             ]
           : [];
-      });
-    }
-    if (activeMode === 'names' && literalNames.status === 'ready') {
-      return literalNames.data.records.map((record) => ({
+      }) ?? [],
+    [surnameDataset, surnameDisplayMode],
+  );
+  const literalWordmarks = useMemo<readonly MapWordmarkLabel[]>(
+    () =>
+      literalDataset?.records.map((record) => ({
         countryId: record.id,
         countryName: COUNTRY_NAMES[record.id]?.en ?? record.id,
         wordmark: resolveLiteralNameWordmark(record, namesLabel, locale),
-      }));
-    }
-    return [];
-  }, [
-    activeMode,
-    literalNames,
-    locale,
-    namesLabel,
-    surnameData,
-    surnameDisplayMode,
-  ]);
+      })) ?? [],
+    [literalDataset, namesLabel, locale],
+  );
+  const mapWordmarks = useMemo<readonly MapWordmarkLabel[]>(
+    () =>
+      activeMode === 'surnames'
+        ? surnameWordmarks
+        : activeMode === 'names'
+          ? literalWordmarks
+          : [],
+    [activeMode, surnameWordmarks, literalWordmarks],
+  );
   const wordmarkKey =
     activeMode === 'surnames'
       ? `surnames:${surnameDisplayMode}`
