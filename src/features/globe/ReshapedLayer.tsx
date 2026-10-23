@@ -151,7 +151,14 @@ vec4 classifyTexels(int ids[4], int bits[4], float distances[4], float weights[4
   for(int k=0;k<4;k++) if(ids[k]!=bestId || distances[k]<distanceCap) cappedInterior=false;
   return vec4(float(bestId),best*4.0/255.0,float(bestBits),cappedInterior?1.0:0.0);
 }
-vec4 classify(vec2 uv) {
+// Analytic gradient of the winning bilinear signed distance. Reuses the
+// four fetched texels; no fragment derivatives inside divergent sampling.
+vec2 labelGradient(int ids[4], float distances[4], vec2 f, int id) {
+  vec4 d=vec4(distances[0],distances[1],distances[2],distances[3]);
+  for(int i=0;i<4;i++) if(ids[i]!=id) d[i]=-d[i];
+  return vec2(mix(d.y-d.x,d.w-d.z,f.y),mix(d.z-d.x,d.w-d.y,f.x))*4.0/255.0;
+}
+vec4 classify(vec2 uv, out vec2 gradient) {
   ivec2 size=textureSize(uIds,0);
   vec2 scaled=vec2(fract(uv.x),clamp(uv.y,0.0,1.0))*vec2(size)-0.5;
   ivec2 base=ivec2(floor(scaled)); vec2 f=fract(scaled);
@@ -164,8 +171,11 @@ vec4 classify(vec2 uv) {
     distances[k]=floor(texelFetch(uDistances,p,0).r*255.0+0.5);
     weights[k]=((i==0)?1.0-f.x:f.x)*((j==0)?1.0-f.y:f.y);
   }
-  return classifyTexels(ids,bits,distances,weights,uDistanceCap);
-}`;
+  vec4 label=classifyTexels(ids,bits,distances,weights,uDistanceCap);
+  gradient=labelGradient(ids,distances,f,int(label.x));
+  return label;
+}
+vec4 classify(vec2 uv) { vec2 gradient; return classify(uv,gradient); }`;
 
 export const RESHAPED_PATCH_GLSL = `
 uniform sampler2D uPatchAtlas;
@@ -173,7 +183,7 @@ uniform int uPatchCount;
 uniform vec4 uPatchBboxes[64];
 uniform vec4 uPatchRects[64];
 uniform uvec2 uPatchBins[32];
-vec4 classifyPatch(vec2 uv, vec4 rect) {
+vec4 classifyPatch(vec2 uv, vec4 rect, out vec2 gradient) {
   vec2 inner=rect.zw-vec2(2.0);
   vec2 scaled=uv*inner-vec2(0.5);
   ivec2 base=ivec2(floor(scaled)); vec2 f=fract(scaled);
@@ -187,8 +197,11 @@ vec4 classifyPatch(vec2 uv, vec4 rect) {
     ids[k]=int(packed.x); bits[k]=int(packed.y); distances[k]=packed.z;
     weights[k]=((i==0)?1.0-f.x:f.x)*((j==0)?1.0-f.y:f.y);
   }
-  return classifyTexels(ids,bits,distances,weights,255.0);
+  vec4 label=classifyTexels(ids,bits,distances,weights,255.0);
+  gradient=labelGradient(ids,distances,f,int(label.x));
+  return label;
 }
+vec4 classifyPatch(vec2 uv, vec4 rect) { vec2 gradient; return classifyPatch(uv,rect,gradient); }
 int patchAt(vec2 uv, out vec2 patchUv, out float patchWeight) {
   patchWeight=0.0; patchUv=vec2(0.0);
   float lon=wrapLongitude(uv.x*360.0-180.0); float lat=90.0-uv.y*180.0;
@@ -245,7 +258,7 @@ vec4 shadeLabel(vec4 label, vec3 p, float footprint, float edgeWidth, float stri
   paddingColor=mix(paddingColor,vec3(0.18,0.13,0.09),stripe*0.65);
   color=mix(color,paddingColor,padding);
   float px=label.y/max(footprint*uPixelRatio,0.0001);
-  float aa=clamp(edgeWidth*0.5/max(footprint*uPixelRatio,0.0001),0.25,0.75);
+  float aa=clamp(edgeWidth*0.5/max(footprint*uPixelRatio,0.0001),0.25/uPixelRatio,0.75/uPixelRatio);
   // Saturated B means distance >= its cap, not distance = its cap. Painting it
   // as a real edge floods small globes with border ink at large footprints.
   // The unsigned distance gives the same half-width on either side: 0.5 CSS
@@ -255,6 +268,9 @@ vec4 shadeLabel(vec4 label, vec3 p, float footprint, float edgeWidth, float stri
   color=mix(color,uCasing,casing*uCasingOpacity);
   color=mix(color,uBorder,border);
   if(id!=0 && id==uSelected && label.w<0.5) {
+    // A fine local distance field can saturate before the wide inner ring
+    // when zoomed out. Keep selection visible on the boundary itself too.
+    color=mix(color,uSelection,border);
     float ring=smoothstep(1.25-aa,1.25+aa,px)*(1.0-smoothstep(4.25-aa,4.25+aa,px));
     color=mix(color,uSelection,ring);
     float outerCasing=smoothstep(4.25-aa,4.25+aa,px)*(1.0-smoothstep(6.0-aa,6.0+aa,px));
@@ -267,6 +283,14 @@ vec4 shadeLabel(vec4 label, vec3 p, float footprint, float edgeWidth, float stri
   float edgeSamples=label.w>0.5?0.0:float(px<(id!=0 && id==uSelected?6.0+aa:1.25+aa));
   return vec4(color,edgeSamples);
 }
+// Distance changes perpendicular to an edge determine its screen width.
+// The full UV footprint is only a fallback for quantized/flat distance cells.
+vec2 edgeFootprint(vec2 gradient, vec2 dx, vec2 dy, vec2 size) {
+  vec2 screenGradient=vec2(dot(gradient,dx*size),dot(gradient,dy*size));
+  float normalWidth=length(screenGradient);
+  if(normalWidth>0.00001) return vec2(normalWidth,abs(screenGradient.x)+abs(screenGradient.y));
+  return vec2(max(length(dx*size),length(dy*size)),length((abs(dx)+abs(dy))*size));
+}
 vec4 shadeAt(vec2 uv, vec3 p, vec2 dx, vec2 dy, vec2 derivativeWidth, float stripeAa) {
   vec2 baseSize=vec2(textureSize(uIds,0));
   float footprint=max(length(dx*baseSize),length(dy*baseSize));
@@ -275,12 +299,17 @@ vec4 shadeAt(vec2 uv, vec3 p, vec2 dx, vec2 dy, vec2 derivativeWidth, float stri
   bool usePatch=index>=0 && patchWeight>0.0;
   // Shade the base raster at one call site for the same compile-size reason.
   vec4 baseColor=vec4(0.0);
-  if(!usePatch || patchWeight<1.0) baseColor=shadeLabel(classify(uv),p,footprint,length(derivativeWidth*baseSize),stripeAa);
+  if(!usePatch || patchWeight<1.0) {
+    vec2 gradient; vec4 label=classify(uv,gradient);
+    vec2 edge=edgeFootprint(gradient,dx,dy,baseSize);
+    baseColor=shadeLabel(label,p,edge.x,edge.y,stripeAa);
+  }
   if(!usePatch) return baseColor;
   vec4 box=uPatchBboxes[index];
   vec2 patchSize=(uPatchRects[index].zw-2.0)*vec2(360.0/(box.z-box.x),180.0/(box.w-box.y));
-  float patchFootprint=max(length(dx*patchSize),length(dy*patchSize));
-  vec4 patchColor=shadeLabel(classifyPatch(patchUv,uPatchRects[index]),p,patchFootprint,length(derivativeWidth*patchSize),stripeAa);
+  vec2 gradient; vec4 label=classifyPatch(patchUv,uPatchRects[index],gradient);
+  vec2 edge=edgeFootprint(gradient,dx,dy,patchSize);
+  vec4 patchColor=shadeLabel(label,p,edge.x,edge.y,stripeAa);
   if(patchWeight>=1.0) return patchColor;
   return mix(baseColor,patchColor,patchWeight);
 }

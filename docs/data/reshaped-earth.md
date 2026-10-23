@@ -86,14 +86,15 @@ mark padding and report its approximate fraction. The local atlas is derived
 from the same vector geometry and is checked for geographic and packed-rectangle
 overlap; it has at most 64 blocks, a 150 KB gzip budget and the same GPU budget.
 
-Local candidates have true classified area <20,000 km² and at least one
+Local candidates have true classified area <200,000 km² and at least one
 published area multiplier ≥10×. Their polygon boxes use 8× the base angular
 resolution, expanded by `max(10% of axis span, one base pixel)` and a two-base-
 pixel transition band. Overlapping expanded envelopes are clustered across
 countries and islands until globally disjoint; distant islands may use separate
 blocks. The 64-block limit applies after clustering. If gzip exceeds the budget,
 larger candidates are removed first; Hong Kong, Macao, Singapore, Monaco, Bahrain
-and Malta are protected. The accepted atlas retains all 19 candidates in 17 blocks.
+and Malta are protected. The accepted atlas retains 22 of 27 candidates in 19 blocks, including every previously retained
+small-country candidate and added detail for Belgium, Taiwan and Israel.
 The base/local colour blend uses a 16-local-pixel smoothstep band; CPU picking
 uses local classification at weight ≥0.5. The atlas loads after the first mesh
 draw; loading or failure retains the base map, and leaving the mode releases it.
@@ -108,8 +109,16 @@ borders. Country borders use one dark ink with a symmetric light casing: warm
 brown `#241f18` and warm white `#fbf7ee` at 85% on parchment, navy `#0b1424`
 and cool grey `#9aa7b8` at 35% for night lights. Selection adds an orange
 `#e8562a` or ice-blue `#7fd3ff` ring. Ink is about 1 screen pixel, casing is
-about 0.75 pixels on each side, and selection is about 3 pixels; derivative-
-based antialiasing preserves these widths for base and local maps.
+about 0.75 pixels on each side, and selection is about 3 pixels; antialiasing preserves these widths for base and local maps. The analytic
+gradient of the winning bilinear signed distance is projected through the local
+UV Jacobian to measure width perpendicular to the edge. Tangential cartogram
+stretch no longer broadens country ink or selection rings. Flat/quantized cells
+use a finite UV-footprint fallback; saturated interiors still draw no border.
+The antialias transition scales with the actual framebuffer pixel ratio.
+Classification and CPU picking retain the same four-texel distance scores.
+Selected boundaries also carry the emphasis colour, so selection stays visible
+when a local distance field saturates before the wider inner ring at small
+screen sizes.
 
 | Measure      | ≤0.1×     | ≤0.25×    | ≤0.5×     | around 1× | ≥2×       | ≥4×       | ≥10×      |
 | ------------ | --------- | --------- | --------- | --------- | --------- | --------- | --------- |
@@ -150,8 +159,8 @@ not physical-display calibration.
 
 All four fields retain positive triangles, total-area error below `1e-9`, and
 two byte-identical builds. The country ID raster is ≤1.2 MB gzip; the local
-atlas is 88,161 bytes gzip; inverse fields are 436–504 KB gzip. The largest
-simultaneous inverse transition plus ID textures and palette is about 34.6 MiB,
+atlas is 134,431 bytes gzip; inverse fields are 436–504 KB gzip. The largest
+simultaneous inverse transition plus ID textures and palette is about 35.9 MiB,
 under the 40 MiB GPU limit. The initial population payload is about 1.72 MB.
 All fields stopped on raw acceptance. Exact values, hashes and acceptance
 parameters remain in the generated manifest; detailed aggregation metadata and
@@ -162,7 +171,21 @@ skipped padding countries remain in the accepted build cache.
 Use Node 22 and pnpm 11.7. The ordinary source gate is `pnpm check:source`.
 `pnpm data:reshaped --offline --phase=publish` only repackages the accepted
 `~/.cache/mundus-data/reshaped-earth/country-v4` fields and fails on a missing,
-stale or non-deterministic cache. `all`, `units`, `aggregate`, `coverage` and
+stale or non-deterministic cache. For a patch-only update without the full solver cache, place the two pinned
+Natural Earth source files in an external directory as `chn.geojson` and
+`default.geojson`, then run:
+
+```bash
+node scripts/rebuild-reshaped-patches.mjs --source-dir /external/source-directory
+```
+
+This verifies source hashes and every published input, reconstructs patch
+selection from the published lossless area ratios and base ID/padding raster,
+checks the staged assets with the full data verifier, and atomically publishes
+only the atlas PNG, atlas metadata and manifest. Statistical values, base raster
+and inverse fields remain byte-identical. Repeated runs must be byte-identical.
+
+`all`, `units`, `aggregate`, `coverage` and
 `fields` are the rebuilding phases. Raw downloads and large caches stay outside
 the repository; follow the repository resource gate before starting unknown or
 machine-intensive work.

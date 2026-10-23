@@ -566,7 +566,7 @@ async function verifyReshapedData(manifest) {
   const expectedSelection = units
     .filter(
       (unit) =>
-        !unit.excluded && unit.areaKm2 < 20_000 && maxAreaRatio(unit.id) >= 10,
+        !unit.excluded && unit.areaKm2 < 200_000 && maxAreaRatio(unit.id) >= 10,
     )
     .sort((a, b) => a.rasterId - b.rasterId);
   assert.ok(Array.isArray(patchManifest.selection));
