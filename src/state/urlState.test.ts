@@ -1,3 +1,4 @@
+import { sharedPointFocus } from './urlState';
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_POINT,
@@ -630,5 +631,35 @@ describe('URL state codec', () => {
         namesLabel: 'local',
       });
     });
+  });
+});
+
+describe('explicit shared point focus', () => {
+  it.each(['truesize', 'circle', 'climate', 'reshaped'])(
+    'accepts valid explicit points for %s',
+    (mode) => {
+      for (const point of ['0,180', '90,-180', '-90,0', '31.2304,121.4737']) {
+        const target = sharedPointFocus(`?v=2&mode=${mode}&point=${point}`);
+        const [latitude, longitude] = point.split(',').map(Number);
+        expect(target?.latitude).toBeCloseTo(latitude!, 12);
+        expect(target?.longitude).toBeCloseTo(
+          longitude === 180 ? -180 : longitude!,
+          12,
+        );
+      }
+    },
+  );
+  it.each([
+    '?v=2&mode=truesize',
+    '?v=2&mode=truesize&point=91,0',
+    '?v=2&mode=truesize&point=nope',
+    '?v=2&mode=unknown&point=0,0',
+    '?v=2&mode=development&point=0,0',
+    '?v=2&mode=names&point=0,0',
+    '?v=2&mode=surnames&point=0,0',
+    '?v=2&mode=borders&point=0,0',
+    '?v=2&point=0,0',
+  ])('leaves ordinary and dedicated-camera navigation alone: %s', (search) => {
+    expect(sharedPointFocus(search)).toBeNull();
   });
 });

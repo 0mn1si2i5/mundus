@@ -3,6 +3,7 @@ import { useAppStore } from '../state/appStore';
 import {
   parseNavigationNotice,
   parseUrlState,
+  sharedPointFocus,
   serializeUrlState,
 } from '../state/urlState';
 
@@ -78,13 +79,25 @@ export function useUrlState() {
     const restore = () => {
       applyingHistory = true;
       const parsed = parseUrlState(window.location.search);
+      const previousPoint = useAppStore.getState().point;
+      const pointChanged =
+        previousPoint.latitude !== parsed.point.latitude ||
+        previousPoint.longitude !== parsed.point.longitude;
+      const focus = pointChanged
+        ? sharedPointFocus(window.location.search)
+        : null;
       useAppStore.setState({
         ...parsed,
         bordersDestination: parsed.bordersDestination ?? null,
         navigationNotice: parseNavigationNotice(window.location.search),
         hoveredCountry: null,
         reshapedSelectedUnitId: undefined,
-        cameraFocusIntent: { side: 'origin', target: null },
+        cameraFocusIntent: {
+          side: 'origin',
+          target: focus,
+          ...(focus ? { source: 'shared' as const } : {}),
+        },
+        ...(focus ? { hasInteracted: true } : {}),
         sunlinePlaying: false,
       });
       applyingHistory = false;

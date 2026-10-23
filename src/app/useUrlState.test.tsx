@@ -73,3 +73,34 @@ describe('Reshaped Earth browser history', () => {
     expect(useAppStore.getState()).not.toHaveProperty('reshapedLevel');
   });
 });
+
+describe('shared point camera restoration', () => {
+  it.each(['truesize', 'circle', 'climate', 'reshaped'] as const)(
+    'focuses changed history points in %s once, but not parameter-only navigation',
+    (activeMode) => {
+      useAppStore.setState({
+        activeMode,
+        point: { latitude: 0, longitude: 0 },
+      });
+      renderHook(useUrlState);
+      const navigate = (suffix = '') =>
+        act(() => {
+          window.history.replaceState(
+            {},
+            '',
+            `/exhibit?v=2&mode=${activeMode}&point=31.2304%2C121.4737${suffix}`,
+          );
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        });
+      navigate();
+      expect(useAppStore.getState().cameraFocusIntent.target).toEqual({
+        latitude: 31.2304,
+        longitude: expect.closeTo(121.4737, 12),
+      });
+      act(() => useAppStore.getState().setCameraFocusFree());
+      navigate('&metric=gdp&radius=500');
+      expect(useAppStore.getState().cameraFocusIntent.target).toBeNull();
+      expect(useAppStore.getState().hasMeaningfulInteraction).toBe(false);
+    },
+  );
+});

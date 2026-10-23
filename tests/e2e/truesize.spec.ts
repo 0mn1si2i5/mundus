@@ -88,3 +88,104 @@ test('reads in English and keeps 44px targets on phones', async ({
     }
   }
 });
+
+for (const mode of ['truesize', 'circle', 'climate', 'reshaped']) {
+  test(`shared ${mode} point is on the visible, unobscured globe`, async ({
+    page,
+  }) => {
+    await page.goto(`./?v=2&mode=${mode}&point=31.2304%2C121.4737`);
+    const globe = globeRegion(page);
+    if (mode === 'reshaped') {
+      await expect(globe).toHaveAttribute(
+        'data-reshaped-renderer-active',
+        'true',
+      );
+      await expect(globe).toHaveAttribute(
+        'data-morph-state',
+        /animating|settled/,
+      );
+      await expect(globe).toHaveAttribute('data-morph-state', 'settled');
+    } else {
+      await expect(globe).toHaveAttribute('data-vector-state', 'ready');
+    }
+    await expect(globe).toHaveAttribute('data-camera-focus-state', 'complete');
+    expect(new URL(page.url()).searchParams.get('point')).toBe(
+      '31.2304,121.4737',
+    );
+    const canvas = globe.locator('canvas');
+    const box = (await canvas.boundingBox())!;
+    const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    expect(
+      await canvas.evaluate(
+        (element, p) => document.elementFromPoint(p.x, p.y) === element,
+        centre,
+      ),
+    ).toBe(true);
+    // Hit-test the actual rendered front centre, not a requested-target attribute.
+    const revision = Number(
+      (await globe.getAttribute('data-globe-pick-revision')) ?? 0,
+    );
+    await page.mouse.click(centre.x, centre.y);
+    await expect(globe).toHaveAttribute(
+      'data-globe-pick-revision',
+      String(revision + 1),
+    );
+    // The triangulated hit sphere and a half-pixel mobile event can move a
+    // ray pick slightly; 0.1 degree is far below a visible screen displacement.
+    const picked = new URL(page.url()).searchParams
+      .get('point')!
+      .split(',')
+      .map(Number);
+    expect(Math.abs(picked[0]! - 31.2304)).toBeLessThan(0.1);
+    expect(Math.abs(picked[1]! - 121.4737)).toBeLessThan(0.1);
+    await test.info().attach(`${mode}-shared-point`, {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+  });
+}
+
+test('a gesture cancels a shared cartogram focus before its data arrives', async ({
+  page,
+}) => {
+  let release!: () => void;
+  let observed!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const request = new Promise<void>((resolve) => {
+    observed = resolve;
+  });
+  await page.route('**/*inverse-population*', async (route) => {
+    observed();
+    await gate;
+    await route.continue();
+  });
+  await page.goto('./?v=2&mode=reshaped&point=31.2304%2C121.4737');
+  await request;
+  const globe = globeRegion(page);
+  await globe.focus();
+  await globe.press('ArrowRight');
+  release();
+  await expect(globe).toHaveAttribute('data-reshaped-renderer-active', 'true');
+  await expect(globe).toHaveAttribute('data-morph-state', /animating|settled/);
+  await expect(globe).toHaveAttribute('data-morph-state', 'settled');
+  await expect(globe).not.toHaveAttribute(
+    'data-camera-focus-request-revision',
+    /[1-9]/,
+  );
+  expect(new URL(page.url()).searchParams.get('point')).toBe(
+    '31.2304,121.4737',
+  );
+});
+
+test('shared focus respects reduced motion without changing the coordinates', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('./?v=2&mode=truesize&point=0%2C180');
+  const globe = globeRegion(page);
+  await expect(globe).toHaveAttribute('data-vector-state', 'ready');
+  await expect(globe).toHaveAttribute('data-camera-focus-motion', 'instant');
+  expect(new URL(page.url()).searchParams.get('point')).toBe('0,180');
+});

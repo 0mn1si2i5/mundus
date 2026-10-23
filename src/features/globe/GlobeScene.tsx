@@ -233,7 +233,16 @@ export function GlobeScene({
   );
   const selectedCountry = useAppStore((state) => state.selectedCountry);
   const hoveredCountry = useAppStore((state) => state.hoveredCountry);
-  const cameraTarget = useAppStore((state) => state.cameraFocusIntent.target);
+  const focusIntent = useAppStore((state) => state.cameraFocusIntent);
+  const morphState = useAppStore((state) => state.reshapedMorphState);
+  // Wait for the final mapping instead of focusing real coordinates and then
+  // jumping again as the cartogram arrives. Gestures clear the store intent.
+  const cameraTarget =
+    focusIntent.source === 'shared' &&
+    activeMode === 'reshaped' &&
+    morphState !== 'settled'
+      ? null
+      : focusIntent.target;
   const hasInteracted = useAppStore((state) => state.hasInteracted);
   const hasMeaningfulInteraction = useAppStore(
     (state) => state.hasMeaningfulInteraction,
