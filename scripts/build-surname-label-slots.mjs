@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { readFile, writeFile } from 'node:fs/promises';
 import {
   geoArea,
   geoBounds,
   geoCentroid,
-  geoContains,
+  geoContains as sphericalContains,
   geoDistance,
 } from 'd3-geo';
 import { feature } from 'topojson-client';
@@ -56,21 +57,23 @@ const MAX_EVALUATED_CENTERS = Number(
   process.env.SURNAME_SLOT_MAX_EVALUATED_CENTERS ?? 3,
 );
 
-const anchors = JSON.parse(
-  await readFile('src/data/generated/country-label-anchors.json', 'utf8'),
-).anchors;
-const surnameCountries = Object.keys(
-  JSON.parse(
-    await readFile('src/data/generated/surnames-by-country.json', 'utf8'),
-  ).countries,
+const anchorPath = 'src/data/generated/country-label-anchors.json';
+const anchorBytes = await readFile(anchorPath);
+const anchorManifest = JSON.parse(
+  await readFile('src/data/manifests/country-label-anchors.json', 'utf8'),
 );
+if (
+  createHash('sha256').update(anchorBytes).digest('hex') !==
+  anchorManifest.derivedAssetSha256
+) {
+  throw new Error('Country label anchor hash mismatch');
+}
+const anchors = JSON.parse(anchorBytes.toString('utf8')).anchors;
 const countryLimit = Number(process.env.SURNAME_SLOT_COUNTRY_LIMIT ?? 0);
 const countryFilter = process.env.SURNAME_SLOT_COUNTRIES?.split(',');
-const countriesToBuild = countryFilter
-  ? surnameCountries.filter((countryId) => countryFilter.includes(countryId))
-  : countryLimit > 0
-    ? surnameCountries.slice(0, countryLimit)
-    : surnameCountries;
+if ((countryFilter || countryLimit) && !process.env.SURNAME_SLOT_OUTPUT) {
+  throw new Error('Filtered builds require a separate SURNAME_SLOT_OUTPUT');
+}
 const atlasBytes = await readFile(ATLAS_PATH);
 const atlasSha256 = createHash('sha256').update(atlasBytes).digest('hex');
 if (atlasSha256 !== ATLAS_SHA256) {
@@ -84,6 +87,13 @@ const detailedCountries = topologyFeatures(
 const countriesById = new Map(
   detailedCountries.map((country) => [country.properties.countryId, country]),
 );
+// Every boundary unit participates, including units without surname records.
+const countryIds = [...countriesById.keys()].sort();
+const countriesToBuild = countryFilter
+  ? countryIds.filter((id) => countryFilter.includes(id))
+  : countryLimit > 0
+    ? countryIds.slice(0, countryLimit)
+    : countryIds;
 const countryBounds = new Map(
   detailedCountries.map((country) => [
     country.properties.countryId,
@@ -91,7 +101,16 @@ const countryBounds = new Map(
   ]),
 );
 const countryGrid = createCountryGrid(detailedCountries);
+// Bound each containment query to nearby polygon parts. Testing a point in
+// one island must not walk every coastline of a multipart country.
+const containmentParts = new WeakMap();
 const localClearanceCache = new Map();
+const minimumRadii = new Map(
+  detailedCountries.map((country) => [
+    country.properties.countryId,
+    geoArea(country) < 0.00005 ? 0.0001 : 0.05,
+  ]),
+);
 
 const slots = {};
 for (const countryId of countriesToBuild) {
@@ -230,9 +249,9 @@ for (const countryId of countriesToBuild) {
         squareForeignClearance,
       );
       if (
-        long.maxAngularDegrees <= 0.02 &&
-        medium.maxAngularDegrees <= 0.02 &&
-        square.maxAngularDegrees <= 0.02
+        long.maxAngularDegrees <= 0 &&
+        medium.maxAngularDegrees <= 0 &&
+        square.maxAngularDegrees <= 0
       )
         continue;
       candidates.push({
@@ -290,13 +309,14 @@ for (const countryId of countriesToBuild) {
             isolatedOverflow: false,
             localClearance: 0,
             landSafe: false,
+            unavailableReason: 'no-safe-envelope',
           },
         ]
   ).slice(0, TOP_CANDIDATES);
 }
 
 const output = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   sourceName:
     'Mundus country boundary view (Natural Earth) with spherical surname envelopes',
   sourcePath: ATLAS_PATH,
@@ -326,6 +346,24 @@ const outputPath =
   process.env.SURNAME_SLOT_OUTPUT ??
   'src/data/generated/surname-label-slots.json';
 await writeFile(outputPath, bytes);
+if (!countryFilter && !countryLimit && !process.env.SURNAME_SLOT_OUTPUT) {
+  const manifestPath = 'src/data/manifests/surname-label-slots.json';
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  manifest.version =
+    'Natural Earth 5.1.2, Mundus boundary view / slot schema 9 (offline microstate envelopes)';
+  manifest.derivedAssetSha256 = createHash('sha256')
+    .update(bytes)
+    .digest('hex');
+  manifest.recordCount = Object.values(slots).reduce(
+    (sum, entries) => sum + entries.length,
+    0,
+  );
+  manifest.rawBytes = Buffer.byteLength(bytes);
+  manifest.gzipBytes = gzipSync(bytes, { level: 9 }).byteLength;
+  manifest.staticDecodedBytesEstimate = manifest.rawBytes * 4;
+  manifest.runtimeDecodedBytesEstimate = manifest.rawBytes * 6;
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
 console.log(
   JSON.stringify({
     countryCount: Object.keys(slots).length,
@@ -355,7 +393,7 @@ function principalAxis(country) {
       const longitude = normalize(
         west + ((column + 0.5) / SHAPE_GRID) * longitudeSpan,
       );
-      if (!geoContains(country, [longitude, latitude])) continue;
+      if (!containsCountry(country, [longitude, latitude])) continue;
       points.push([
         normalize(longitude - centroidLongitude) * cosine,
         latitude - centroidLatitude,
@@ -453,7 +491,8 @@ function refineCenter(
               Math.max(POLE_SAFE_COSINE, Math.cos((latitude * Math.PI) / 180)),
         ),
       };
-      if (!geoContains(country, [center.longitude, center.latitude])) continue;
+      if (!containsCountry(country, [center.longitude, center.latitude]))
+        continue;
       const fit = coarseOwnFit(
         center,
         countryId,
@@ -539,7 +578,7 @@ function coarseOwnFit(
       // overestimates rotated fits that cross narrow necks or bays.
       ENVELOPE_SAMPLES,
     );
-  const minimum = 0.05;
+  const minimum = minimumRadius(countryId);
   const maximum = Math.min(MAX_FOOTPRINT_DEGREES, countryScaleCap);
   if (!isAllowed(minimum)) return 0;
   if (isAllowed(maximum)) return maximum;
@@ -583,7 +622,7 @@ function createInteriorCenters(country, anchor) {
       const longitudeSpan = east >= west ? east - west : east + 360 - west;
       const longitude = west + ((column + 0.5) / 5) * longitudeSpan;
       const point = { latitude, longitude: normalize(longitude) };
-      if (geoContains(country, [point.longitude, point.latitude]))
+      if (containsCountry(country, [point.longitude, point.latitude]))
         centers.push(point);
     }
   }
@@ -595,7 +634,7 @@ function createInteriorCenters(country, anchor) {
     if (
       Number.isFinite(normalized.latitude) &&
       Number.isFinite(normalized.longitude) &&
-      geoContains(country, [normalized.longitude, normalized.latitude])
+      containsCountry(country, [normalized.longitude, normalized.latitude])
     ) {
       unique.set(
         `${normalized.latitude.toFixed(5)}:${normalized.longitude.toFixed(5)}`,
@@ -623,7 +662,7 @@ function solveCandidateFit(
   equivalentRadiusDegrees,
   foreignClearance,
 ) {
-  const minimum = 0.05;
+  const minimum = minimumRadius(countryId);
   const maximum = Math.min(MAX_FOOTPRINT_DEGREES, base.countryScaleCap);
   const strictMaxAngularDegrees = findMaximumRadius(
     (radius, samples) =>
@@ -696,12 +735,12 @@ function isOwnCountrySafe(
   const country = countriesById.get(countryId);
   if (
     !country ||
-    !geoContains(country, [base.center.longitude, base.center.latitude])
+    !containsCountry(country, [base.center.longitude, base.center.latitude])
   )
     return false;
   const envelope = sampleEnvelope(base, radius, heightRatio, samples);
   return envelope.every((point) =>
-    geoContains(country, [point.longitude, point.latitude]),
+    containsCountry(country, [point.longitude, point.latitude]),
   );
 }
 
@@ -716,7 +755,7 @@ function isForeignLandSafe(
   return !potentialCountries(envelope).some((candidate) => {
     if (candidate.properties.countryId === countryId) return false;
     return envelope.some((point) =>
-      geoContains(candidate, [point.longitude, point.latitude]),
+      containsCountry(candidate, [point.longitude, point.latitude]),
     );
   });
 }
@@ -739,7 +778,7 @@ function localBoundaryClearance(
     const points = sampleEnvelope(base, middle, 1, samples);
     if (
       points.every((point) =>
-        geoContains(country, [point.longitude, point.latitude]),
+        containsCountry(country, [point.longitude, point.latitude]),
       )
     )
       low = middle;
@@ -755,7 +794,7 @@ function sampleEnvelope(
   heightRatio,
   samples = ENVELOPE_SAMPLES,
 ) {
-  const radius = (Math.max(0.005, radiusDegrees) * Math.PI) / 180;
+  const radius = (Math.max(0.0001, radiusDegrees) * Math.PI) / 180;
   const halfWidth = radius / Math.sqrt(1 + heightRatio ** 2);
   const halfHeight = halfWidth * heightRatio;
   const rotation = (base.rotationDegrees * Math.PI) / 180;
@@ -932,4 +971,36 @@ function clamp(value, minimum, maximum) {
 }
 function normalize(value) {
   return ((((value + 180) % 360) + 360) % 360) - 180;
+}
+
+// A 0.05° minimum is wider than several real islands and microstates.
+// Keep the established search for larger countries; refine tiny units offline.
+function minimumRadius(countryId) {
+  return minimumRadii.get(countryId);
+}
+
+function containsCountry(country, point) {
+  let parts = containmentParts.get(country);
+  if (!parts) {
+    const geometry = country.geometry;
+    parts = (
+      geometry.type === 'MultiPolygon'
+        ? geometry.coordinates.map((coordinates) => ({
+            type: 'Polygon',
+            coordinates,
+          }))
+        : [geometry]
+    ).map((part) => ({ part, bounds: geoBounds(part) }));
+    containmentParts.set(country, parts);
+  }
+  const [longitude, latitude] = point;
+  return parts.some(
+    ({ part, bounds: [[west, south], [east, north]] }) =>
+      latitude >= south &&
+      latitude <= north &&
+      (west <= east
+        ? longitude >= west && longitude <= east
+        : longitude >= west || longitude <= east) &&
+      sphericalContains(part, point),
+  );
 }

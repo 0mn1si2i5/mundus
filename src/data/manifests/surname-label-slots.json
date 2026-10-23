@@ -4,7 +4,7 @@
   "sourceUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries_chn.geojson",
   "licenseName": "Natural Earth public domain; derived metadata in Mundus",
   "licenseUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
-  "version": "Natural Earth 5.1.2, Mundus boundary view / slot schema 8 (centred candidates per wordmark shape)",
+  "version": "Natural Earth 5.1.2, Mundus boundary view / slot schema 9 (offline microstate envelopes)",
   "retrievedAt": "2026-10-09",
   "sourceAssets": {
     "50m": {
@@ -12,12 +12,12 @@
       "sha256": "b5f8a7f4428ead23409572525e1ca6dc5ea9c06d0f72f3dbe9315b0bba9fede4"
     }
   },
-  "derivedAssetSha256": "74f895d06453724ff155d615f4aec0a28b715585aa5f1efc77d6949d9bb0af33",
-  "recordCount": 1106,
-  "rawBytes": 687239,
-  "gzipBytes": 75759,
-  "staticDecodedBytesEstimate": 2748956,
-  "runtimeDecodedBytesEstimate": 4123434,
+  "derivedAssetSha256": "a8dca365d4f722b8e6e6ccff672de6fb9e0399883861f401f8d7f346c3f91f6e",
+  "recordCount": 1183,
+  "rawBytes": 741826,
+  "gzipBytes": 81002,
+  "staticDecodedBytesEstimate": 2967304,
+  "runtimeDecodedBytesEstimate": 4450956,
   "attribution": "Candidate wordmark slots derived from the pinned Mundus country geometry (Natural Earth); parallel-latitude envelopes by default, axis-aligned straight envelopes for elongated countries, adjacent-land rejection, and bounded isolated-island overflow are applied before display.",
   "redistribution": "allowed",
   "transformations": [
@@ -29,5 +29,12 @@
     "Store only compact candidate metadata; do not include raw country geometry"
   ],
   "missingValuePolicy": "Countries without a safe candidate remain visible in the surname side panel but have no map wordmark.",
-  "boundaryPolicy": "Ordinary candidates remain inside their own country. Isolated-country candidates may extend into ocean within an area-scaled cap, but are rejected when their aspect-specific spherical glyph envelope approaches another country's land geometry."
+  "boundaryPolicy": "Ordinary candidates remain inside their own country. Isolated-country candidates may extend into ocean within an area-scaled cap, but are rejected when their aspect-specific spherical glyph envelope approaches another country's land geometry.",
+  "wordmarkLayouts": {
+    "path": "src/data/generated/wordmark-layouts.json",
+    "sha256": "723970725eae75f021a08d295a2cdc49754c6d29c385b2f6ac820d0e173c952c",
+    "rawBytes": 143527,
+    "gzipBytes": 35948,
+    "wordCount": 1131
+  }
 }

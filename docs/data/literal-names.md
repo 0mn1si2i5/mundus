@@ -57,8 +57,9 @@ entered.
 
 Entering the mode loads two chunks: the reviewed table (about 33 kB gzip)
 and the shared wordmark runtime that Surname Atlas also uses
-(`surnameAtlasRuntime`, about 470 kB gzip, carrying the 50m country topology
-and label slots). The lobby loads neither.
+(`surnameAtlasRuntime`, with compact positions and exact-text radii). The lobby loads neither. Placement uses the shared offline
+slot table for all 239 units; it does not load the 50m topology or search
+polygons in the browser. Unrelated UI renders preserve wordmark identities.
 
 ## Acceptance
 

@@ -1,3 +1,14 @@
+import surnameDataset from '../../data/generated/surnames-by-country.json';
+import {
+  decodeSurnameDataset,
+  getDisplaySurnameRecord,
+} from '../surnames/surnameData';
+import { resolveSurnameWordmark } from '../surnames/surnameWordmark';
+import detailedAtlas from '../../data/generated/mundus-countries-50m.json';
+import { countryFeaturesFromTopology } from './countryData';
+import { LITERAL_NAMES } from '../names/literalNames';
+import { resolveLiteralNameWordmark } from '../names/literalNameWordmark';
+import { getCountryLabelAnchorForId } from './countryLabel';
 import { describe, expect, it } from 'vitest';
 import type { CountryFeature } from './countryData';
 import {
@@ -22,6 +33,120 @@ const country = (
 });
 
 describe('surname label slots', () => {
+  it('selects tiny-country slots without inspecting runtime polygons', () => {
+    const polygons = new Proxy([] as CountryFeature[], {
+      get() {
+        throw new Error('Runtime polygon search');
+      },
+    });
+    for (const id of ['ne-831', 'ne-654', 'ne-674', 'ne-690'] as const) {
+      const slot = generatedSlots.slots[id][0]!;
+      const record = LITERAL_NAMES.find((record) => record.id === id)!;
+      for (const locale of ['zh', 'en'] as const) {
+        const wordmark = resolveLiteralNameWordmark(record, 'local', locale)!;
+        expect(
+          chooseSurnameLabelSlot(
+            id,
+            { point: slot.center, clearanceDegrees: 0.01 },
+            wordmark,
+            polygons,
+          ),
+          id,
+        ).not.toBeNull();
+      }
+    }
+  });
+
+  it('covers every actual literal/local wordmark with bounded offline slots', () => {
+    const polygons = new Proxy([] as CountryFeature[], {
+      get() {
+        throw new Error('Runtime polygon search');
+      },
+    });
+    expect(LITERAL_NAMES).toHaveLength(239);
+    for (const record of LITERAL_NAMES) {
+      const anchor = getCountryLabelAnchorForId(record.id)!;
+      expect(anchor, record.id).not.toBeNull();
+      for (const locale of ['zh', 'en'] as const) {
+        for (const label of ['literal', 'local'] as const) {
+          const wordmark = resolveLiteralNameWordmark(record, label, locale);
+          if (!wordmark) continue; // Unknown meanings keep their result card.
+          const slot = chooseSurnameLabelSlot(
+            record.id,
+            anchor,
+            wordmark,
+            polygons,
+          );
+          expect(slot, `${record.id}:${wordmark.value}`).not.toBeNull();
+          if (slot)
+            chooseAlternativeSurnameLabelSlot(
+              record.id,
+              anchor,
+              wordmark,
+              polygons,
+              slot,
+            );
+        }
+      }
+    }
+  });
+
+  const detailedCountries = countryFeaturesFromTopology(detailedAtlas);
+  it.each(LITERAL_NAMES)(
+    'keeps $id wordmark variants geographically safe',
+    (record) => {
+      for (const locale of ['zh', 'en'] as const) {
+        for (const label of ['literal', 'local'] as const) {
+          const wordmark = resolveLiteralNameWordmark(record, label, locale);
+          if (!wordmark) continue;
+          const slot = chooseSurnameLabelSlot(
+            record.id,
+            getCountryLabelAnchorForId(record.id)!,
+            wordmark,
+            detailedCountries,
+          )!;
+          expect(
+            isSurnameLabelSlotAllowed(
+              slot,
+              record.id,
+              detailedCountries,
+              wordmark,
+            ),
+            `${record.id}:${wordmark.value}`,
+          ).toBe(true);
+        }
+      }
+    },
+  );
+
+  it.each(decodeSurnameDataset(surnameDataset).countries)(
+    'keeps $countryId surname variants geographically safe',
+    (country) => {
+      const record = getDisplaySurnameRecord(country);
+      if (!record) return;
+      for (const mode of ['local', 'latin', 'chinese'] as const) {
+        const wordmark = resolveSurnameWordmark(record, mode);
+        expect(wordmark).not.toBeNull();
+        if (!wordmark) continue;
+        const slot = chooseSurnameLabelSlot(
+          country.countryId,
+          getCountryLabelAnchorForId(country.countryId)!,
+          wordmark,
+          [],
+        );
+        expect(slot, `${country.countryId}:${mode}`).not.toBeNull();
+        expect(
+          isSurnameLabelSlotAllowed(
+            slot!,
+            country.countryId,
+            detailedCountries,
+            wordmark,
+          ),
+        ).toBe(true);
+      }
+    },
+  );
+
   it('offers deterministic east-west candidates for both legacy layout keys', () => {
     const straight = createSurnameLabelSlotCandidates(
       { latitude: 0, longitude: 0 },
@@ -147,7 +272,12 @@ describe('surname label slots', () => {
     expect(candidates.every((slot) => typeof slot.landSafe === 'boolean')).toBe(
       true,
     );
-    expect(candidates.some((slot) => slot.landSafe === false)).toBe(true);
+    for (const slot of candidates.filter((candidate) => !candidate.landSafe)) {
+      expect(slot).toMatchObject({
+        maxAngularDegrees: 0,
+        unavailableReason: 'no-safe-envelope',
+      });
+    }
     expect(
       candidates.some(
         (slot) => slot.landSafe && typeof slot.squareMax === 'number',
@@ -238,31 +368,20 @@ describe('surname label slots', () => {
     expect(brazilDirections).toEqual(new Set([0]));
   });
 
-  it('keeps a layout candidate for every generated country after safety fallback', () => {
-    const wordmark = {
-      value: 'Atlas',
-      source: 'latin' as const,
-      requestedMode: 'latin' as const,
-      fellBack: false,
-      generated: false,
-      layout: 'straight' as const,
-      characterCount: 5,
-    };
-    const countryIds = Object.keys(generatedSlots.slots) as Array<
-      keyof typeof generatedSlots.slots
-    >;
-    expect(countryIds).toHaveLength(239);
-    for (const countryId of countryIds) {
-      const first = generatedSlots.slots[countryId]![0]!;
-      expect(
-        chooseSurnameLabelSlot(
-          countryId,
-          { point: first.center, clearanceDegrees: first.maxAngularDegrees },
-          wordmark,
-          [],
-        ),
-      ).not.toBeNull();
-    }
+  it('fails closed for text missing from the compiled table', () => {
+    const wordmark = resolveLiteralNameWordmark(
+      LITERAL_NAMES[0]!,
+      'local',
+      'en',
+    )!;
+    expect(
+      chooseSurnameLabelSlot(
+        LITERAL_NAMES[0]!.id,
+        getCountryLabelAnchorForId(LITERAL_NAMES[0]!.id)!,
+        { ...wordmark, value: 'Uncompiled text' },
+        [],
+      ),
+    ).toBeNull();
   });
 
   it('expands a safe wordmark to the largest sampled envelope', () => {
@@ -301,7 +420,7 @@ describe('surname label slots', () => {
 
   it('switches a blocked selected wordmark to a different safe candidate', () => {
     const wordmark = {
-      value: 'Wang',
+      value: 'Wáng',
       source: 'latin' as const,
       requestedMode: 'latin' as const,
       fellBack: false,
@@ -372,7 +491,16 @@ describe('rotated wordmarks for elongated countries', () => {
       latin('Rossi'),
       [],
     );
-    const long = chooseSurnameLabelSlot('ne-380', italy, latin('Esposito'), []);
+    const long = chooseSurnameLabelSlot(
+      'ne-380',
+      italy,
+      resolveLiteralNameWordmark(
+        LITERAL_NAMES.find((record) => record.id === 'ne-380')!,
+        'literal',
+        'en',
+      )!,
+      [],
+    );
     // A medium word already fits the Po valley on its parallel; only a long
     // word gains enough from following the peninsula to be rotated.
     expect(horizontal!.rotationDegrees).toBe(0);
@@ -382,7 +510,12 @@ describe('rotated wordmarks for elongated countries', () => {
   });
 
   it('never tilts a compact square wordmark', () => {
-    const slot = chooseSurnameLabelSlot('ne-380', italy, latin('Li'), []);
+    const slot = chooseSurnameLabelSlot(
+      'ne-156',
+      getCountryLabelAnchorForId('ne-156')!,
+      { ...latin('王'), source: 'local', requestedMode: 'local' },
+      [],
+    );
     expect(slot).not.toBeNull();
     expect(slot!.rotationDegrees).toBe(0);
   });
