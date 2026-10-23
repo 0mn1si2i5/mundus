@@ -1141,12 +1141,25 @@ test('a settled morph does not redraw the unchanged globe', async ({
   await ready(page);
   // The entry morph runs once the layer mounts; wait for it to finish.
   await expect.poll(async () => (await probe()).settles).toBe(1);
+  // A shared link focuses only after the entry morph settles. Wait for that
+  // visible camera change before testing an otherwise unchanged replay.
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-camera-focus-state',
+    'complete',
+  );
+  const focusRevision = await globeRegion(page).getAttribute(
+    'data-camera-focus-request-revision',
+  );
   await expect.poll(async () => (await probe()).pendingFrames).toBe(0);
   await controls(page).getByRole('button', { name: '重播变形' }).click();
   await expect.poll(async () => (await probe()).settles).toBe(2);
   await expect.poll(async () => (await probe()).pendingFrames).toBe(0);
   const settled = await probe();
   expect(settled.draws).toBe(settled.drawsAtSettle);
+  await expect(globeRegion(page)).toHaveAttribute(
+    'data-camera-focus-request-revision',
+    focusRevision!,
+  );
 });
 
 test('four primary observations remain visible with 44px targets at the device width and 360px', async ({
